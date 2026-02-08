@@ -31,5 +31,5 @@ export function suggestIndianPricing(category: string, followerCount: number): P
 
 export async function generateProductDescription(title: string) {
     // Mock AI response for Indian professional tone
-    return `Premium content by Md Arsh Eqbal. A comprehensive guide into ${title}, specifically designed for the Indian digital ecosystem. Includes GST compliance and UPI payment support.`;
+    return `Premium content by our top creators. A comprehensive guide into ${title}, specifically designed for the Indian digital ecosystem. Includes GST compliance and UPI payment support.`;
 }

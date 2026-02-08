@@ -1,6 +1,5 @@
-@import "tailwindcss";
-
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
 
 :root {
   --primary: #FF9E00;
@@ -33,6 +32,15 @@
     --glass: rgba(10, 10, 10, 0.85);
     --glass-border: rgba(255, 255, 255, 0.05);
   }
+}
+
+.dark {
+  --background: #050505;
+  --foreground: #f0f0f0;
+  --platinum: #111111;
+  --glass: rgba(10, 10, 10, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  color-scheme: dark;
 }
 
 body {

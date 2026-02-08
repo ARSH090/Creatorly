@@ -1,14 +1,9 @@
-import React from 'react';
-import CreatorDashboard from '@/components/CreatorDashboard';
-import BioLinkStore from '@/components/BioLinkStore';
+'use client';
+
+import LandingPage from '@/components/LandingPage';
+
+export const dynamic = 'force-dynamic';
 
 export default function Home() {
-  // We can toggle between Dashboard and Store for demo purposes
-  const isDashboardView = false;
-
-  return (
-    <>
-      {isDashboardView ? <CreatorDashboard /> : <BioLinkStore />}
-    </>
-  );
+  return <LandingPage />;
 }
