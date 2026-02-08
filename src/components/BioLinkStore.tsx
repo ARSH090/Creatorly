@@ -88,9 +88,10 @@ const BioLinkStore: React.FC<BioLinkStoreProps> = ({
         <div className="min-h-screen bg-platinum flex flex-col items-center p-4">
             {/* Bio Profile */}
             <div className="w-full max-w-lg mt-12 mb-8 flex flex-col items-center animate-in fade-in slide-in-from-bottom-4 duration-700">
-                <div className="w-24 h-24 rounded-full bg-slate-200 border-4 border-white shadow-xl overflow-hidden mb-4">
-                    {/* Placeholder for Creator Image */}
-                    <div className="w-full h-full bg-linear-to-tr from-primary to-accent"></div>
+                <div className="w-24 h-24 rounded-full bg-slate-200 border-4 border-white shadow-xl overflow-hidden mb-4 relative">
+                    <div className="w-full h-full bg-gradient-to-tr from-orange-500 to-rose-500 flex items-center justify-center text-white text-3xl font-black">
+                        {creatorName[0]}
+                    </div>
                 </div>
                 <h1 className="text-2xl font-bold">{creatorName}</h1>
                 <p className="text-foreground/60 text-center px-4 mt-2">

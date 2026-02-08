@@ -1,11 +1,22 @@
+import { getServerSession } from 'next-auth';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { UsersManagement } from '@/components/admin/UsersManagement';
+import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
-export default function AdminUsersPage() {
+export default async function AdminUsersPage() {
+  const session = await getServerSession();
+
+  if (!session) {
+    redirect('/auth/login');
+  }
+
   return (
-    <AdminLayout adminName="" adminEmail="" onLogout={() => {}}>
+    <AdminLayout
+      adminName={session.user?.name || 'Admin'}
+      adminEmail={session.user?.email || ''}
+    >
       <UsersManagement />
     </AdminLayout>
   );

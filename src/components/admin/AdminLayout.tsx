@@ -1,8 +1,7 @@
-'use client';
-
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import {
   LayoutDashboard,
   Users,
@@ -22,7 +21,7 @@ export interface AdminLayoutProps {
   children: React.ReactNode;
   adminName: string;
   adminEmail: string;
-  onLogout: () => void;
+  onLogout?: () => void;
 }
 
 const navigationItems = [
@@ -76,9 +75,8 @@ export function AdminLayout({ children, adminName, adminEmail, onLogout }: Admin
     <div className="flex h-screen bg-gray-900">
       {/* Sidebar */}
       <div
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-20'
-        } bg-gray-800 text-white transition-all duration-300 flex flex-col overflow-y-auto`}
+        className={`${sidebarOpen ? 'w-64' : 'w-20'
+          } bg-gray-800 text-white transition-all duration-300 flex flex-col overflow-y-auto`}
       >
         {/* Logo */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
@@ -98,11 +96,10 @@ export function AdminLayout({ children, adminName, adminEmail, onLogout }: Admin
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  isActive
-                    ? 'bg-blue-600 text-white'
-                    : 'text-gray-300 hover:bg-gray-700'
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-700'
+                  }`}
               >
                 <Icon size={20} />
                 {sidebarOpen && <span>{item.name}</span>}
@@ -121,7 +118,7 @@ export function AdminLayout({ children, adminName, adminEmail, onLogout }: Admin
             </div>
           )}
           <button
-            onClick={onLogout}
+            onClick={() => onLogout ? onLogout() : signOut({ callbackUrl: '/auth/login' })}
             className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"
           >
             <LogOut size={18} />

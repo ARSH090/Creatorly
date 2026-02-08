@@ -142,33 +142,6 @@ export default function CreatorDashboard() {
                             ))}
                         </section>
 
-                        {/* Recent Transactions & Customer Map Placeholder */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-                            <div className="bg-white dark:bg-zinc-900 shadow-lg border border-zinc-200 dark:border-zinc-800 rounded-4xl p-8">
-                                <h3 className="text-xl font-bold mb-6">Recent Indian Orders</h3>
-                                <div className="space-y-4">
-                                    {[1, 2, 3].map(i => (
-                                        <div key={i} className="flex justify-between items-center p-3 bg-slate-50 rounded-2xl">
-                                            <div>
-                                                <p className="font-bold text-sm">Customer #{i + 1240}</p>
-                                                <p className="text-[10px] opacity-40 uppercase font-bold">Mumbai • UPI Completed</p>
-                                            </div>
-                                            <span className="font-extrabold text-sm">₹{899 * i}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            <div className="bg-white p-8 rounded-4xl border border-black/5 shadow-sm flex flex-col items-center justify-center text-center">
-                                <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                                    <span className="text-2xl">📍</span>
-                                </div>
-                                <h3 className="text-xl font-bold mb-2">Bharat Delivery Map</h3>
-                                <p className="text-sm text-foreground/40 max-w-xs">
-                                    Real-time heat-map of where your customers are purchasing from in Tier 1, 2, and 3 cities.
-                                </p>
-                            </div>
-                        </div>
                     </>
                 ) : (
                     <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

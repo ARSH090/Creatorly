@@ -1,41 +1,17 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { TrendingUp, Users, Package, ShoppingCart, Clock, AlertTriangle } from 'lucide-react';
+import { TrendingUp, Users, Package, ShoppingCart, Clock, AlertTriangle, Ticket } from 'lucide-react';
 
 interface MetricsData {
-  overview: {
-    totalRevenue: number;
-    totalRevenueFormatted: string;
-    activeCreators: number;
-    totalProducts: number;
-    ordersProcessedToday: number;
-    pendingPayouts: number;
-    pendingPayoutsFormatted: string;
-    platformConversionRate: string;
-    averageOrderValue: number;
-    averageOrderValueFormatted: string;
-  };
-  users: {
-    totalUsers: number;
-    activeCreators: number;
-    suspendedUsers: number;
-    newUsersThisMonth: number;
-  };
-  orders: {
-    allTime: number;
-    thisMonth: number;
-    thisWeek: number;
-    today: number;
-    failed: number;
-    refunded: number;
-  };
-  systemHealth: {
-    apiResponseTime: string;
-    apiUptime: string;
-    databaseStatus: string;
-    status: string;
-  };
+  users: { total: number; creators: number; regular: number };
+  products: { active: number };
+  orders: { today: number; week: number; month: number };
+  revenue: { today: number; week: number; month: number; allTime: number; platformCommission: number };
+  payouts: { pending: number };
+  subscriptions: { active: number };
+  conversion: { rate: number; purchasingUsers: number };
+  averageOrderValue: number;
 }
 
 export function DashboardMetrics() {
@@ -49,7 +25,7 @@ export function DashboardMetrics() {
 
   const fetchMetrics = async () => {
     try {
-      const response = await fetch('/api/admin/metrics');
+      const response = await fetch('/api/admin/dashboard/metrics');
       if (!response.ok) throw new Error('Failed to fetch metrics');
       const data = await response.json();
       setMetrics(data.metrics);
@@ -63,9 +39,9 @@ export function DashboardMetrics() {
 
   if (loading) {
     return (
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {[...Array(8)].map((_, i) => (
-          <div key={i} className="bg-gray-700 h-32 rounded-lg animate-pulse"></div>
+          <div key={i} className="bg-gray-800 h-32 rounded-xl animate-pulse border border-gray-700"></div>
         ))}
       </div>
     );
@@ -73,126 +49,137 @@ export function DashboardMetrics() {
 
   if (error) {
     return (
-      <div className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded-lg flex items-center gap-2">
-        <AlertTriangle size={20} />
-        <span>Error loading metrics: {error}</span>
+      <div className="bg-red-900/20 border border-red-900/50 text-red-200 px-6 py-4 rounded-xl flex items-center gap-3">
+        <AlertTriangle size={20} className="text-red-500" />
+        <span className="font-medium">Connectivity Error: {error}</span>
       </div>
     );
   }
 
   if (!metrics) return null;
 
+  const formatINR = (amount: number) =>
+    new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount);
+
   const metricCards = [
     {
       title: 'Total Revenue',
-      value: metrics.overview.totalRevenueFormatted,
+      value: formatINR(metrics.revenue.allTime),
       icon: TrendingUp,
       color: 'blue',
-      trend: '+12% from last month',
+      trend: 'All-time platform volume',
     },
     {
       title: 'Active Creators',
-      value: metrics.users.activeCreators.toString(),
+      value: metrics.users.creators.toString(),
       icon: Users,
       color: 'green',
-      trend: `+${metrics.users.newUsersThisMonth} this month`,
+      trend: 'Verified store owners',
     },
     {
       title: 'Total Products',
-      value: metrics.overview.totalProducts.toString(),
+      value: metrics.products.active.toString(),
       icon: Package,
       color: 'purple',
-      trend: '+5% growth',
+      trend: 'Live listings',
     },
     {
       title: 'Orders Today',
       value: metrics.orders.today.toString(),
       icon: ShoppingCart,
       color: 'orange',
-      trend: `${metrics.orders.thisWeek} this week`,
+      trend: `${metrics.orders.week} this week`,
     },
     {
       title: 'Avg Order Value',
-      value: metrics.overview.averageOrderValueFormatted,
+      value: formatINR(metrics.averageOrderValue),
       icon: TrendingUp,
       color: 'pink',
-      trend: 'All orders',
+      trend: 'Across all listings',
+    },
+    {
+      title: 'Platform Earnings',
+      value: formatINR(metrics.revenue.platformCommission),
+      icon: TrendingUp,
+      color: 'blue',
+      trend: '5% platform fee total',
     },
     {
       title: 'Pending Payouts',
-      value: metrics.overview.pendingPayoutsFormatted,
+      value: formatINR(metrics.payouts.pending),
       icon: Clock,
       color: 'yellow',
-      trend: 'Action required',
+      trend: 'Creator payments due',
     },
     {
-      title: 'Failed Orders',
-      value: metrics.orders.failed.toString(),
-      icon: AlertTriangle,
-      color: 'red',
-      trend: 'Last 30 days',
-    },
-    {
-      title: 'Suspended Users',
-      value: metrics.users.suspendedUsers.toString(),
-      icon: Users,
-      color: 'gray',
-      trend: 'Needs review',
+      title: 'Active Subs',
+      value: metrics.subscriptions.active.toString(),
+      icon: Ticket,
+      color: 'indigo',
+      trend: 'Creatorly Pro users',
     },
   ];
 
   const colorMap: Record<string, string> = {
-    blue: 'bg-blue-900 border-blue-700',
-    green: 'bg-green-900 border-green-700',
-    purple: 'bg-purple-900 border-purple-700',
-    orange: 'bg-orange-900 border-orange-700',
-    pink: 'bg-pink-900 border-pink-700',
-    yellow: 'bg-yellow-900 border-yellow-700',
-    red: 'bg-red-900 border-red-700',
-    gray: 'bg-gray-700 border-gray-600',
+    blue: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
+    green: 'bg-green-500/10 border-green-500/20 text-green-400',
+    purple: 'bg-purple-500/10 border-purple-500/20 text-purple-400',
+    orange: 'bg-orange-500/10 border-orange-500/20 text-orange-400',
+    pink: 'bg-pink-500/10 border-pink-500/20 text-pink-400',
+    yellow: 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400',
+    indigo: 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400',
   };
 
   return (
-    <div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {metricCards.map((metric, index) => {
           const Icon = metric.icon;
-          const bgColor = colorMap[metric.color];
+          const colorClass = colorMap[metric.color] || 'bg-gray-500/10 border-gray-500/20 text-gray-400';
 
           return (
-            <div key={index} className={`${bgColor} border rounded-lg p-6 text-white`}>
+            <div key={index} className={`${colorClass} border rounded-2xl p-6 transition-all hover:scale-[1.02]`}>
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-gray-300 text-sm font-medium">{metric.title}</p>
-                  <p className="text-3xl font-bold mt-2">{metric.value}</p>
-                  <p className="text-xs text-gray-400 mt-2">{metric.trend}</p>
+                  <p className="text-xs font-bold uppercase tracking-wider opacity-60 mb-2">{metric.title}</p>
+                  <p className="text-2xl font-black tracking-tight">{metric.value}</p>
+                  <p className="text-[10px] font-medium opacity-50 mt-2">{metric.trend}</p>
                 </div>
-                <Icon size={32} className="text-gray-400" />
+                <div className="bg-white/5 p-2 rounded-lg">
+                  <Icon size={20} />
+                </div>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* System Health */}
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">System Health</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-gray-700 rounded p-4">
-            <p className="text-gray-400 text-sm">API Response Time</p>
-            <p className="text-2xl font-bold text-green-400 mt-1">{metrics.systemHealth.apiResponseTime}</p>
+      {/* Conversion Stats */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
+            <TrendingUp size={16} /> Platform Conversion
+          </h3>
+          <div className="flex items-end gap-4 mb-4">
+            <span className="text-5xl font-black tracking-tighter text-white">{metrics.conversion.rate}%</span>
+            <span className="text-sm font-medium text-gray-500 pb-2">of visitors convert to customers</span>
           </div>
-          <div className="bg-gray-700 rounded p-4">
-            <p className="text-gray-400 text-sm">API Uptime</p>
-            <p className="text-2xl font-bold text-green-400 mt-1">{metrics.systemHealth.apiUptime}</p>
-          </div>
-          <div className="bg-gray-700 rounded p-4">
-            <p className="text-gray-400 text-sm">Database Status</p>
-            <p className="text-2xl font-bold text-green-400 mt-1 capitalize">{metrics.systemHealth.databaseStatus}</p>
-          </div>
-          <div className="bg-gray-700 rounded p-4">
-            <p className="text-gray-400 text-sm">Overall Status</p>
-            <p className="text-2xl font-bold text-green-400 mt-1 capitalize">{metrics.systemHealth.status}</p>
+          <p className="text-xs text-gray-500">Based on {metrics.conversion.purchasingUsers} purchasing users found in database.</p>
+        </div>
+
+        <div className="bg-gray-800/50 border border-gray-700/50 rounded-2xl p-6">
+          <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 mb-6 flex items-center gap-2">
+            <Users size={16} /> User Base Distribution
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700/30">
+              <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Creators</p>
+              <p className="text-2xl font-bold text-white">{metrics.users.creators}</p>
+            </div>
+            <div className="bg-gray-900/50 p-4 rounded-xl border border-gray-700/30">
+              <p className="text-[10px] uppercase font-bold text-gray-500 mb-1">Customers</p>
+              <p className="text-2xl font-bold text-white">{metrics.users.regular}</p>
+            </div>
           </div>
         </div>
       </div>
