@@ -138,14 +138,13 @@ const ProductSchema: Schema = new Schema({
         keywords: [String]
     },
 
-    isActive: { type: Boolean, default: true, index: true },
+    isActive: { type: Boolean, default: true },
     isFeatured: { type: Boolean, default: false },
     inventoryCount: { type: Number, default: 0 }
 }, { timestamps: true });
 
 // Performance & Discovery Indexes
 ProductSchema.index({ creatorId: 1, type: 1 });
-ProductSchema.index({ slug: 1 });
 ProductSchema.index({ category: 1 });
 ProductSchema.index({ isActive: 1, isFeatured: 1 });
 ProductSchema.index({ createdAt: -1 });

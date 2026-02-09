@@ -83,7 +83,6 @@ const CreatorProfileSchema: Schema = new Schema({
     isCustomDomainVerified: { type: Boolean, default: false }
 }, { timestamps: true });
 
-CreatorProfileSchema.index({ creatorId: 1 });
 CreatorProfileSchema.index({ customDomain: 1 });
 
 const CreatorProfile: Model<ICreatorProfile> = mongoose.models.CreatorProfile || mongoose.model<ICreatorProfile>('CreatorProfile', CreatorProfileSchema);

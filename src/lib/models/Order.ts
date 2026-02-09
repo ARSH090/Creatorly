@@ -60,7 +60,6 @@ OrderSchema.index({ creatorId: 1, createdAt: -1 });
 OrderSchema.index({ productId: 1 });
 OrderSchema.index({ customerEmail: 1 });
 OrderSchema.index({ status: 1 });
-OrderSchema.index({ razorpayOrderId: 1 });
 
 const Order: Model<IOrder> = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
 export { Order };
