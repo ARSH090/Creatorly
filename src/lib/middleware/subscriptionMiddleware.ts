@@ -7,7 +7,7 @@ import { PlanTier } from '@/lib/models/plan.types';
 // These are placeholders for the logic requested.
 
 export async function enforceFreeTierLimits(userId: string) {
-    const user = await User.findById(userId).populate('activeSubscription');
+    const user = await User.findById(userId).populate('activeSubscription') as any;
     if (!user || !user.activeSubscription) return { allowed: true };
 
     const plan = await Plan.findById(user.activeSubscription.planId);
@@ -27,7 +27,7 @@ export async function enforceFreeTierLimits(userId: string) {
     }
 
     // 3. Team Member Limit
-    if (user.teamMembers && user.teamMembers.length > plan.maxUsers - 1) {
+    if ((user as any).teamMembers && (user as any).teamMembers.length > plan.maxUsers - 1) {
         return { allowed: false, error: 'Free tier supports only 1 user', code: 403 };
     }
 
