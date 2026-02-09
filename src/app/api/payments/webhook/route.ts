@@ -1,6 +1,7 @@
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
 import Subscription from '@/lib/models/Subscription';
+import Booking from '@/lib/models/Booking';
 import ProcessedWebhook from '@/lib/models/ProcessedWebhook';
 import { NextResponse } from 'next/server';
 import {
@@ -76,6 +77,20 @@ export async function POST(req: Request) {
             order.razorpayPaymentId = payment.id;
             order.razorpaySignature = signature;
             await order.save();
+
+            // 4. Handle Booking Confirmation
+            if (order.metadata?.bookingId) {
+                const booking = await Booking.findById(order.metadata.bookingId);
+                if (booking) {
+                    booking.status = 'confirmed';
+                    // Store payment link in booking
+                    booking.meetLink = `https://meet.google.com/placeholder-${booking._id}`; // Placeholder until Google Meet API
+                    await booking.save();
+                    console.log(`📅 Booking ${booking._id} confirmed for order ${order._id}`);
+
+                    // TODO: Trigger Google Calendar Sync / Email Notifications
+                }
+            }
 
             console.log(`✅ Order ${payment.order_id} captured and verified`);
         }

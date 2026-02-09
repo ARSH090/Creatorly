@@ -104,15 +104,13 @@ export async function saveInvoice(orderId: string): Promise<Buffer> {
     customerName: order.customerEmail.split('@')[0],
     customerEmail: order.customerEmail,
     amount: order.amount,
-    gstAmount: Math.floor(order.amount * 0.18),
-    items: [
-      {
-        name: (order.productId as any)?.name || 'Product',
-        quantity: 1,
-        price: order.amount - Math.floor(order.amount * 0.18),
-        total: order.amount - Math.floor(order.amount * 0.18),
-      },
-    ],
+    gstAmount: Math.floor(order.amount - (order.amount / 1.18)), // 18% inclusive GST
+    items: order.items.map((item: any) => ({
+      name: item.name,
+      quantity: item.quantity,
+      price: item.price,
+      total: item.price * item.quantity,
+    })),
     paymentMethod: 'Razorpay',
     paymentDate: order.createdAt,
   };

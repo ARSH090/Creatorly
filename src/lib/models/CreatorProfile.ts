@@ -48,6 +48,30 @@ export interface ICreatorProfile extends Document {
         storefrontEnabled: boolean;
     };
 
+    // Booking & Availability
+    availability: {
+        weeklySchedule: Array<{
+            dayOfWeek: number; // 0-6
+            active: boolean;
+            slots: Array<{
+                start: string; // HH:mm
+                end: string;
+            }>;
+        }>;
+        bufferTime: number; // minutes
+        defaultSlotDuration: number; // minutes
+        googleCalendarId?: string;
+        isGoogleCalendarSyncEnabled: boolean;
+        isBookingEnabled: boolean;
+        googleCalendarTokens?: {
+            access_token?: string;
+            refresh_token?: string;
+            scope?: string;
+            token_type?: string;
+            expiry_date?: number;
+        };
+    };
+
     createdAt: Date;
     updatedAt: Date;
 }
@@ -93,6 +117,29 @@ const CreatorProfileSchema: Schema = new Schema({
         newsletterEnabled: { type: Boolean, default: true },
         commentsEnabled: { type: Boolean, default: true },
         storefrontEnabled: { type: Boolean, default: true }
+    },
+
+    availability: {
+        weeklySchedule: [{
+            dayOfWeek: { type: Number, required: true },
+            active: { type: Boolean, default: true },
+            slots: [{
+                start: { type: String, default: '09:00' },
+                end: { type: String, default: '17:00' }
+            }]
+        }],
+        bufferTime: { type: Number, default: 15 },
+        defaultSlotDuration: { type: Number, default: 30 },
+        googleCalendarId: String,
+        isGoogleCalendarSyncEnabled: { type: Boolean, default: false },
+        isBookingEnabled: { type: Boolean, default: false },
+        googleCalendarTokens: {
+            access_token: String,
+            refresh_token: String,
+            scope: String,
+            token_type: String,
+            expiry_date: Number
+        }
     }
 }, { timestamps: true });
 

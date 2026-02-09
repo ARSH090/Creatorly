@@ -1,7 +1,13 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IOrder extends Document {
-    productId: mongoose.Types.ObjectId;
+    items: Array<{
+        productId: mongoose.Types.ObjectId;
+        name: string;
+        price: number;
+        quantity: number;
+        type: string;
+    }>;
     creatorId: mongoose.Types.ObjectId;
     userId: mongoose.Types.ObjectId;
     customerEmail: string;
@@ -24,12 +30,19 @@ export interface IOrder extends Document {
         processedAt: Date;
         status: 'completed' | 'failed' | 'pending';
     };
+    metadata?: Record<string, any>;
     createdAt: Date;
     updatedAt: Date;
 }
 
 const OrderSchema: Schema = new Schema({
-    productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+    items: [{
+        productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+        name: { type: String, required: true },
+        price: { type: Number, required: true },
+        quantity: { type: Number, default: 1 },
+        type: { type: String, required: true }
+    }],
     creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     customerEmail: { type: String, required: true },
@@ -54,7 +67,9 @@ const OrderSchema: Schema = new Schema({
         reason: { type: String },
         processedAt: { type: Date },
         status: { type: String, enum: ['completed', 'failed', 'pending'] }
-    }
+    },
+
+    metadata: { type: Schema.Types.Mixed, default: {} }
 }, { timestamps: true });
 
 // Indexes for performance
