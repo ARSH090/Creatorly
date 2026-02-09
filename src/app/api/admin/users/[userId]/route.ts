@@ -4,6 +4,7 @@ import User from '@/lib/models/User';
 import { AdminLog } from '@/lib/models/AdminLog';
 import { adminAuthMiddleware, checkAdminPermission } from '@/lib/middleware/adminAuth';
 import { z } from 'zod';
+import type { RouteContext } from '@/lib/types/route-types';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,10 +17,10 @@ const userUpdateSchema = z.object({
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ userId: string }> }
-) {
+  context: RouteContext<{ userId: string }>
+): Promise<Response> {
   try {
-    const { userId } = await params;
+    const { userId } = await context.params;
     const authResult = await adminAuthMiddleware(req);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -50,10 +51,10 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ userId: string }> }
-) {
+  context: RouteContext<{ userId: string }>
+): Promise<Response> {
   try {
-    const { userId } = await params;
+    const { userId } = await context.params;
     const authResult = await adminAuthMiddleware(req);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -118,10 +119,10 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ userId: string }> }
-) {
+  context: RouteContext<{ userId: string }>
+): Promise<Response> {
   try {
-    const { userId } = await params;
+    const { userId } = await context.params;
     const authResult = await adminAuthMiddleware(req);
     if (authResult instanceof NextResponse) {
       return authResult;
