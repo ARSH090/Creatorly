@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import { z } from 'zod';
 import User from '@/lib/models/User';
 import { connectToDatabase } from '@/lib/db/mongodb';
@@ -195,7 +196,7 @@ export async function POST(req: NextRequest) {
       }
 
       const clientIp = getClientIp(req);
-      
+
       await logAdminAction(
         session.id,
         session.email,

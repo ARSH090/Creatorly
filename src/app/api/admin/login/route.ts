@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+export const dynamic = 'force-dynamic';
 import * as crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';

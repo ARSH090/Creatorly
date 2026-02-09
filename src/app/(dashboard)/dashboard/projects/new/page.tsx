@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     ChevronRight, ChevronLeft, Package, FileText,
     Youtube, Users, Calendar, Banknote, Sparkles,
@@ -9,6 +9,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import AntiGravityUpload from '@/components/dashboard/AntiGravityUpload';
 
 interface Lesson {
     id: string;
@@ -110,6 +111,49 @@ export default function NewProductWizard() {
         if (currentStep > 0) setCurrentStep(c => c - 1);
     };
 
+    const [productId, setProductId] = useState<string | null>(null);
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+
+    // Anti-Gravity Auto-save logic
+    useEffect(() => {
+        if (currentStep === 0) return; // Don't save before type is selected
+
+        const saveTimeout = setTimeout(async () => {
+            if (!user) return;
+
+            try {
+                const payload = {
+                    ...formData,
+                    price: Number(formData.price) || 0,
+                    isActive: false // Drafts are always inactive
+                };
+
+                if (productId) {
+                    await fetch(`/api/products/${productId}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    const res = await fetch('/api/products', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                        const data = await res.json();
+                        setProductId(data.productId);
+                    }
+                }
+                setLastSaved(new Date());
+            } catch (err) {
+                console.error('Auto-save failed:', err);
+            }
+        }, 10000); // Save every 10 seconds
+
+        return () => clearTimeout(saveTimeout);
+    }, [formData, user, productId, currentStep]);
+
     const handleTypeSelect = (type: ProductFormData['type']) => {
         setFormData({ ...formData, type });
         handleNext();
@@ -118,19 +162,22 @@ export default function NewProductWizard() {
     const handlePublish = async () => {
         try {
             setIsPublishing(true);
-            const response = await fetch('/api/products', {
-                method: 'POST',
+
+            const url = productId ? `/api/products/${productId}` : '/api/products';
+            const method = productId ? 'PATCH' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...formData,
                     price: Number(formData.price),
-                    creatorId: user?.uid || 'mock-id'
+                    isActive: true // Make it live
                 }),
             });
 
             if (!response.ok) throw new Error('Failed to publish product');
 
-            // Redirect to projects list on success
             router.push('/dashboard/projects');
             router.refresh();
         } catch (error) {
@@ -323,18 +370,18 @@ export default function NewProductWizard() {
 
                                     {formData.type === 'digital' ? (
                                         <div className="max-w-2xl mx-auto w-full space-y-6">
-                                            <div className="aspect-video bg-white/5 rounded-[2.5rem] border border-dashed border-white/10 flex flex-col items-center justify-center p-8 text-center group cursor-pointer hover:border-indigo-500/50 transition-colors">
-                                                <div className="w-20 h-20 bg-indigo-500/10 rounded-3xl flex items-center justify-center mb-6">
-                                                    <Upload className="w-10 h-10 text-indigo-400" />
-                                                </div>
-                                                <h3 className="text-xl font-bold">Upload Digital Asset</h3>
-                                                <p className="text-zinc-500 font-medium mt-2 max-w-xs mx-auto">
-                                                    Drag and drop your ZIP, PDF, or Video file here. (Max 2GB)
-                                                </p>
-                                                <button className="mt-8 bg-white/10 px-8 py-3 rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white/20 transition-all">
-                                                    Browse Files
-                                                </button>
-                                            </div>
+                                            <AntiGravityUpload
+                                                type={`products/${formData.type}`}
+                                                onUploadComplete={(url, key, meta) => {
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        files: [...prev.files, { name: meta.name, url, size: meta.size, mimeType: meta.mimeType }]
+                                                    }));
+                                                }}
+                                                onUploadError={(err) => {
+                                                    console.error('Upload Error:', err);
+                                                }}
+                                            />
 
                                             <div className="bg-white/[0.02] rounded-2xl p-6 flex items-center justify-between border border-white/5">
                                                 <div className="flex items-center gap-4">
@@ -479,6 +526,12 @@ export default function NewProductWizard() {
                                                 )}
                                                 {isPublishing ? 'Publishing...' : 'Publish Product'}
                                             </button>
+
+                                            {lastSaved && (
+                                                <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest text-center mt-4">
+                                                    Draft Auto-saved at {lastSaved.toLocaleTimeString()}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

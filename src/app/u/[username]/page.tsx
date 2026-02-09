@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
 import ProductModel, { IProduct } from '@/lib/models/Product';
@@ -10,6 +11,8 @@ import ProductGrid from '@/components/storefront/ProductGrid';
 
 import { getCurrentUser } from '@/lib/firebase/server-auth';
 import Order from '@/lib/models/Order';
+import NewsletterSignup from '@/components/storefront/NewsletterSignup';
+import { ProductGridSkeleton } from '@/components/storefront/ProductSkeleton';
 
 export const dynamic = 'force-dynamic';
 
@@ -97,7 +100,7 @@ export default async function CreatorStorefront({ params }: { params: { username
 
     return (
         <div
-            className="min-h-screen"
+            className="min-h-screen selection:bg-indigo-500/30 overflow-x-hidden"
             style={{
                 backgroundColor: theme.backgroundColor,
                 color: theme.textColor,
@@ -106,7 +109,24 @@ export default async function CreatorStorefront({ params }: { params: { username
         >
             <StoreHeader creator={plainCreator} />
 
-            <main className="max-w-4xl mx-auto px-6 pt-32 pb-12 space-y-16">
+            <main className="max-w-4xl mx-auto px-6 pt-32 pb-12 space-y-16 relative">
+                {/* Intent/View Tracker (Anti-Gravity) */}
+                <script
+                    dangerouslySetInnerHTML={{
+                        __html: `
+                        fetch('/api/analytics/view', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ 
+                                type: 'bio_page', 
+                                creatorId: '${creator._id}',
+                                path: window.location.pathname,
+                                referrer: document.referrer
+                            })
+                        }).catch(() => {});
+                    `}}
+                />
+
                 {/* Hero / Bio Section */}
                 <CreatorBio creator={plainCreator} />
 
@@ -117,19 +137,28 @@ export default async function CreatorStorefront({ params }: { params: { username
                         <div className="h-px flex-1 bg-white/10 mx-6 hidden md:block" />
                     </div>
 
-                    <ProductGrid
-                        products={plainProducts}
-                        purchasedProductIds={purchasedProductIds}
-                        creator={{
-                            id: creator._id.toString(),
-                            username: creator.username,
-                            displayName: creator.displayName
-                        }}
-                        theme={theme}
-                    />
+                    <Suspense fallback={<ProductGridSkeleton />}>
+                        <ProductGrid
+                            products={plainProducts}
+                            purchasedProductIds={purchasedProductIds}
+                            creator={{
+                                id: creator._id.toString(),
+                                username: creator.username,
+                                displayName: creator.displayName
+                            }}
+                            theme={theme}
+                        />
+                    </Suspense>
                 </section>
 
-                {/* Newsletter / Footer Section */}
+                {/* Newsletter Section */}
+                {profile?.features?.newsletterEnabled !== false && (
+                    <section id="newsletter" className="max-w-xl mx-auto">
+                        <NewsletterSignup creatorId={creator._id.toString()} theme={theme} />
+                    </section>
+                )}
+
+                {/* Footer Section */}
                 <footer className="pt-20 pb-10 text-center border-t border-white/5">
                     <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em]">
                         Powered by Creatorly

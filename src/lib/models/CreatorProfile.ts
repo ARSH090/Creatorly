@@ -41,6 +41,13 @@ export interface ICreatorProfile extends Document {
     customDomain?: string;
     isCustomDomainVerified: boolean;
 
+    // Feature Toggles
+    features: {
+        newsletterEnabled: boolean;
+        commentsEnabled: boolean;
+        storefrontEnabled: boolean;
+    };
+
     createdAt: Date;
     updatedAt: Date;
 }
@@ -80,7 +87,13 @@ const CreatorProfileSchema: Schema = new Schema({
     }],
 
     customDomain: { type: String, sparse: true },
-    isCustomDomainVerified: { type: Boolean, default: false }
+    isCustomDomainVerified: { type: Boolean, default: false },
+
+    features: {
+        newsletterEnabled: { type: Boolean, default: true },
+        commentsEnabled: { type: Boolean, default: true },
+        storefrontEnabled: { type: Boolean, default: true }
+    }
 }, { timestamps: true });
 
 CreatorProfileSchema.index({ customDomain: 1 });
