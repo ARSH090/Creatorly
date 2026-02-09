@@ -8,6 +8,10 @@ import StoreHeader from '@/components/storefront/StoreHeader';
 import CreatorBio from '@/components/storefront/CreatorBio';
 import ProductGrid from '@/components/storefront/ProductGrid';
 
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth/authOptions';
+import Order from '@/lib/models/Order';
+
 export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: { username: string } }): Promise<Metadata> {
@@ -45,6 +49,19 @@ export default async function CreatorStorefront({ params }: { params: { username
 
     const profile = await CreatorProfile.findOne({ creatorId: creator._id });
     const products = await ProductModel.find({ creatorId: creator._id, isActive: true }).sort({ isFeatured: -1, createdAt: -1 }) as IProduct[];
+
+    // Fetch user's purchased products for this creator
+    const session = await getServerSession(authOptions);
+    let purchasedProductIds: string[] = [];
+
+    if (session?.user) {
+        const orders = await Order.find({
+            userId: (session.user as any).id,
+            creatorId: creator._id,
+            status: 'success'
+        });
+        purchasedProductIds = orders.map(o => o.productId.toString());
+    }
 
     // Standardize theme with defaults
     const theme = profile?.theme || {
@@ -103,6 +120,7 @@ export default async function CreatorStorefront({ params }: { params: { username
 
                     <ProductGrid
                         products={plainProducts}
+                        purchasedProductIds={purchasedProductIds}
                         creator={{
                             id: creator._id.toString(),
                             username: creator.username,

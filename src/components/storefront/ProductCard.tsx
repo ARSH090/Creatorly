@@ -25,14 +25,26 @@ interface ProductCardProps {
         displayName: string;
     };
     theme: any;
+    hasAccess?: boolean;
 }
 
-export default function ProductCard({ product, creator, theme }: ProductCardProps) {
+export default function ProductCard({ product, creator, theme, hasAccess }: ProductCardProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const router = useRouter();
 
-    const handleCheckout = async () => {
+    const handleAction = async () => {
+        if (hasAccess) {
+            if (product.type === 'course') {
+                router.push(`/u/${creator.username}/learn/${product.id}`); // Using ID for robust routing
+            } else if (product.type === 'membership') {
+                router.push(`/u/${creator.username}/community`);
+            } else {
+                router.push(`/u/${creator.username}/success/${product.id}`); // Re-download
+            }
+            return;
+        }
+
         try {
             setIsCheckingOut(true);
 
@@ -143,7 +155,7 @@ export default function ProductCard({ product, creator, theme }: ProductCardProp
                             className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-8 z-20"
                         >
                             <button
-                                onClick={handleCheckout}
+                                onClick={handleAction}
                                 disabled={isCheckingOut}
                                 className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl disabled:opacity-50"
                                 style={{
@@ -154,10 +166,14 @@ export default function ProductCard({ product, creator, theme }: ProductCardProp
                             >
                                 {isCheckingOut ? (
                                     <Loader2 className="w-5 h-5 animate-spin" />
+                                ) : hasAccess ? (
+                                    product.type === 'course' ? <Play className="w-5 h-5 fill-white" /> :
+                                        product.type === 'membership' ? <Users className="w-5 h-5" /> :
+                                            <ShoppingBag className="w-5 h-5" />
                                 ) : (
                                     <ShoppingBag className="w-5 h-5" />
                                 )}
-                                {isCheckingOut ? 'Processing...' : 'Get Access Now'}
+                                {isCheckingOut ? 'Processing...' : (hasAccess ? (product.type === 'course' ? 'Start Learning' : product.type === 'membership' ? 'Join Community' : 'Download Now') : 'Get Access Now')}
                             </button>
                         </motion.div>
                     )}

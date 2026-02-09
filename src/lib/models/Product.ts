@@ -8,6 +8,21 @@ export interface IProductFile {
     downloadLimit?: number;
 }
 
+export interface ILesson {
+    id: string;
+    title: string;
+    type: 'video' | 'text' | 'quiz' | 'file';
+    content: string; // URL for video/file, Markdown for text, JSON for quiz
+    duration?: string;
+    isFreePreview?: boolean;
+}
+
+export interface IModule {
+    id: string;
+    title: string;
+    lessons: ILesson[];
+}
+
 export interface IProduct extends Document {
     creatorId: mongoose.Types.ObjectId;
     name: string;
@@ -24,9 +39,16 @@ export interface IProduct extends Document {
     // Multi-type support
     type: 'digital' | 'course' | 'membership' | 'physical' | 'coaching';
 
+    // Pricing & Billing
+    billingCycle?: 'monthly' | 'yearly';
+    razorpayPlanId?: string;
+
     // Assets & Delivery
     files: IProductFile[];
     digitalFileUrl?: string; // Legacy support
+
+    // Course Specific
+    curriculum?: IModule[];
 
     // Logic & Scheduling
     accessRules: {
@@ -75,6 +97,12 @@ const ProductSchema: Schema = new Schema({
         index: true
     },
 
+    billingCycle: {
+        type: String,
+        enum: ['monthly', 'yearly'],
+    },
+    razorpayPlanId: String,
+
     files: [{
         name: { type: String, required: true },
         url: { type: String, required: true },
@@ -82,7 +110,20 @@ const ProductSchema: Schema = new Schema({
         mimeType: String,
         downloadLimit: { type: Number, default: 0 } // 0 = unlimited
     }],
-    digitalFileUrl: { type: String }, // Keep for backward compat
+    digitalFileUrl: { type: String },
+
+    curriculum: [{
+        id: String,
+        title: String,
+        lessons: [{
+            id: String,
+            title: String,
+            type: { type: String, enum: ['video', 'text', 'quiz', 'file'], default: 'video' },
+            content: String,
+            duration: String,
+            isFreePreview: { type: Boolean, default: false }
+        }]
+    }],
 
     accessRules: {
         immediateAccess: { type: Boolean, default: true },

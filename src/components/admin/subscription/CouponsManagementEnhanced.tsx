@@ -16,6 +16,7 @@ import {
     MenuItem,
     FormControlLabel,
     Switch,
+    Grid,
     Typography,
     Box,
     Divider,
@@ -23,7 +24,6 @@ import {
     Alert,
     Autocomplete
 } from '@mui/material';
-import Grid from '@mui/material/Grid';
 import {
     Add as AddIcon,
     Edit as EditIcon,
@@ -184,9 +184,9 @@ export default function CouponsManagementEnhanced() {
                 <DialogContent dividers>
                     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-                    <Grid container spacing={3}>
-                        <Grid item xs={12}><Typography variant="subtitle2" color="primary">Section 1: Coupon Details</Typography></Grid>
-                        <Grid item xs={12} sm={6}>
+                    <Box sx={{ display: 'grid', gap: 3 }}>
+                        <Typography variant="subtitle2" color="primary">Section 1: Coupon Details</Typography>
+                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
                             <TextField
                                 fullWidth label="Coupon Code" required
                                 value={formData.code}
@@ -194,15 +194,11 @@ export default function CouponsManagementEnhanced() {
                                 disabled={!!editingCoupon}
                                 helperText="Uppercase, no spaces"
                             />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth label="Description"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                             />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
                             <TextField
                                 select fullWidth label="Discount Type" required
                                 value={formData.discountType}
@@ -211,18 +207,16 @@ export default function CouponsManagementEnhanced() {
                                 <MenuItem value="percentage">Percentage (%)</MenuItem>
                                 <MenuItem value="fixed_amount">Fixed Amount (₹)</MenuItem>
                             </TextField>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth type="number" label="Discount Value" required
                                 value={formData.discountValue}
                                 onChange={(e) => setFormData({ ...formData, discountValue: Number(e.target.value) })}
                             />
-                        </Grid>
+                        </Box>
 
-                        <Grid item xs={12}><Divider /></Grid>
-                        <Grid item xs={12}><Typography variant="subtitle2" color="primary">Section 2: Applicability Rules</Typography></Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Divider />
+                        <Typography variant="subtitle2" color="primary">Section 2: Applicability Rules</Typography>
+                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr' } }}>
                             <TextField
                                 select fullWidth label="Applies To"
                                 value={formData.appliesTo}
@@ -232,82 +226,72 @@ export default function CouponsManagementEnhanced() {
                                 <MenuItem value="specific_plans">Specific Plans</MenuItem>
                                 <MenuItem value="specific_tiers">Specific Tiers</MenuItem>
                             </TextField>
-                        </Grid>
-                        <Grid item xs={12} sm={8}>
-                            {formData.appliesTo === 'specific_plans' && (
-                                <Autocomplete
-                                    multiple
-                                    options={plans}
-                                    getOptionLabel={(option: any) => option.name}
-                                    value={plans.filter((p: any) => formData.applicablePlanIds.includes(p._id))}
-                                    onChange={(_, newValue) => setFormData({ ...formData, applicablePlanIds: newValue.map((v: any) => v._id) })}
-                                    renderInput={(params) => <TextField {...params} label="Select Plans" />}
-                                />
-                            )}
-                            {formData.appliesTo === 'specific_tiers' && (
-                                <Autocomplete
-                                    multiple
-                                    options={['basic', 'pro', 'enterprise']}
-                                    value={formData.applicableTiers}
-                                    onChange={(_, newValue) => setFormData({ ...formData, applicableTiers: newValue })}
-                                    renderInput={(params) => <TextField {...params} label="Select Tiers" />}
-                                />
-                            )}
-                        </Grid>
+                            <Box>
+                                {formData.appliesTo === 'specific_plans' && (
+                                    <Autocomplete
+                                        multiple
+                                        options={plans}
+                                        getOptionLabel={(option: any) => option.name}
+                                        value={plans.filter((p: any) => formData.applicablePlanIds.includes(p._id))}
+                                        onChange={(_, newValue) => setFormData({ ...formData, applicablePlanIds: newValue.map((v: any) => v._id) })}
+                                        renderInput={(params) => <TextField {...params} label="Select Plans" />}
+                                    />
+                                )}
+                                {formData.appliesTo === 'specific_tiers' && (
+                                    <Autocomplete
+                                        multiple
+                                        options={['basic', 'pro', 'enterprise']}
+                                        value={formData.applicableTiers}
+                                        onChange={(_, newValue) => setFormData({ ...formData, applicableTiers: newValue })}
+                                        renderInput={(params) => <TextField {...params} label="Select Tiers" />}
+                                    />
+                                )}
+                            </Box>
+                        </Box>
 
-                        <Grid item xs={12}><Divider /></Grid>
-                        <Grid item xs={12}><Typography variant="subtitle2" color="primary">Section 3: Usage Restrictions</Typography></Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Divider />
+                        <Typography variant="subtitle2" color="primary">Section 3: Usage Restrictions</Typography>
+                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' } }}>
                             <TextField
                                 fullWidth type="number" label="Max Total Uses" required
                                 value={formData.maxUses}
                                 onChange={(e) => setFormData({ ...formData, maxUses: Number(e.target.value) })}
                             />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
                             <TextField
                                 fullWidth type="number" label="Uses Per User" required
                                 value={formData.maxUsesPerUser}
                                 onChange={(e) => setFormData({ ...formData, maxUsesPerUser: Number(e.target.value) })}
                             />
-                        </Grid>
-                        <Grid item xs={12} sm={4}>
                             <TextField
                                 fullWidth type="number" label="Min Purchase Amt (₹)"
                                 value={formData.minimumPurchaseAmount}
                                 onChange={(e) => setFormData({ ...formData, minimumPurchaseAmount: Number(e.target.value) })}
                             />
-                        </Grid>
+                        </Box>
 
-                        <Grid item xs={12}><Divider /></Grid>
-                        <Grid item xs={12}><Typography variant="subtitle2" color="primary">Section 4: Validity & Advanced</Typography></Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Divider />
+                        <Typography variant="subtitle2" color="primary">Section 4: Validity & Advanced</Typography>
+                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
                             <TextField
                                 fullWidth type="date" label="Valid From" InputLabelProps={{ shrink: true }}
                                 value={formData.validFrom}
                                 onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
                             />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
                             <TextField
                                 fullWidth type="date" label="Valid Until" required InputLabelProps={{ shrink: true }}
                                 value={formData.validUntil}
                                 onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
                             />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
                             <FormControlLabel
                                 control={<Switch checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />}
                                 label="Is Active"
                             />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
                             <FormControlLabel
                                 control={<Switch checked={formData.cannotCombineWithOtherCoupons} onChange={(e) => setFormData({ ...formData, cannotCombineWithOtherCoupons: e.target.checked })} />}
                                 label="Cannot Combine Coupons"
                             />
-                        </Grid>
-                    </Grid>
+                        </Box>
+                    </Box>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClose}>Cancel</Button>

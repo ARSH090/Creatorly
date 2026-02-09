@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 
 interface ProductGridProps {
     products: any[];
+    purchasedProductIds: string[];
     creator: {
         id: string;
         username: string;
@@ -14,7 +15,7 @@ interface ProductGridProps {
     theme: any;
 }
 
-export default function ProductGrid({ products, creator, theme }: ProductGridProps) {
+export default function ProductGrid({ products, purchasedProductIds, creator, theme }: ProductGridProps) {
     if (!products.length) {
         return (
             <div className="text-center py-20 bg-white/5 rounded-3xl border border-dashed border-white/10">
@@ -26,7 +27,13 @@ export default function ProductGrid({ products, creator, theme }: ProductGridPro
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {products.map((product) => (
-                <ProductCard key={product.id} product={product} creator={creator} theme={theme} />
+                <ProductCard
+                    key={product.id}
+                    product={product}
+                    creator={creator}
+                    theme={theme}
+                    hasAccess={purchasedProductIds.includes(product.id)}
+                />
             ))}
         </div>
     );

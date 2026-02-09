@@ -6,6 +6,12 @@ import { ArrowRight, Sparkles, Shield, Zap } from "lucide-react";
 import Link from "next/link";
 
 export default function HeroSection() {
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
     return (
         <section className="relative overflow-hidden min-h-screen flex items-center bg-[#030303]">
             {/* Background Gradient - Adapted for Dark Mode to match existing theme */}
@@ -13,7 +19,7 @@ export default function HeroSection() {
 
             {/* Animated Particles */}
             <div className="absolute inset-0 pointer-events-none">
-                {[...Array(20)].map((_, i) => (
+                {mounted && [...Array(20)].map((_, i) => (
                     <motion.div
                         key={i}
                         className="absolute w-1 h-1 bg-indigo-500/30 rounded-full"
