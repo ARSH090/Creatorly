@@ -1,40 +1,44 @@
-# Creatorly: The Operating System for Indian Creators
+# Creatorly
 
-Welcome to **Creatorly**, an enterprise-grade social commerce platform built specifically for the Indian creator economy. Designed to handle 1M+ creators and millions of concurrent users with sub-second performance.
+The ultimate platform for digital creators.
 
-## 🇮🇳 Built for Bharat
+## Overview
+Creatorly is a headless-first digital commerce platform designed for performance, security, and scalability. It enables creators to manage products, subscriptions, and customers with ease.
 
-Creatorly isn't just a store; it's a financial and social tech rail for Indian entrepreneurs.
+## Quick Start
+1. **Setup Environment**: Copy `.env.example` to `.env.local` and fill in the required keys.
+2. **Install Dependencies**: `npm install`
+3. **Run Development Server**: `npm run dev`
+4. **Access Admin Panel**: Go to `/admin/dashboard`
 
-- **Unified UPI Checkout**: Direct-to-bank UPI deep-linking for PhonePe, GPay, and Paytm.
-- **AI Indian Market Intelligence**: Dynamic pricing suggestions for Tier 1, 2, and 3 cities.
-- **GST Compliance (SGST/CGST/IGST)**: Built-in tax engine for Indian compliance.
-- **WhatsApp-Centric Automation**: Automated checkout notifications via India's #1 communication app.
-- **Premium Bharat Design System**: High-fidelity Indian aesthetic using Saffron and Indian Green accents.
+## Documentation
+For complete technical details, API references, and deployment guides, please refer to the **[Master Playbook](MASTER_PLAYBOOK.md)**.
 
-## 🛠️ High-Scale Tech Stack
-
-- **Frontend**: Next.js 15 (App Router, Server Components)
-- **Styling**: Tailwind CSS + Custom Design Tokens
-- **Logic**: TypeScript with strict Indian regulatory models
-- **Payments**: Bharat UPI Deep Link Protocol
-- **Intelligence**: Custom AI Market Reasoning (lib/ai)
-
----
-
-## 👨‍💻 Ownership & Credits
-
-**Built by Md Arsh Eqbal**
-
-This project is a flagship implementation representing professional, production-ready software for the Indian market.
+## Key Features
+- **Subscription Management**: Tier-based access with strict price protection.
+- **Digital Storefront**: Premium product listing and sales analytics.
+- **Advanced Security**: 2FA, Rate Limiting, and Fraud Detection.
+- **Headless API**: v1 REST API for custom integrations.
 
 ---
 
-## 🚀 Getting Started
+## 🏗️ Architecture
 
-```bash
-npm install
-npm run dev
-```
+- **`src/app`**: Route constraints (App Router).
+- **`src/components`**: Reusable UI components.
+- **`src/lib`**: Utilities, DB connection, and Models.
+- **`src/hooks`**: Custom React hooks.
+- **`public`**: Static assets.
 
-Dashboard Access: Toggle `isDashboardView` in `app/page.tsx` to switch between management and storefront views.
+## 🧪 Commands
+
+| Command | Description |
+| :--- | :--- |
+| `npm run dev` | Start development server |
+| `npm run build` | Build for production |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
+| `npm run test` | Run unit tests |
+
+---
+© 2026 Creatorly Team

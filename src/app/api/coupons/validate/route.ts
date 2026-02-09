@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check usage limits
-        if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+        if (coupon.maxUses && coupon.currentUses >= coupon.maxUses) {
             return NextResponse.json(
                 { error: 'Coupon usage limit reached' },
                 { status: 400 }
@@ -61,10 +61,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Check minimum purchase amount
-        if (coupon.minPurchaseAmount && cartTotal < coupon.minPurchaseAmount) {
+        if (coupon.minimumPurchaseAmount && cartTotal < coupon.minimumPurchaseAmount) {
             return NextResponse.json(
                 {
-                    error: `Minimum purchase amount is ₹${(coupon.minPurchaseAmount / 100).toFixed(2)}`,
+                    error: `Minimum purchase amount is ₹${(coupon.minimumPurchaseAmount / 100).toFixed(2)}`,
                 },
                 { status: 400 }
             );
@@ -88,9 +88,6 @@ export async function POST(request: NextRequest) {
         }
 
         // Apply max discount cap if set
-        if (coupon.maxDiscountAmount) {
-            discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
-        }
 
         // Ensure discount doesn't exceed cart total
         discountAmount = Math.min(discountAmount, cartTotal);
@@ -145,16 +142,16 @@ export async function GET(request: NextRequest) {
         }
 
         const coupons = await Coupon.find(query)
-            .select('code description discountType discountValue minPurchaseAmount')
+            .select('code description discountType discountValue minimumPurchaseAmount')
             .limit(50);
 
         return NextResponse.json({
-            coupons: coupons.map((c) => ({
+            coupons: coupons.map((c: any) => ({
                 code: c.code,
                 description: c.description,
                 discountType: c.discountType,
                 discountValue: c.discountValue,
-                minPurchaseAmount: c.minPurchaseAmount,
+                minimumPurchaseAmount: c.minimumPurchaseAmount,
             })),
         });
     } catch (error) {

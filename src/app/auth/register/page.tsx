@@ -1,12 +1,13 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Logo from '@/components/Logo';
 
 function RegisterFormContent() {
     const [formData, setFormData] = useState({
-        username: '',
         email: '',
         password: '',
         displayName: '',
@@ -37,21 +38,6 @@ function RegisterFormContent() {
             setLoading(false);
             return;
         }
-        if (!formData.username.trim()) {
-            setError('Choose a username for your profile');
-            setLoading(false);
-            return;
-        }
-        if (formData.username.length < 3) {
-            setError('Username must be at least 3 characters');
-            setLoading(false);
-            return;
-        }
-        if (!/^[a-z0-9_-]+$/.test(formData.username)) {
-            setError('Username can only contain letters, numbers, hyphens, and underscores');
-            setLoading(false);
-            return;
-        }
         if (!formData.email.includes('@')) {
             setError('Please enter a valid email address');
             setLoading(false);
@@ -78,10 +64,25 @@ function RegisterFormContent() {
                 return;
             }
 
-            setSuccess('Account created! Redirecting to login...');
-            setTimeout(() => {
-                router.push('/auth/login?registered=true');
-            }, 1500);
+            // Auto sign-in after successful registration for smoother UX
+            const signInResult = await signIn('credentials', {
+                redirect: false,
+                email: formData.email,
+                password: formData.password,
+            });
+
+            if (signInResult?.error) {
+                // If auto sign-in failed, redirect to login with helpful message
+                setSuccess('Account created. Please sign in.');
+                setTimeout(() => {
+                    router.push('/auth/login?registered=true');
+                }, 1200);
+                setLoading(false);
+                return;
+            }
+
+            // Successful sign in -> redirect to dashboard
+            router.push('/dashboard');
         } catch (err: any) {
             setError(err.message || 'An error occurred. Please try again.');
             setLoading(false);
@@ -89,101 +90,77 @@ function RegisterFormContent() {
     };
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
             {error && (
-                <div className="bg-red-50 text-red-700 p-4 rounded-2xl text-sm font-bold border border-red-200">
+                <div className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-sm font-bold border border-red-500/20 animate-in fade-in slide-in-from-top-2">
                     ✗ {error}
                 </div>
             )}
 
             {success && (
-                <div className="bg-green-50 text-green-700 p-4 rounded-2xl text-sm font-bold border border-green-200">
+                <div className="bg-emerald-500/10 text-emerald-400 p-4 rounded-2xl text-sm font-bold border border-emerald-500/20 animate-in fade-in slide-in-from-top-2">
                     ✓ {success}
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Your Name</label>
-                    <input
-                        type="text"
-                        required
-                        autoComplete="name"
-                        className="w-full px-5 py-3 bg-slate-100 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white outline-none transition-all font-medium text-slate-900 placeholder-slate-500"
-                        placeholder="Priya Sharma"
-                        value={formData.displayName}
-                        onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                    />
-                    <p className="text-xs text-slate-600 mt-1">This is how creators will see your name</p>
-                </div>
-
-                <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Your Username</label>
-                    <div className="flex items-center bg-slate-100 border border-slate-300 rounded-2xl px-5 py-3 focus-within:ring-2 focus-within:ring-orange-500 focus-within:border-orange-500 focus-within:bg-white transition-all">
-                        <span className="text-slate-600 font-medium">creatorly.link/</span>
+            <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="space-y-2">
+                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Identity</label>
                         <input
                             type="text"
                             required
-                            autoComplete="username"
-                            className="flex-1 bg-transparent outline-none font-medium text-slate-900 placeholder-slate-500"
-                            placeholder="priya"
-                            value={formData.username}
-                            onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
-                        />
-                    </div>
-                    <p className="text-xs text-slate-600 mt-1">3-20 characters. This is your unique link</p>
+                            autoComplete="name"
+                            className="w-full px-5 py-4 bg-white/3 border border-white/8 rounded-4xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
+                        placeholder="Full Name (e.g. Priya Sharma)"
+                        value={formData.displayName}
+                        onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                    />
                 </div>
 
-                <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Email Address</label>
-                    <input
-                        type="email"
-                        required
-                        autoComplete="email"
-                        className="w-full px-5 py-3 bg-slate-100 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white outline-none transition-all font-medium text-slate-900 placeholder-slate-500"
-                        placeholder="priya@example.com"
+                <div className="space-y-2">
+                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Connectivity</label>
+                        <input
+                            type="email"
+                            required
+                            autoComplete="email"
+                            className="w-full px-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
+                        placeholder="Email Address"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
-                    <p className="text-xs text-slate-600 mt-1">We'll send a confirmation link here</p>
                 </div>
 
-                <div>
-                    <label className="block text-sm font-bold text-slate-900 mb-2">Password</label>
-                    <input
-                        type="password"
-                        required
-                        autoComplete="new-password"
-                        className="w-full px-5 py-3 bg-slate-100 border border-slate-300 rounded-2xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 focus:bg-white outline-none transition-all font-medium text-slate-900 placeholder-slate-500"
+                <div className="space-y-2">
+                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Security</label>
+                        <input
+                            type="password"
+                            required
+                            autoComplete="new-password"
+                            className="w-full px-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
                         placeholder="••••••••"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     />
-                    <p className="text-xs text-slate-600 mt-1">At least 6 characters. Keep it secure!</p>
                 </div>
 
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-4 mt-6 bg-linear-to-r from-orange-600 to-pink-600 text-white rounded-2xl font-bold text-lg hover:shadow-lg hover:scale-105 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-4 mt-4 bg-white text-black rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-zinc-200 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(255,255,255,0.1)]"
                 >
                     {loading ? (
                         <span className="flex items-center justify-center gap-2">
-                            <span className="animate-spin">⏳</span> Creating your account...
+                            <span className="animate-spin text-lg">⏳</span> Initializing...
                         </span>
                     ) : (
-                        '🚀 Get Started for Free'
+                        'Claim Your Storefront'
                     )}
                 </button>
 
-                <p className="text-xs text-slate-600 text-center">
-                    By signing up, you agree to our {' '}
-                    <Link href="/terms-of-service" className="text-orange-600 font-bold hover:text-orange-700">
-                        Terms
-                    </Link>
-                    {' '} and {' '}
-                    <Link href="/privacy-policy" className="text-orange-600 font-bold hover:text-orange-700">
-                        Privacy Policy
+                <p className="text-[10px] text-zinc-500 text-center font-bold uppercase tracking-wider">
+                    Registration indicates acceptance of our {' '}
+                    <Link href="/terms-of-service" className="text-white hover:underline">
+                        Legal Terms
                     </Link>
                 </p>
             </form>
@@ -193,134 +170,69 @@ function RegisterFormContent() {
 
 export default function RegisterPage() {
     return (
-        <div className="min-h-screen bg-white text-slate-900">
-            {/* Top Navigation */}
-            <div className="border-b border-slate-200">
-                <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-                    <Link href="/" className="text-xl font-black bg-linear-to-r from-orange-600 to-pink-600 bg-clip-text text-transparent">
-                        Creatorly
-                    </Link>
-                    <div className="text-sm text-slate-600">
-                        Already have an account? {' '}
-                        <Link href="/auth/login" className="font-bold text-orange-600 hover:text-orange-700">
-                            Log in
-                        </Link>
-                    </div>
-                </div>
-            </div>
+        <div className="min-h-screen bg-[#030303] text-zinc-400 selection:bg-indigo-500/30 font-sans antialiased overflow-x-hidden">
+            {/* Background Noise & Grid */}
+            <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3%3Ffilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
 
-            <div className="grid md:grid-cols-2 min-h-[calc(100vh-80px)]">
-                {/* Left: Sign-up form */}
-                <div className="flex items-center justify-center p-6 sm:p-8 bg-white">
-                    <div className="w-full max-w-md">
-                        <div className="mb-8">
-                            <h1 className="text-3xl sm:text-4xl font-black text-slate-900 mb-3">
-                                Build Your Creator Store
-                            </h1>
-                            <p className="text-lg text-slate-600">
-                                Join creators earning ₹2L+ monthly selling directly to their audience
-                            </p>
+            {/* Top Navigation moved to global Header for consistent spacing */}
+
+            <main className="relative z-10 pt-20 pb-12 px-6">
+                <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-20 items-center">
+                    {/* Left: Branding Content */}
+                    <div className="hidden md:block">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/8 bg-white/2 mb-8">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+                            </span>
+                            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em]">Scale Your Influence</span>
                         </div>
 
-                        <Suspense fallback={<div className="text-center text-slate-600">Loading...</div>}>
-                            <RegisterFormContent />
-                        </Suspense>
+                        <h1 className="text-5xl lg:text-7xl font-medium tracking-tighter text-white leading-[0.9] mb-8">
+                            Join the <br />
+                            <span className="text-zinc-600 italic">top 1%</span> creators.
+                        </h1>
 
-                        <div className="mt-8 pt-8 border-t border-slate-200">
-                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mb-4">What you get</p>
-                            <ul className="space-y-3 text-sm">
-                                <li className="flex items-start gap-3">
-                                    <span className="text-lg mt-0.5">🔗</span>
-                                    <span className="text-slate-700"><strong>Custom Bio Link</strong> - Share one link everywhere</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <span className="text-lg mt-0.5">💰</span>
-                                    <span className="text-slate-700"><strong>Instant Payouts</strong> - Get paid within 24 hours</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <span className="text-lg mt-0.5">📊</span>
-                                    <span className="text-slate-700"><strong>Real Analytics</strong> - See what sells</span>
-                                </li>
-                                <li className="flex items-start gap-3">
-                                    <span className="text-lg mt-0.5">🎨</span>
-                                    <span className="text-slate-700"><strong>No Design Skills</strong> - Pre-made templates ready to use</span>
-                                </li>
-                            </ul>
+                        <div className="space-y-8 mt-12">
+                            {[
+                                { t: 'Unified Infrastructure', d: 'One dashboard to manage products, payments, and settlements.' },
+                                { t: 'Zero Platform Tax', d: 'Keep 100% of your earnings (minus standard gateway fees).' },
+                                { t: 'Enterprise Security', d: 'Your data and revenue protected by military-grade encryption.' }
+                            ].map((item, i) => (
+                                <div key={i} className="flex gap-4 group">
+                                    <div className="mt-1 w-5 h-5 rounded-full border border-white/20 flex items-center justify-center text-zinc-600 font-bold text-[10px]">
+                                        0{i + 1}
+                                    </div>
+                                    <div>
+                                        <h4 className="font-bold text-white mb-1 uppercase tracking-widest text-[11px]">{item.t}</h4>
+                                        <p className="text-sm text-zinc-500 leading-relaxed">{item.d}</p>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                </div>
 
-                {/* Right: Social Proof and Benefits */}
-                <div className="hidden md:flex flex-col items-center justify-center p-8 bg-linear-to-br from-orange-50 via-pink-50 to-purple-50">
-                    <div className="max-w-md">
-                        <div className="mb-12">
-                            <h2 className="text-2xl font-black text-slate-900 mb-4">
-                                1000+ Creators Earning on Creatorly
-                            </h2>
-                            <p className="text-slate-700 leading-relaxed">
-                                From Instagram influencers to YouTube creators, coaches to consultants - all growing their income with Creatorly.
-                            </p>
-                        </div>
+                    {/* Right: Sign-up Form */}
+                    <div className="relative">
+                        <div className="absolute inset-0 bg-indigo-500/10 blur-[100px] rounded-full -z-10" />
+                        <div className="bg-zinc-900/40 border border-white/8 backdrop-blur-3xl rounded-4xl p-8 md:p-12">
+                            <h2 className="text-3xl font-medium tracking-tight text-white mb-2">Get Started</h2>
+                            <p className="text-zinc-500 text-sm mb-10">Create your professional creator ID in minutes.</p>
 
-                        {/* Testimonials */}
-                        <div className="space-y-6">
-                            <div className="bg-white rounded-2xl p-6 border border-orange-100 shadow-sm">
-                                <div className="flex items-center gap-2 mb-3">
-                                    {[...Array(5)].map((_, i) => (
-                                        <span key={i} className="text-yellow-400 text-lg">⭐</span>
-                                    ))}
-                                </div>
-                                <p className="text-slate-700 font-medium mb-3">
-                                    "Went from 0 to ₹2,50,000 in first month. The platform is so simple!"
-                                </p>
-                                <p className="text-sm font-bold text-slate-900">Arjun Patel</p>
-                                <p className="text-xs text-slate-600">Tech YouTuber • 500K subscribers</p>
-                            </div>
-
-                            <div className="bg-white rounded-2xl p-6 border border-pink-100 shadow-sm">
-                                <div className="flex items-center gap-2 mb-3">
-                                    {[...Array(5)].map((_, i) => (
-                                        <span key={i} className="text-yellow-400 text-lg">⭐</span>
-                                    ))}
-                                </div>
-                                <p className="text-slate-700 font-medium mb-3">
-                                    "My 1-on-1 consultations bookings tripled. Best decision ever!"
-                                </p>
-                                <p className="text-sm font-bold text-slate-900">Anaya Gupta</p>
-                                <p className="text-xs text-slate-600">Life Coach • 50K followers</p>
-                            </div>
-
-                            <div className="bg-white rounded-2xl p-6 border border-purple-100 shadow-sm">
-                                <div className="flex items-center gap-2 mb-3">
-                                    {[...Array(5)].map((_, i) => (
-                                        <span key={i} className="text-yellow-400 text-lg">⭐</span>
-                                    ))}
-                                </div>
-                                <p className="text-slate-700 font-medium mb-3">
-                                    "My digital course now sells automatically on my bio link. Passive income!"
-                                </p>
-                                <p className="text-sm font-bold text-slate-900">Priya Sharma</p>
-                                <p className="text-xs text-slate-600">Fashion Influencer • 150K followers</p>
-                            </div>
-                        </div>
-
-                        <div className="mt-8 pt-8 border-t border-slate-300">
-                            <div className="text-center">
-                                <p className="text-xs font-bold text-slate-600 uppercase tracking-wider mb-4">Trusted by creators from</p>
-                                <div className="flex items-center justify-center gap-2 text-xs font-bold text-slate-700">
-                                    <span>📱 Instagram</span>
-                                    <span>•</span>
-                                    <span>📺 YouTube</span>
-                                    <span>•</span>
-                                    <span>𝕏 Twitter</span>
-                                    <span>•</span>
-                                    <span>📘 LinkedIn</span>
-                                </div>
-                            </div>
+                            <Suspense fallback={<div className="text-zinc-500 animate-pulse">Establishing secure connection...</div>}>
+                                <RegisterFormContent />
+                            </Suspense>
                         </div>
                     </div>
                 </div>
-            </div>
+            </main>
+
+            <footer className="py-20 border-t border-white/5 bg-[#020202]">
+                <div className="max-w-7xl mx-auto px-6 flex flex-col md:row justify-between items-center gap-6 opacity-40">
+                    <span className="text-xl font-black text-white tracking-tighter">Creatorly</span>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">Built for the Next Billion • Bharat 🇮🇳</p>
+                </div>
+            </footer>
         </div>
     );
 }

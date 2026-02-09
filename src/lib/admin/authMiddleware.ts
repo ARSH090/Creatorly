@@ -1,4 +1,5 @@
 import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
 import { AdminLog } from '@/lib/models/AdminLog';
 import { connectToDatabase } from '@/lib/db/mongodb';
@@ -11,7 +12,7 @@ export interface AdminSession {
 }
 
 export async function getAdminSession(): Promise<AdminSession | null> {
-  const session = await getServerSession();
+  const session = await getServerSession(authOptions);
 
   if (!session?.user) return null;
 

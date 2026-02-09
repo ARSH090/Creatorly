@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  typedRoutes: false,
   // Image optimization
   images: {
     remotePatterns: [
@@ -29,7 +30,7 @@ const nextConfig: NextConfig = {
           // CSP: Content Security Policy
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline'; img-src 'self' https:; font-src 'self' data:; connect-src 'self' https://api.razorpay.com"
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.razorpay.com wss: ws:;"
           },
           // X-Content-Type-Options: Prevent MIME sniffing
           {
@@ -64,11 +65,6 @@ const nextConfig: NextConfig = {
           {
             key: 'Cross-Origin-Opener-Policy',
             value: 'same-origin'
-          },
-          // Cache-Control: No store for sensitive pages
-          {
-            key: 'Cache-Control',
-            value: 'no-store, no-cache, must-revalidate, proxy-revalidate'
           }
         ]
       }

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -16,6 +18,7 @@ import {
   BarChart3,
   AlertCircle,
 } from 'lucide-react';
+import Logo from '@/components/Logo';
 
 export interface AdminLayoutProps {
   children: React.ReactNode;
@@ -56,6 +59,11 @@ const navigationItems = [
     icon: CreditCard,
   },
   {
+    name: 'Subscriptions',
+    href: '/admin/subscriptions',
+    icon: Ticket,
+  },
+  {
     name: 'Analytics',
     href: '/admin/analytics',
     icon: BarChart3,
@@ -80,7 +88,7 @@ export function AdminLayout({ children, adminName, adminEmail, onLogout }: Admin
       >
         {/* Logo */}
         <div className="flex items-center justify-between p-4 border-b border-gray-700">
-          {sidebarOpen && <h1 className="text-xl font-bold">Creatorly</h1>}
+          {sidebarOpen && <Logo showText={true} className="text-xl" iconClassName="w-8 h-8" />}
           <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-1 hover:bg-gray-700 rounded">
             {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
           </button>

@@ -10,9 +10,9 @@ export default function MobileNavigation() {
 
     const navItems = [
         { name: 'Home', href: '/', icon: Home },
-        { name: 'Explore', href: '/explore', icon: Compass },
-        { name: 'Create', href: '/create', icon: PlusSquare }, // Central action
-        { name: 'Activity', href: '/activity', icon: Heart },
+        { name: 'Demo', href: '/u/demo', icon: Compass },
+        { name: 'Create', href: '/auth/register', icon: PlusSquare }, // Central action
+        { name: 'Cart', href: '/cart', icon: Heart },
         { name: 'Profile', href: '/dashboard', icon: User },
     ];
 

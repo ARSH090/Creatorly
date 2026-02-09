@@ -3,16 +3,23 @@
 
 :root {
   --primary: #FF9E00;
-  /* Vibrant Deep Saffron */
   --secondary: #00843D;
-  /* Deep Indian Green */
-  --accent: #283593;
-  /* Indigo Indian Navy */
-  --background: #ffffff;
-  --foreground: #121212;
-  --platinum: #f8f9fa;
-  --glass: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.4);
+  --accent: #4F46E5;
+  --header-height: 4rem;
+  /* Tailwind `h-16` */
+  --footer-height: 7rem;
+  /* Indigo */
+  --background: #030303;
+  --foreground: #f0f0f0;
+  --platinum: #111111;
+  --glass: rgba(10, 10, 10, 0.85);
+  --glass-border: rgba(255, 255, 255, 0.05);
+}
+
+/* Site utility helpers for consistent spacing */
+.site-content {
+  padding-top: var(--header-height);
+  padding-bottom: var(--footer-height);
 }
 
 @theme inline {
@@ -24,22 +31,7 @@
   --font-sans: 'Outfit', Arial, Helvetica, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #050505;
-    --foreground: #f0f0f0;
-    --platinum: #111111;
-    --glass: rgba(10, 10, 10, 0.85);
-    --glass-border: rgba(255, 255, 255, 0.05);
-  }
-}
-
 .dark {
-  --background: #050505;
-  --foreground: #f0f0f0;
-  --platinum: #111111;
-  --glass: rgba(10, 10, 10, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.05);
   color-scheme: dark;
 }
 
@@ -48,6 +40,7 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
 }
 
 /* Creator-Grade Glassmorphism */
@@ -86,4 +79,14 @@ body {
   background: transparent;
   color: var(--foreground);
   border-color: var(--foreground);
+}
+
+/* Utilities */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

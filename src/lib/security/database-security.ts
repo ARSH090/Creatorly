@@ -12,44 +12,17 @@ import crypto from 'crypto';
 // ============================================================================
 
 export const mongoSecurityOptions = {
-  // TLS/SSL Configuration (modern approach)
-  tls: true,
-  tlsAllowInvalidCertificates: false,
-  tlsCertificateKeyFilePassword: undefined,
-
-  // Authentication
-  authSource: 'admin',
-  authMechanism: 'SCRAM-SHA-256',
-
-  // Write concern
-  writeConcern: {
-    w: 'majority', // Majority of servers must acknowledge
-    j: true, // Journaled to disk
-    wtimeout: 5000
-  },
-
-  // Read concern
-  readConcern: {
-    level: 'majority'
-  },
-
-  // Transactions (for ACID compliance)
+  // Use URI defaults instead of forcing strict settings that might fail in some environments
   retryWrites: true,
   retryReads: true,
 
   // Connection pooling
   maxPoolSize: 50,
-  minPoolSize: 10,
-  maxIdleTimeMS: 60000,
-  waitQueueTimeoutMS: 10000,
+  minPoolSize: 5,
 
   // Timeouts
-  serverSelectionTimeoutMS: 5000,
+  serverSelectionTimeoutMS: 8000,
   socketTimeoutMS: 45000,
-  family: 4,
-
-  // Monitoring
-  monitorCommands: true
 };
 
 // ============================================================================

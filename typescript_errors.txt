@@ -1,8 +1,0 @@
-﻿src/app/api/auth/[...nextauth]/route.ts(28,86): error TS2769: No overload matches this call.
-  Overload 1 of 2, '(password: string, hash: string): Promise<boolean>', gave the following error.
-    Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
-      Type 'undefined' is not assignable to type 'string'.
-  Overload 2 of 2, '(password: string, hash: string, callback?: Callback<boolean> | undefined, progressCallback?: ProgressCallback | undefined): void', gave the following error.
-    Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
-      Type 'undefined' is not assignable to type 'string'.
-src/lib/compliance/gst.test.ts(49,13): error TS2322: Type 'undefined' is not assignable to type 'number'.

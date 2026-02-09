@@ -5,10 +5,18 @@ export interface IOrder extends Document {
     creatorId: mongoose.Types.ObjectId;
     customerEmail: string;
     amount: number;
+    currency: string;
     razorpayOrderId: string;
     razorpayPaymentId?: string;
     razorpaySignature?: string;
     status: 'pending' | 'success' | 'failed' | 'refunded';
+
+    // Delivery & Tracking
+    downloadCount: number;
+    downloadLimit: number;
+    downloadHistory: Date[];
+    ipAddress?: string;
+
     refund?: {
         amount: number;
         reason: string;
@@ -24,6 +32,7 @@ const OrderSchema: Schema = new Schema({
     creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     customerEmail: { type: String, required: true },
     amount: { type: Number, required: true },
+    currency: { type: String, default: 'INR' },
     razorpayOrderId: { type: String, required: true, unique: true },
     razorpayPaymentId: { type: String },
     razorpaySignature: { type: String },
@@ -32,6 +41,12 @@ const OrderSchema: Schema = new Schema({
         enum: ['pending', 'success', 'failed', 'refunded'],
         default: 'pending'
     },
+
+    downloadCount: { type: Number, default: 0 },
+    downloadLimit: { type: Number, default: 3 },
+    downloadHistory: [Date],
+    ipAddress: String,
+
     refund: {
         amount: { type: Number },
         reason: { type: String },
@@ -39,6 +54,13 @@ const OrderSchema: Schema = new Schema({
         status: { type: String, enum: ['completed', 'failed', 'pending'] }
     }
 }, { timestamps: true });
+
+// Indexes for performance
+OrderSchema.index({ creatorId: 1, createdAt: -1 });
+OrderSchema.index({ productId: 1 });
+OrderSchema.index({ customerEmail: 1 });
+OrderSchema.index({ status: 1 });
+OrderSchema.index({ razorpayOrderId: 1 });
 
 const Order: Model<IOrder> = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
 export { Order };

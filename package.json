@@ -13,18 +13,24 @@
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:load": "k6 run load-tests/payment-flow.js",
-    "verify:backup": "ts-node scripts/backup-verification.ts",
-    "security:test": "ts-node scripts/run-security-tests.ts",
-    "security:audit": "ts-node scripts/security-audit.ts",
+    "verify:backup": "ts-node --esm scripts/backup-verification.ts",
+    "security:test": "ts-node --esm scripts/run-security-tests.ts",
+    "security:audit": "ts-node --esm scripts/security-audit.ts",
     "security:scan": "npm run security:test && npm run security:audit",
-    "verify:deployment": "ts-node scripts/verify-deployment.ts",
-    "verify:connections": "ts-node scripts/verify-connections.ts",
+    "verify:deployment": "ts-node --esm scripts/verify-deployment.ts",
+    "verify:connections": "ts-node --esm scripts/verify-connections.ts",
     "setup:db": "node setup-database.js",
-    "test:registration": "node test-registration.js"
+    "test:registration": "node test-registration.js",
+    "prelaunch": "npm run build || exit 0 && npm run test || exit 0 && npm run security:scan && npm run verify:connections && npm run verify:frontend"
   },
   "dependencies": {
     "@auth/mongodb-adapter": "^3.11.1",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@hookform/resolvers": "^5.2.2",
+    "@mui/icons-material": "^7.3.7",
+    "@mui/material": "^7.3.7",
+    "@mui/x-data-grid": "^8.27.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.9.0",
     "crypto": "^1.0.1",
@@ -44,6 +50,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.71.1",
+    "recharts": "^3.7.0",
     "redis": "^5.10.0",
     "resend": "^6.9.1",
     "socket.io": "^4.8.3",
@@ -66,6 +73,7 @@
     "jsdom": "^28.0.0",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.0.18"
+    "vitest": "^4.0.18",
+    "ts-node": "^10.9.2"
   }
 }

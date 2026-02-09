@@ -3,7 +3,12 @@ import { z } from 'zod';
 export const UserRegistrationSchema = z.object({
     username: z.string().min(3).max(20).regex(/^[a-z0-9_-]+$/, "Username must be alphanumeric, hyphens, and underscores only"),
     email: z.string().email("Please enter a valid email"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    password: z.string()
+        .min(12, "Password must be at least 12 characters")
+        .regex(/[A-Z]/, "Password must include an uppercase letter")
+        .regex(/[a-z]/, "Password must include a lowercase letter")
+        .regex(/[0-9]/, "Password must include a number")
+        .regex(/[^A-Za-z0-9]/, "Password must include a special character"),
     displayName: z.string().min(2).max(50),
 });
 

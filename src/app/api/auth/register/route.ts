@@ -4,12 +4,13 @@ import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 
 import { UserRegistrationSchema } from '@/lib/validations';
-import { RateLimiter } from '@/lib/security/rate-limiter';
+import { RedisRateLimiter } from '@/lib/security/redis-rate-limiter';
 
 export async function POST(req: Request) {
     try {
-        const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '127.0.0.1';
-        const isAllowed = await RateLimiter.check('register', 5, 60 * 60 * 1000, ip); // 5 attempts per hour
+        const forwarded = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '';
+        const ip = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
+        const isAllowed = await RedisRateLimiter.check('register', 5, 60 * 60 * 1000, ip); // 5 attempts per hour
 
         if (!isAllowed) {
             return NextResponse.json(
@@ -18,13 +19,13 @@ export async function POST(req: Request) {
             );
         }
 
+        // Parse and validate request body
         const body = await req.json();
 
-        // Validate required fields
-        if (!body.email || !body.password || !body.username || !body.displayName) {
-            return NextResponse.json({
-                error: 'Missing required fields',
-            }, { status: 400 });
+        // Auto-generate temporary username if not provided
+        if (!body.username) {
+            const tempId = Math.random().toString(36).substring(2, 7);
+            body.username = `user_${tempId}`;
         }
 
         const validation = UserRegistrationSchema.safeParse(body);

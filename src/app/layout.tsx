@@ -14,11 +14,35 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Creatorly — The Operating System for Indian Creators",
+  title: {
+    default: "Creatorly — The Operating System for Indian Creators",
+    template: "%s | Creatorly"
+  },
   description: "The all-in-one platform for Indian creators to manage stores, payments, and audience engagement with sub-second performance.",
+  keywords: ["creator economy", "india", "ecommerce", "digital products", "monetization"],
+  authors: [{ name: "Creatorly Team" }],
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    url: "https://creatorly.in",
+    siteName: "Creatorly",
+    images: [{
+      url: "/og-image.jpg",
+      width: 1200,
+      height: 630,
+      alt: "Creatorly Platform"
+    }]
+  },
+  twitter: {
+    card: "summary_large_image",
+    site: "@creatorly_in",
+    creator: "@creatorly_in"
+  },
+  metadataBase: new URL("https://creatorly.in"),
 };
 
 import { AuthProvider } from '@/components/providers/AuthProvider';
+import ClientLayout from '@/components/layout/ClientLayout';
 
 export default function RootLayout({
   children,
@@ -27,11 +51,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AuthProvider>
-          {children}
+          <ClientLayout>
+            {children}
+          </ClientLayout>
         </AuthProvider>
         <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       </body>

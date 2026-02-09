@@ -16,8 +16,11 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
     if (status === 'loading') {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <div className="w-12 h-12 border-4 border-orange-600 border-t-transparent rounded-full animate-spin"></div>
+            <div className="min-h-screen flex items-center justify-center bg-[#030303]">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-10 h-10 border-2 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+                    <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em] animate-pulse">Establishing Secure Session...</p>
+                </div>
             </div>
         );
     }

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import MobileNavigation from '@/components/navigation/MobileNavigation';
+import CookieConsent from '@/components/common/CookieConsent';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
@@ -17,17 +18,17 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const isCart = pathname?.startsWith('/cart');
 
     const showGlobalNav = !isDashboard && !isStorefront && !isAdmin && !isAuth && !isCart;
-    const isHome = pathname === '/';
 
     return (
         <div className="min-h-screen flex flex-col bg-transparent">
             {showGlobalNav && <Header />}
-            <main className={`flex-1 site-content ${showGlobalNav && !isHome ? 'pt-16' : ''}`}>
+            <main className="flex-1 site-content">
                 {children}
             </main>
             {showGlobalNav && <Footer />}
 
             <MobileNavigation />
+            <CookieConsent />
         </div>
     );
 }

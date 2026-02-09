@@ -2,9 +2,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function CreatorDashboard() {
     const { data: session } = useSession();
+    const router = useRouter();
     const [view, setView] = useState<'analytics' | 'products'>('analytics');
     const [myProducts, setMyProducts] = useState<any[]>([]);
     const [showAddModal, setShowAddModal] = useState(false);
@@ -18,13 +21,19 @@ export default function CreatorDashboard() {
     });
 
     useEffect(() => {
-        if (session) {
+        if (session?.user) {
+            // If user has a temporary ID (user_xxxx), redirect to setup
+            if (session.user.username?.startsWith('user_')) {
+                router.push('/setup/url-path');
+                return;
+            }
+
             fetch('/api/products')
                 .then(res => res.json())
                 .then(data => setMyProducts(data))
                 .catch(err => console.error(err));
         }
-    }, [session]);
+    }, [session, router]);
 
     const handleAddProduct = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -62,165 +71,210 @@ export default function CreatorDashboard() {
     ];
 
     return (
-        <div className="min-h-screen bg-slate-50 flex text-slate-900">
-            {/* Sidebar - Desktop Only */}
-            <aside className="w-64 bg-white border-r border-black/5 p-6 hidden lg:flex flex-col">
-                <h2 className="text-xl font-bold text-bharat-gradient mb-12 uppercase tracking-tighter">Creatorly</h2>
-                <nav className="space-y-6 flex-1">
-                    <div
-                        onClick={() => setView('analytics')}
-                        className={`text-sm font-bold cursor-pointer transition-opacity ${view === 'analytics' ? 'opacity-100 text-orange-600' : 'opacity-50'}`}
-                    >
-                        Analytics
-                    </div>
-                    <div
-                        onClick={() => setView('products')}
-                        className={`text-sm font-bold cursor-pointer transition-opacity ${view === 'products' ? 'opacity-100 text-orange-600' : 'opacity-50'}`}
-                    >
-                        Products
-                    </div>
-                    <div className="pt-8 flex-1">
-                        <div className="bg-orange-50 p-4 rounded-3xl border border-orange-100">
-                            <p className="text-[10px] font-bold text-orange-600 uppercase mb-1">Creatorly Pro</p>
-                            <p className="text-xs font-medium text-orange-800 mb-3 leading-tight">Unlock unlimited products and 0% platform fees.</p>
-                            <button className="w-full py-2 bg-orange-600 text-white rounded-xl text-[10px] font-bold uppercase shadow-sm active:scale-95 transition-all">Upgrade Now</button>
+        <div className="min-h-screen bg-[#030303] text-zinc-400 selection:bg-indigo-500/30 font-sans antialiased overflow-x-hidden flex">
+            {/* Background Noise & Grid */}
+            <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.02]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3%3Ffilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
+
+            {/* Sidebar */}
+            <aside className="w-72 bg-[#050505] border-r border-white/5 p-8 hidden lg:flex flex-col relative z-10">
+                <div className="flex items-center gap-2 group mb-12">
+                    <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-black font-black">C</div>
+                    <span className="text-xl font-bold text-white tracking-tight">Creatorly</span>
+                </div>
+
+                <nav className="space-y-1 flex-1">
+                    {[
+                        { id: 'analytics', label: 'Infrastructure', icon: '📊' },
+                        { id: 'products', label: 'Inventory', icon: '📦' },
+                    ].map((item) => (
+                        <div
+                            key={item.id}
+                            onClick={() => setView(item.id as any)}
+                            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest cursor-pointer transition-all ${view === item.id
+                                ? 'bg-white/5 text-white border border-white/8'
+                                : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/2'
+                                }`}
+                        >
+                            <span>{item.icon}</span>
+                            {item.label}
+                        </div>
+                    ))}
+
+                    <div className="pt-8 mt-8 border-t border-white/5">
+                        <div className="bg-indigo-500/5 p-6 rounded-4xl border border-indigo-500/10 relative overflow-hidden group">
+                            <div className="absolute -right-4 -top-4 w-20 h-20 bg-indigo-500/10 blur-2xl rounded-full group-hover:bg-indigo-500/20 transition-colors" />
+                            <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Creatorly Elite</p>
+                            <p className="text-xs font-medium text-zinc-400 mb-4 leading-relaxed">Scale to infinite products with 0% platform tax.</p>
+                            <button className="w-full py-3 bg-white text-black rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all">Upgrade Now</button>
                         </div>
                     </div>
                 </nav>
-                <div className="pt-6 border-t border-black/5">
+
+                <div className="pt-8 border-t border-white/5">
                     {session?.user && (
-                        <div className="mb-4">
-                            <p className="text-sm font-bold truncate">{session.user.name}</p>
+                        <div className="flex items-center justify-between group">
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-bold text-white truncate">{session.user.name}</p>
+                                <p className="text-[10px] text-zinc-600 font-medium truncate">@{session.user.username || 'creator'}</p>
+                            </div>
                             <button
                                 onClick={() => signOut()}
-                                className="text-[10px] font-bold text-red-500 uppercase hover:underline"
+                                className="p-2 text-zinc-600 hover:text-red-400 transition-colors"
+                                title="Sign Out"
                             >
-                                Sign Out
+                                🚪
                             </button>
                         </div>
                     )}
-                    <div className="text-[10px] font-bold opacity-40 uppercase tracking-widest">Creatorly v1.0 • Enterprise</div>
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 p-8 overflow-y-auto">
-                <header className="flex justify-between items-center mb-12">
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            Namaste, {session?.user?.name?.split(' ')[0] || 'Creator'}!
+            <main className="flex-1 relative z-10 flex flex-col min-w-0">
+                <header className="h-20 border-b border-white/5 bg-black/20 backdrop-blur-md px-8 flex items-center justify-between sticky top-0 z-20">
+                    <div className="flex flex-col">
+                        <h1 className="text-sm font-bold text-white uppercase tracking-[0.2em]">
+                            Control Center <span className="text-zinc-600 mx-2">/</span>
+                            <span className="text-zinc-400">{view === 'analytics' ? 'Infrastructure' : 'Inventory'}</span>
                         </h1>
-                        <p className="text-foreground/50 font-medium">
-                            {view === 'analytics' ? 'Monitoring your storefront performance across Bharat' : 'Manage your digital offerings'}
-                        </p>
                     </div>
-                    <div className="flex gap-4">
+
+                    <div className="flex items-center gap-4">
                         {view === 'products' && (
                             <button
                                 onClick={() => setShowAddModal(true)}
-                                className="px-6 py-2 bg-orange-600 text-white rounded-full text-sm font-bold shadow-lg hover:bg-orange-700 transition-all"
+                                className="h-10 px-6 bg-white text-black rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-zinc-200 transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)]"
                             >
-                                + Add Product
+                                + New Offering
                             </button>
                         )}
-                        <button className="btn-enterprise">Live Preview Store</button>
+                        <button className="h-10 px-6 bg-white/3 border border-white/8 text-white rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-white/6 transition-all">
+                            Live Store
+                        </button>
                     </div>
                 </header>
 
-                {view === 'analytics' ? (
-                    <>
-                        {/* Stats Grid */}
-                        <section className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-                            {stats.map(stat => (
-                                <div key={stat.label} className="bg-white p-6 rounded-[28px] border border-black/5 shadow-sm">
-                                    <p className="text-xs font-bold uppercase tracking-widest text-foreground/40 mb-2">{stat.label}</p>
-                                    <div className="flex items-baseline gap-3">
-                                        <span className="text-3xl font-extrabold tracking-tighter">{stat.value}</span>
-                                        <span className="text-xs font-bold text-secondary">{stat.change}</span>
-                                    </div>
-                                </div>
-                            ))}
-                        </section>
+                <div className="p-8 lg:p-12 overflow-y-auto flex-1">
+                    <div className="max-w-6xl">
+                        <div className="mb-12">
+                            <h2 className="text-3xl lg:text-4xl font-medium tracking-tighter text-white mb-2">
+                                Namaste, {session?.user?.name?.split(' ')[0] || 'Creator'}.
+                            </h2>
+                            <p className="text-zinc-500 font-medium">Your digital infrastructure is performing optimally.</p>
+                        </div>
 
-                    </>
-                ) : (
-                    <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {myProducts.length === 0 ? (
-                            <div className="col-span-full py-20 text-center bg-white rounded-4xl border border-dashed border-slate-200">
-                                <p className="text-slate-400 font-bold">No products yet. Create your first one!</p>
+                        {view === 'analytics' ? (
+                            <div className="space-y-12">
+                                {/* Stats Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    {stats.map(stat => (
+                                        <div key={stat.label} className="bg-zinc-900/40 border border-white/5 p-8 rounded-[2.5rem] relative overflow-hidden group hover:border-white/10 transition-all">
+                                            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 blur-3xl rounded-full -mr-16 -mt-16" />
+                                            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 mb-4">{stat.label}</p>
+                                            <div className="flex items-baseline justify-between gap-4">
+                                                <span className="text-3xl font-medium tracking-tighter text-white">{stat.value}</span>
+                                                <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg">{stat.change}</span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Chart Mockup placeholder */}
+                                <div className="bg-zinc-900/40 border border-white/5 p-8 rounded-[2.5rem] h-96 relative flex items-center justify-center">
+                                    <div className="absolute inset-0 opacity-10" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='20' viewBox='0 0 100 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 15 Q 10 5, 20 15 T 40 15 T 60 15 T 80 15 T 100 15' fill='none' stroke='white' stroke-width='0.5'/%3E%3C/svg%3E")`, backgroundSize: '200px 40px' }} />
+                                    <p className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Real-time Traffic Metrics</p>
+                                </div>
                             </div>
                         ) : (
-                            myProducts.map(product => (
-                                <div key={product._id} className="bg-white p-6 rounded-[28px] border border-black/5 shadow-sm">
-                                    <div className="w-full aspect-square bg-slate-100 rounded-2xl mb-4 overflow-hidden">
-                                        <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {myProducts.length === 0 ? (
+                                    <div className="col-span-full py-32 text-center bg-zinc-900/20 rounded-[2.5rem] border border-dashed border-white/10">
+                                        <div className="text-4xl mb-6">📦</div>
+                                        <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">No active inventory found.</p>
+                                        <button onClick={() => setShowAddModal(true)} className="mt-8 text-white font-bold text-xs hover:underline uppercase tracking-widest underline-offset-8">Deploy First Product</button>
                                     </div>
-                                    <h3 className="font-bold text-lg mb-1">{product.name}</h3>
-                                    <p className="text-orange-600 font-extrabold">₹{product.price}</p>
-                                    <p className="text-[10px] uppercase font-bold opacity-40 mt-2">{product.type}</p>
-                                </div>
-                            ))
+                                ) : (
+                                    myProducts.map(product => (
+                                        <div key={product._id} className="group bg-zinc-900/40 border border-white/5 p-6 rounded-[2.5rem] hover:border-white/10 transition-all flex flex-col h-full">
+                                            <div className="w-full aspect-square bg-zinc-800/50 rounded-2xl mb-6 overflow-hidden relative">
+                                                <img src={product.image} alt={product.name} className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500" />
+                                                <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-[10px] font-bold text-white uppercase tracking-widest">
+                                                    ₹{product.price}
+                                                </div>
+                                            </div>
+                                            <h3 className="font-bold text-white mb-2 leading-tight flex-1">{product.name}</h3>
+                                            <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+                                                <span className="text-[10px] uppercase font-black tracking-widest text-zinc-500">{product.type}</span>
+                                                <button className="text-indigo-400 hover:text-white transition-colors text-xl">↗</button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         )}
-                    </section>
-                )}
+                    </div>
+                </div>
             </main>
 
             {/* Add Product Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-100 flex items-center justify-center p-6">
-                    <div className="bg-white w-full max-w-2xl rounded-4xl p-10 shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="flex justify-between items-center mb-8">
-                            <h2 className="text-2xl font-bold">Add Digital Product</h2>
-                            <button onClick={() => setShowAddModal(false)} className="text-2xl opacity-40 hover:opacity-100 cursor-pointer">×</button>
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-xl z-100 flex items-center justify-center p-6">
+                    <div className="bg-[#080808] border border-white/10 w-full max-w-2xl rounded-[3rem] p-10 md:p-16 shadow-2xl animate-in zoom-in-95 duration-300 relative">
+                        <button onClick={() => setShowAddModal(false)} className="absolute top-8 right-8 text-3xl text-zinc-600 hover:text-white transition-colors">×</button>
+
+                        <div className="mb-12">
+                            <h2 className="text-3xl font-medium tracking-tight text-white mb-2">New Offering</h2>
+                            <p className="text-zinc-500 text-sm">Deploy a new digital product to your storefront.</p>
                         </div>
-                        <form onSubmit={handleAddProduct} className="grid grid-cols-2 gap-6">
-                            <div className="col-span-2">
-                                <label className="block text-xs font-bold uppercase opacity-40 mb-2">Product Name</label>
+
+                        <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="md:col-span-2 space-y-2">
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Title</label>
                                 <input
                                     required
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-orange-600 transition-all font-bold"
+                                    className="w-full bg-white/3 border border-white/8 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500/50 focus:bg-white/5 transition-all font-bold text-white placeholder-zinc-700"
                                     value={newProduct.name}
                                     onChange={e => setNewProduct({ ...newProduct, name: e.target.value })}
-                                    placeholder="Enter product title"
+                                    placeholder="e.g. Masterclass on Content Design"
                                 />
                             </div>
-                            <div className="col-span-1">
-                                <label className="block text-xs font-bold uppercase opacity-40 mb-2">Price (INR)</label>
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Valuation (INR)</label>
                                 <input
                                     required type="number"
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-orange-600 transition-all font-extrabold"
+                                    className="w-full bg-white/3 border border-white/8 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500/50 focus:bg-white/5 transition-all font-black text-white placeholder-zinc-700"
                                     value={newProduct.price}
                                     onChange={e => setNewProduct({ ...newProduct, price: e.target.value })}
-                                    placeholder="999"
+                                    placeholder="499"
                                 />
                             </div>
-                            <div className="col-span-1">
-                                <label className="block text-xs font-bold uppercase opacity-40 mb-2">Category</label>
+                            <div className="space-y-2">
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Asset Class</label>
                                 <select
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 outline-none focus:ring-2 focus:ring-orange-600 transition-all font-bold"
+                                    className="w-full bg-white/3 border border-white/8 rounded-2xl px-6 py-4 outline-none focus:border-indigo-500/50 focus:bg-white/5 transition-all font-bold text-white appearance-none cursor-pointer"
                                     value={newProduct.category}
                                     onChange={e => setNewProduct({ ...newProduct, category: e.target.value, type: e.target.value as any })}
                                 >
-                                    <option>Digital Goods</option>
-                                    <option>Consultations</option>
-                                    <option>Physical Goods</option>
+                                    <option className="bg-[#080808]">Digital Goods</option>
+                                    <option className="bg-[#080808]">Consultations</option>
+                                    <option className="bg-[#080808]">Physical Goods</option>
                                 </select>
                             </div>
-                            <div className="col-span-2">
-                                <label className="block text-xs font-bold uppercase opacity-40 mb-2">Description</label>
+                            <div className="md:col-span-2 space-y-2">
+                                <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Descriptor</label>
                                 <textarea
                                     required
-                                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 h-32 outline-none focus:ring-2 focus:ring-orange-600 transition-all font-medium"
+                                    className="w-full bg-white/3 border border-white/8 rounded-2xl px-6 py-4 h-32 outline-none focus:border-indigo-500/50 focus:bg-white/5 transition-all font-medium text-white placeholder-zinc-700 resize-none"
                                     value={newProduct.description}
                                     onChange={e => setNewProduct({ ...newProduct, description: e.target.value })}
-                                    placeholder="What are you selling?"
+                                    placeholder="Briefly describe the value proposition..."
                                 />
                             </div>
                             <button
                                 type="submit"
-                                className="col-span-2 py-5 bg-orange-600 text-white rounded-3xl font-extrabold text-lg shadow-xl hover:bg-orange-700 active:scale-95 transition-all shadow-orange-600/20"
+                                className="md:col-span-2 py-5 bg-white text-black rounded-3xl font-black text-xs uppercase tracking-[0.3em] shadow-xl hover:bg-zinc-200 active:scale-95 transition-all shadow-white/5"
                             >
-                                Launch Product 🚀
+                                Deploy to Storefront
                             </button>
                         </form>
                     </div>
