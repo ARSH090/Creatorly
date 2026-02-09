@@ -5,11 +5,11 @@ import Product from '@/lib/models/Product';
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { orderId: string } }
+    { params }: { params: Promise<{ orderId: string }> }
 ) {
     try {
         await connectToDatabase();
-        const { orderId } = params;
+        const { orderId } = await params;
 
         // 1. Fetch Order and include Product details
         const order = await Order.findById(orderId);
@@ -31,7 +31,12 @@ export async function GET(
         }
 
         // 4. Fetch Product for the secure URL
-        const product = await Product.findById(order.productId);
+        const firstItem = order.items?.[0];
+        if (!firstItem) {
+            return NextResponse.json({ error: 'Order has no items' }, { status: 400 });
+        }
+
+        const product = await Product.findById(firstItem.productId);
         if (!product || !product.digitalFileUrl) {
             return NextResponse.json({ error: 'Digital asset not found' }, { status: 404 });
         }

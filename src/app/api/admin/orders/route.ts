@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
     const orders = await Order.find(query)
       .populate('creatorId', 'displayName email')
-      .populate('productId', 'name price')
+      .populate('items.productId', 'name price')
       .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
       .skip(skip)
       .limit(limit)
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
     const enrichedOrders = orders.map((order: any) => ({
       ...order,
       creatorName: order.creatorId?.displayName || 'Unknown',
-      productName: order.productId?.name || 'Unknown',
+      productName: order.items?.[0]?.productId?.name || 'Unknown',
     }));
 
     return NextResponse.json({

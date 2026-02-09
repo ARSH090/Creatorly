@@ -58,11 +58,18 @@ export const POST = withAuth(async (req, user) => {
         const rzpOrder = await razorpay.orders.create(options);
 
         await Order.create({
-            productId,
+            items: [{
+                productId,
+                name: product.name,
+                price: product.price,
+                quantity: 1,
+                type: product.type
+            }],
             creatorId,
             userId: user._id,
             customerEmail,
             amount: amount || product.price,
+            currency: currency || 'INR',
             razorpayOrderId: rzpOrder.id,
             status: 'pending'
         });

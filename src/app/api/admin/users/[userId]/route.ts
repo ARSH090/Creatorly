@@ -15,10 +15,10 @@ const userUpdateSchema = z.object({
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params;
+    const { userId } = await params;
     const authResult = await adminAuthMiddleware(req);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -49,10 +49,10 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params;
+    const { userId } = await params;
     const authResult = await adminAuthMiddleware(req);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -117,10 +117,10 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { userId: string } }
+  { params }: { params: Promise<{ userId: string }> }
 ) {
   try {
-    const { userId } = params;
+    const { userId } = await params;
     const authResult = await adminAuthMiddleware(req);
     if (authResult instanceof NextResponse) {
       return authResult;

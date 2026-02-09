@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { razorpay } from '@/lib/razorpay';
 import Order from '@/lib/models/Order';
@@ -56,11 +57,14 @@ export async function POST(req: NextRequest) {
         });
 
         // 3. Save Order in Database
+        if (!creatorId) {
+            return NextResponse.json({ error: 'No valid products in cart' }, { status: 400 });
+        }
 
         await Order.create({
             items,
             creatorId,
-            userId: user?.id ? user.id : null,
+            userId: user?.id ? new mongoose.Types.ObjectId(user.id) : new mongoose.Types.ObjectId(),
             customerEmail: customer.email,
             amount: amountWithTax,
             currency: 'INR',

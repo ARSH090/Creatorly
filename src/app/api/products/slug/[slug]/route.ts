@@ -8,11 +8,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { slug: string } }
+    { params }: { params: Promise<{ slug: string }> }
 ) {
     try {
         await connectToDatabase();
-        const { slug } = params;
+        const { slug } = await params;
 
         // 1. Fetch Product
         const product = await Product.findOne({ slug, isActive: true });

@@ -16,7 +16,12 @@ export default async function SuccessPage({ params }: { params: Promise<{ userna
         notFound();
     }
 
-    const product = await Product.findById(order.productId);
+    const firstItem = order.items?.[0];
+    if (!firstItem) {
+        notFound();
+    }
+
+    const product = await Product.findById(firstItem.productId);
     const creator = await User.findOne({ username });
 
     if (!product || !creator) {

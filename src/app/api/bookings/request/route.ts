@@ -94,11 +94,18 @@ export const POST = withAuth(async (req, user) => {
 
         // Also create a pending Order record for tracking
         await Order.create({
-            productId,
+            items: [{
+                productId,
+                name: product.name,
+                price: product.price,
+                quantity: 1,
+                type: product.type
+            }],
             creatorId,
             userId: user._id,
             customerEmail,
             amount: product.price,
+            currency: product.currency || 'INR',
             razorpayOrderId: rzpOrder.id,
             status: 'pending',
             metadata: { bookingId: booking._id }

@@ -3,9 +3,9 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import { withAuth } from '@/lib/firebase/withAuth';
 
-export const GET = withAuth(async (req, user, { params }: { params: { id: string } }) => {
+export const GET = withAuth(async (req, user, { params }: { params: Promise<{ id: string }> }) => {
     try {
-        const { id } = params;
+        const { id } = await params;
         await connectToDatabase();
         const product = await Product.findOne({ _id: id, creatorId: user._id });
 
@@ -19,9 +19,9 @@ export const GET = withAuth(async (req, user, { params }: { params: { id: string
     }
 });
 
-export const PATCH = withAuth(async (req, user, { params }: { params: { id: string } }) => {
+export const PATCH = withAuth(async (req, user, { params }: { params: Promise<{ id: string }> }) => {
     try {
-        const { id } = params;
+        const { id } = await params;
         const data = await req.json();
         await connectToDatabase();
 
@@ -42,9 +42,9 @@ export const PATCH = withAuth(async (req, user, { params }: { params: { id: stri
     }
 });
 
-export const DELETE = withAuth(async (req, user, { params }: { params: { id: string } }) => {
+export const DELETE = withAuth(async (req, user, { params }: { params: Promise<{ id: string }> }) => {
     try {
-        const { id } = params;
+        const { id } = await params;
         await connectToDatabase();
         const product = await Product.findOneAndUpdate(
             { _id: id, creatorId: user._id },

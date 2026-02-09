@@ -8,10 +8,10 @@ import DownloadToken from '@/lib/models/DownloadToken';
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: { token: string } }
+    { params }: { params: Promise<{ token: string }> }
 ) {
     try {
-        const { token } = params;
+        const { token } = await params;
         const payload = verifyDeliveryToken(token);
 
         if (!payload) {
