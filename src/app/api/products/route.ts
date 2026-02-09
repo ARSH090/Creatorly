@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
+import User from '@/lib/models/User';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth/authOptions';
 
@@ -16,6 +17,23 @@ export async function POST(req: NextRequest) {
 
         if (!data.name || !data.type || !data.price || !data.image || !data.category) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        // 1. Enforce Plan Limits
+        const user = await User.findById((session.user as any).id).select('planLimits');
+        const maxProducts = user?.planLimits?.maxProducts ?? 3; // Default to 3 (Free Tier) if not set
+
+        const currentCount = await Product.countDocuments({
+            creatorId: (session.user as any).id,
+            isActive: true
+        });
+
+        if (currentCount >= maxProducts) {
+            return NextResponse.json({
+                error: 'Plan limit reached',
+                message: `You have reached the maximum of ${maxProducts} products for your plan. Please upgrade to add more.`,
+                code: 'LIMIT_EXCEEDED'
+            }, { status: 403 });
         }
 
         // 2. Map Wizard Data to Product Schema

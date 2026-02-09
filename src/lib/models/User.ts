@@ -37,6 +37,15 @@ export interface IUser extends Document {
     lastFailedLoginAt?: Date;
     createdAt: Date;
     updatedAt: Date;
+    // Security & Limits
+    planLimits?: {
+        maxProducts: number;
+        maxStorageMb: number;
+        maxTeamMembers: number;
+        customDomain: boolean;
+        canRemoveBranding: boolean;
+    };
+    verifiedDevices?: mongoose.Types.ObjectId[]; // Array of trusted device IDs
 }
 
 const UserSchema: Schema = new Schema({
@@ -120,6 +129,18 @@ const UserSchema: Schema = new Schema({
         default: 0,
     },
     lastFailedLoginAt: Date,
+    // Security & Limits Enforced at User Level
+    planLimits: {
+        maxProducts: { type: Number, default: 3 },
+        maxStorageMb: { type: Number, default: 100 },
+        maxTeamMembers: { type: Number, default: 1 },
+        customDomain: { type: Boolean, default: false },
+        canRemoveBranding: { type: Boolean, default: false },
+    },
+    verifiedDevices: [{
+        type: Schema.Types.ObjectId,
+        ref: 'Device'
+    }],
     createdAt: {
         type: Date,
         default: Date.now,

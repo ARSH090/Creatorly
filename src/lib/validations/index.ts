@@ -10,6 +10,7 @@ export const UserRegistrationSchema = z.object({
         .regex(/[0-9]/, "Password must include a number")
         .regex(/[^A-Za-z0-9]/, "Password must include a special character"),
     displayName: z.string().min(2).max(50),
+    fingerprint: z.string().optional(),
 });
 
 export const ProductSchema = z.object({
@@ -17,7 +18,7 @@ export const ProductSchema = z.object({
     description: z.string().min(10),
     price: z.number().min(1),
     category: z.string(),
-    type: z.enum(['Digital Goods', 'Consultations', 'Physical Goods']),
+    type: z.enum(['Digital Goods', 'Consultations', 'Physical Goods']), // This might need to match the new enum in Product.ts if widely used
     image: z.string().url(),
     digitalFileUrl: z.string().optional(),
 });

@@ -5,11 +5,15 @@ import { NextResponse } from 'next/server';
 
 import { UserRegistrationSchema } from '@/lib/validations';
 import { RedisRateLimiter } from '@/lib/security/redis-rate-limiter';
+import { checkDeviceAbuse, registerDevice } from '@/lib/security/abuse-detection';
 
 export async function POST(req: Request) {
     try {
         const forwarded = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '';
         const ip = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
+        const userAgent = req.headers.get('user-agent') || 'Unknown';
+
+        // 1. Rate Limiting
         const isAllowed = await RedisRateLimiter.check('register', 5, 60 * 60 * 1000, ip); // 5 attempts per hour
 
         if (!isAllowed) {
@@ -19,7 +23,7 @@ export async function POST(req: Request) {
             );
         }
 
-        // Parse and validate request body
+        // 2. Parse and validate request body
         const body = await req.json();
 
         // Auto-generate temporary username if not provided
@@ -39,11 +43,24 @@ export async function POST(req: Request) {
             }, { status: 400 });
         }
 
-        const { email, password, username, displayName } = validation.data;
+        const { email, password, username, displayName, fingerprint } = validation.data;
+
+        // 3. Security & Abuse Check (Fingerprinting)
+        // If fingerprint is provided, check for abuse. 
+        // Note: We prioritize blocking abuse over allowing signup if fingerprint is missing in a high-security context.
+        if (fingerprint) {
+            const abuseCheck = await checkDeviceAbuse(fingerprint, ip, userAgent, 'free'); // Defaulting to free plan for now
+            if (abuseCheck.blocked) {
+                return NextResponse.json(
+                    { error: abuseCheck.reason || 'Registration blocked due to suspicious activity.' },
+                    { status: 403 }
+                );
+            }
+        }
 
         await connectToDatabase();
 
-        // Check if user already exists
+        // 4. Check if user already exists
         const existingUser = await User.findOne({
             $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }]
         });
@@ -62,16 +79,34 @@ export async function POST(req: Request) {
             }
         }
 
-        // Hash password
+        // 5. Hash password
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        // Create user
+        // 6. Create user
         const user = await User.create({
             email: email.toLowerCase(),
             password: hashedPassword,
             username: username.toLowerCase(),
             displayName,
+            // Initialize with default plan limits (Free Tier)
+            planLimits: {
+                maxProducts: 3,
+                maxStorageMb: 100,
+                maxTeamMembers: 1,
+                customDomain: false,
+                canRemoveBranding: false
+            }
         });
+
+        // 7. Register Device (if fingerprint provided)
+        if (fingerprint) {
+            try {
+                await registerDevice(fingerprint, user._id.toString(), ip, userAgent, 'free');
+            } catch (deviceError) {
+                console.error('Failed to register device:', deviceError);
+                // Non-blocking error, user is created
+            }
+        }
 
         return NextResponse.json({
             success: true,

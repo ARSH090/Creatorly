@@ -8,7 +8,7 @@ import User from '@/lib/models/User';
 import bcryptjs from 'bcryptjs';
 
 export const authOptions: NextAuthOptions = {
-  adapter: MongoDBAdapter(connectToDatabase().then(conn => conn.getClient())),
+  adapter: MongoDBAdapter(connectToDatabase().then(conn => conn.connection.getClient())),
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || '',
@@ -87,7 +87,7 @@ export const authOptions: NextAuthOptions = {
         if (!existingUser && user.email) {
           // Create new user from social provider
           const username = profile?.name?.replace(/\s+/g, '_').toLowerCase() || user.email?.split('@')[0] || 'user';
-          
+
           const newUser = await User.create({
             email: user.email,
             username: username + '_' + Date.now().toString().slice(-4),

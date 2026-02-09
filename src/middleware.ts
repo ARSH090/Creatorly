@@ -1,6 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse, NextRequest } from "next/server";
-import { RedisRateLimiter } from "@/lib/security/redis-rate-limiter";
+// import { RedisRateLimiter } from "@/lib/security/redis-rate-limiter";
 
 export default withAuth(
     function middleware(req: NextRequest) {
@@ -16,6 +16,11 @@ export default withAuth(
         const isAuthRoute = pathname.startsWith('/api/auth');
         const isWebhook = pathname.startsWith('/api/payments/webhook');
         const isMutating = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+
+        // NOTE: RedisRateLimiter uses 'ioredis' which is NOT compatible with Vercel Edge Runtime.
+        // We have disabled it here to prevent deployment crashes.
+        // To enable: Use '@upstash/redis' or move rate limiting to specific API routes (Node.js runtime).
+        /*
         const windowMs = 60 * 1000;
         let limit = 100;
         if (isAuthRoute) limit = 20;
@@ -27,6 +32,7 @@ export default withAuth(
                 return res;
             }
         });
+        */
         if (process.env.NODE_ENV === 'production' && api && isMutating && !isAuthRoute && !isWebhook) {
             const csrfHeader = req.headers.get('x-csrf-token');
             const csrfCookie = req.cookies.get('csrfToken')?.value;
