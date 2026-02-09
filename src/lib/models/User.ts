@@ -46,6 +46,7 @@ export interface IUser extends Document {
         canRemoveBranding: boolean;
     };
     verifiedDevices?: mongoose.Types.ObjectId[]; // Array of trusted device IDs
+    activeSubscription?: any; // Populated field
 }
 
 const UserSchema: Schema = new Schema({

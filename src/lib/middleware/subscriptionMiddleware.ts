@@ -8,7 +8,7 @@ import { PlanTier } from '@/lib/models/plan.types';
 
 export async function enforceFreeTierLimits(userId: string) {
     // Cast to any to avoid production build type errors with missing schema fields
-    const user = await User.findById(userId).populate('activeSubscription') as any;
+    const user = await User.findById(userId).populate('activeSubscription');
     if (!user || !user.activeSubscription) return { allowed: true };
 
     const plan = await Plan.findById(user.activeSubscription.planId);
