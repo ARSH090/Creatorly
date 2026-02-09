@@ -8,8 +8,7 @@ import StoreHeader from '@/components/storefront/StoreHeader';
 import CreatorBio from '@/components/storefront/CreatorBio';
 import ProductGrid from '@/components/storefront/ProductGrid';
 
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/authOptions';
+import { getCurrentUser } from '@/lib/firebase/server-auth';
 import Order from '@/lib/models/Order';
 
 export const dynamic = 'force-dynamic';
@@ -51,12 +50,12 @@ export default async function CreatorStorefront({ params }: { params: { username
     const products = await ProductModel.find({ creatorId: creator._id, isActive: true }).sort({ isFeatured: -1, createdAt: -1 }) as IProduct[];
 
     // Fetch user's purchased products for this creator
-    const session = await getServerSession(authOptions);
+    const currentUser = await getCurrentUser();
     let purchasedProductIds: string[] = [];
 
-    if (session?.user) {
+    if (currentUser) {
         const orders = await Order.find({
-            userId: (session.user as any).id,
+            userId: currentUser._id,
             creatorId: creator._id,
             status: 'success'
         });

@@ -8,10 +8,10 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function MemberFeed({ params }: { params: { username: string } }) {
-    const { data: session, status: authStatus } = useSession();
+    const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [posts, setPosts] = useState<any[]>([]);
@@ -54,9 +54,9 @@ export default function MemberFeed({ params }: { params: { username: string } })
             }
         }
 
-        if (authStatus === 'authenticated') fetchFeed();
-        else if (authStatus === 'unauthenticated') router.push(`/u/${params.username}`);
-    }, [params.username, authStatus]);
+        if (!authLoading && user) fetchFeed();
+        else if (!authLoading && !user) router.push(`/u/${params.username}`);
+    }, [params.username, user, authLoading, router]);
 
     if (loading) {
         return (

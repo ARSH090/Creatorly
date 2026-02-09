@@ -1,20 +1,19 @@
 import AdminDashboardMetrics from '@/components/admin/DashboardMetrics';
 import { Shield, TrendingUp } from 'lucide-react';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/firebase/server-auth';
 import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboard() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
-  if (!session) {
+  if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
     redirect('/auth/login');
   }
 
-  const adminName = session.user?.name || 'Admin';
-  const adminEmail = session.user?.email || '';
+  const adminName = user.displayName || 'Admin';
+  const adminEmail = user.email || '';
 
   return (
     <div className="min-h-screen bg-gray-900 p-6 lg:p-10">

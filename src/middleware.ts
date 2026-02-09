@@ -1,68 +1,73 @@
-import { withAuth } from "next-auth/middleware";
-import { NextResponse, NextRequest } from "next/server";
-// import { RedisRateLimiter } from "@/lib/security/redis-rate-limiter";
+import { NextRequest, NextResponse } from 'next/server';
 
-export default withAuth(
-    function middleware(req: NextRequest) {
-        const pathname = req.nextUrl.pathname;
-        const method = req.method.toUpperCase();
-        const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
-        const response = NextResponse.next();
-        response.headers.set('X-Content-Type-Options', 'nosniff');
-        response.headers.set('X-Frame-Options', 'DENY');
-        response.headers.set('X-XSS-Protection', '1; mode=block');
-        response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-        const api = pathname.startsWith('/api/');
-        const isAuthRoute = pathname.startsWith('/api/auth');
-        const isWebhook = pathname.startsWith('/api/payments/webhook');
-        const isMutating = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+export function middleware(req: NextRequest) {
+    const pathname = req.nextUrl.pathname;
 
-        // NOTE: RedisRateLimiter uses 'ioredis' which is NOT compatible with Vercel Edge Runtime.
-        // We have disabled it here to prevent deployment crashes.
-        // To enable: Use '@upstash/redis' or move rate limiting to specific API routes (Node.js runtime).
-        /*
-        const windowMs = 60 * 1000;
-        let limit = 100;
-        if (isAuthRoute) limit = 20;
-        if (pathname.startsWith('/api/payments')) limit = 50;
-        RedisRateLimiter.check('global', limit, windowMs, String(ip)).then(allowed => {
-            if (!allowed) {
-                const res = NextResponse.json({ error: 'Too many requests' }, { status: 429 });
-                res.headers.set('Retry-After', '60');
-                return res;
-            }
-        });
-        */
-        if (process.env.NODE_ENV === 'production' && api && isMutating && !isAuthRoute && !isWebhook) {
+    // Check for auth token in cookies (set by client SDK)
+    const authToken = req.cookies.get('authToken')?.value;
+
+    // Protected routes pattern
+    const isProtectedRoute =
+        pathname.startsWith('/dashboard') ||
+        pathname.startsWith('/admin') ||
+        pathname.startsWith('/onboarding');
+
+    // Auth routes pattern
+    const isAuthRoute = pathname.startsWith('/auth');
+
+    // 1. Redirect to login if accessing protected route without token
+    if (isProtectedRoute && !authToken) {
+        const loginUrl = new URL('/auth/login', req.url);
+        loginUrl.searchParams.set('callbackUrl', pathname);
+        return NextResponse.redirect(loginUrl);
+    }
+
+    // 2. Redirect to dashboard if accessing auth pages while logged in
+    if (isAuthRoute && authToken) {
+        return NextResponse.redirect(new URL('/dashboard', req.url));
+    }
+
+    // 3. Security Headers
+    const response = NextResponse.next();
+    response.headers.set('X-Content-Type-Options', 'nosniff');
+    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set('X-XSS-Protection', '1; mode=block');
+    response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+    // 4. CSRF Protection for mutating API requests
+    const isApi = pathname.startsWith('/api/');
+    const isMutating = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+    const isWebhook = pathname.startsWith('/api/payments/webhook');
+
+    if (process.env.NODE_ENV === 'production' && isApi && isMutating && !isWebhook) {
+        // Skip CSRF for auth endpoints if needed, but generally good to keep
+        if (!pathname.startsWith('/api/auth')) {
             const csrfHeader = req.headers.get('x-csrf-token');
             const csrfCookie = req.cookies.get('csrfToken')?.value;
             if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie) {
                 return NextResponse.json({ error: 'Invalid CSRF token' }, { status: 403 });
             }
         }
-        if (!req.cookies.get('csrfToken')) {
-            const r = NextResponse.next();
-            r.cookies.set('csrfToken', Math.random().toString(36).slice(2), { httpOnly: false, sameSite: 'lax' });
-            return r;
-        }
-        return response;
-    },
-    {
-        callbacks: {
-            authorized: ({ token }) => !!token,
-        },
-        pages: {
-            signIn: "/auth/login",
-        },
     }
-);
+
+    // Set CSRF cookie if missing
+    if (!req.cookies.get('csrfToken')) {
+        response.cookies.set('csrfToken', Math.random().toString(36).slice(2), {
+            httpOnly: false,
+            sameSite: 'lax',
+            secure: process.env.NODE_ENV === 'production'
+        });
+    }
+
+    return response;
+}
 
 export const config = {
     matcher: [
         "/dashboard/:path*",
         "/admin/:path*",
-        // Protect all APIs EXCEPT auth-related ones
-        "/api/products/:path*",
-        "/api/payments/:path*",
+        "/onboarding/:path*",
+        "/auth/:path*",
+        "/api/:path*",
     ],
 };

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { User } from '@/lib/models/User';
+
+import { User, IUser } from '@/lib/models/User';
 import { Plan } from '@/lib/models/Plan';
 import { PlanTier } from '@/lib/models/plan.types';
 // Note: In a real app, you'd have utility functions for these checks.
@@ -8,7 +8,9 @@ import { PlanTier } from '@/lib/models/plan.types';
 
 export async function enforceFreeTierLimits(userId: string) {
     // Cast to any to avoid production build type errors with missing schema fields
-    const user = await User.findById(userId).populate('activeSubscription');
+    const user = await User.findById(userId)
+        .populate<{ activeSubscription?: { planId: string } }>('activeSubscription')
+        .lean<IUser & { activeSubscription?: { planId: string } }>();
     if (!user || !user.activeSubscription) return { allowed: true };
 
     const plan = await Plan.findById(user.activeSubscription.planId);

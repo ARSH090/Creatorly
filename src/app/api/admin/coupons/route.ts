@@ -1,26 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Coupon from '@/lib/models/Coupon';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { withAdminAuth } from '@/lib/firebase/withAuth';
 
-/**
- * Standardized Database Connection Utility
- */
-async function checkAdmin(requiredRole = 'admin') {
-  const session = await getServerSession(authOptions);
-  if (!session) return false;
-  const role = (session.user as any).role;
-  if (requiredRole === 'super-admin') return role === 'super-admin';
-  return role === 'admin' || role === 'super-admin';
-}
-
-export async function GET(req: NextRequest) {
+export const GET = withAdminAuth(async (req, user) => {
   try {
-    if (!await checkAdmin()) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const search = searchParams.get('search');
@@ -40,14 +24,10 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withAdminAuth(async (req, user) => {
   try {
-    if (!await checkAdmin()) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     await connectToDatabase();
     const body = await req.json();
 
@@ -60,14 +40,10 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
-}
+});
 
-export async function PUT(req: NextRequest) {
+export const PUT = withAdminAuth(async (req, user) => {
   try {
-    if (!await checkAdmin()) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     await connectToDatabase();
     const body = await req.json();
     const { id, ...updateData } = body;
@@ -83,11 +59,11 @@ export async function PUT(req: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
-}
+});
 
-export async function DELETE(req: NextRequest) {
+export const DELETE = withAdminAuth(async (req, user) => {
   try {
-    if (!await checkAdmin('super-admin')) {
+    if (user.role !== 'super-admin') {
       return NextResponse.json({ error: 'Unauthorized - SuperAdmin required for deletion' }, { status: 401 });
     }
 
@@ -103,4 +79,4 @@ export async function DELETE(req: NextRequest) {
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
-}
+});

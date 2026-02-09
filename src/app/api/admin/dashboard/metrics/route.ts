@@ -1,23 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
 import User from '@/lib/models/User';
 import Product from '@/lib/models/Product';
 import Subscription from '@/lib/models/Subscription';
-import { adminAuthMiddleware, checkAdminPermission } from '@/lib/middleware/adminAuth';
+import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { checkAdminPermission } from '@/lib/middleware/adminAuth';
 
-export async function GET(req: NextRequest) {
+export const GET = withAdminAuth(async (req, user) => {
   try {
-    const authResult = await adminAuthMiddleware(req);
-    
-    // Check if authResult is a NextResponse (error case)
-    if (authResult instanceof NextResponse) {
-      return authResult;
-    }
-
-    const { user } = authResult;
-
     if (!checkAdminPermission('view_dashboard', user.role)) {
       return NextResponse.json(
         { error: 'Permission denied' },
@@ -139,8 +130,8 @@ export async function GET(req: NextRequest) {
     const avgOrderValue =
       monthOrders > 0
         ? (
-            (monthRevenue[0]?.total || 0) / monthOrders
-          ).toFixed(2)
+          (monthRevenue[0]?.total || 0) / monthOrders
+        ).toFixed(2)
         : '0.00';
 
     return NextResponse.json({
@@ -196,4 +187,4 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

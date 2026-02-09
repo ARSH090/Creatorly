@@ -2,18 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
 import CreatorProfile from '@/lib/models/CreatorProfile';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/authOptions';
+import { withAuth } from '@/lib/firebase/withAuth';
 
-export async function GET(req: NextRequest, context: { params: Promise<{ username: string }> }) {
+export const GET = withAuth(async (req, user, context: any) => {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         await connectToDatabase();
-        const userId = (session.user as any).id;
+        const userId = user._id;
 
         // 1. Fetch Creator Profile
         const { username } = await context.params;
@@ -61,4 +55,4 @@ export async function GET(req: NextRequest, context: { params: Promise<{ usernam
         console.error('Community API Error:', error);
         return NextResponse.json({ error: 'Failed to fetch community' }, { status: 500 });
     }
-}
+});

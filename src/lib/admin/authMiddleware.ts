@@ -1,172 +1,95 @@
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { NextRequest, NextResponse } from 'next/server';
-import { AdminLog } from '@/lib/models/AdminLog';
-import { connectToDatabase } from '@/lib/db/mongodb';
+import * as crypto from 'crypto';
 
-export interface AdminSession {
-  id: string;
-  email: string;
-  role: 'admin' | 'super-admin';
-  permissions: string[];
+export const ADMIN_PERMISSIONS = {
+    VIEW_USERS: 'view_users',
+    EDIT_USERS: 'edit_users',
+    VIEW_ORDERS: 'view_orders',
+    REFUND_ORDERS: 'refund_orders',
+    VIEW_ANALYTICS: 'view_analytics',
+    MANAGE_PRODUCTS: 'manage_products',
+};
+
+export async function getAdminSession() {
+    const { cookies } = await import('next/headers');
+    const token = (await cookies()).get('admin-token')?.value;
+
+    if (!token) return null;
+
+    try {
+        const [base64Payload, signature] = token.split('.');
+        if (!base64Payload || !signature) return null;
+
+        const payloadText = Buffer.from(base64Payload, 'base64').toString();
+
+        // Verify Signature
+        const expectedSignature = crypto.createHmac('sha256', process.env.JWT_SECRET || 'fallback-secret')
+            .update(payloadText)
+            .digest('hex');
+
+        if (signature !== expectedSignature) {
+            console.error('🚨 Admin session signature mismatch!');
+            return null;
+        }
+
+        const session = JSON.parse(payloadText);
+
+        // Check expiry (2 hours)
+        if (Date.now() - session.iat > 2 * 60 * 60 * 1000) {
+            return null;
+        }
+
+        return session;
+    } catch (error) {
+        console.error('Admin session parsing error:', error);
+        return null;
+    }
 }
 
-export async function getAdminSession(): Promise<AdminSession | null> {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user) return null;
-
-  // In production, you'd also validate the role from your database
-  const isAdmin = ['admin', 'super-admin'].includes((session.user as any).role);
-
-  if (!isAdmin) return null;
-
-  return {
-    id: (session.user as any).id,
-    email: session.user.email || '',
-    role: (session.user as any).role,
-    permissions: (session.user as any).permissions || [],
-  };
-}
-
-export async function adminAuthMiddleware(req: NextRequest, requiredPermission?: string) {
-  const session = await getAdminSession();
-
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // Check specific permission if required
-  if (requiredPermission && !hasPermission(session, requiredPermission)) {
-    return NextResponse.json({ error: 'Forbidden: Insufficient permissions' }, { status: 403 });
-  }
-
-  return { session };
-}
-
-export function hasPermission(session: AdminSession, permission: string): boolean {
-  // Super-admin has all permissions
-  if (session.role === 'super-admin') return true;
-
-  return session.permissions.includes(permission);
+export function hasPermission(session: any, permission: string) {
+    if (!session) return false;
+    if (session.role === 'super-admin') return true;
+    return session.permissions?.includes(permission) || false;
 }
 
 export async function logAdminAction(
-  adminId: string,
-  adminEmail: string,
-  action: string,
-  resource: string,
-  resourceId?: string,
-  resourceName?: string,
-  description?: string,
-  changes?: any,
-  ipAddress?: string,
-  userAgent?: string
+    adminId: string,
+    adminEmail: string,
+    action: string,
+    resourceType: string,
+    resourceId: string,
+    identifier: string,
+    details: string,
+    changes?: any,
+    ip?: string,
+    userAgent?: string
 ) {
-  try {
-    await connectToDatabase();
-
-    const log = new AdminLog({
-      adminId,
-      adminEmail,
-      action,
-      resource,
-      resourceId,
-      resourceName,
-      description: description || `${action} on ${resource}`,
-      changes,
-      ipAddress,
-      userAgent,
-      status: 'success',
-      timestamp: new Date(),
-    });
-
-    await log.save();
-    return log;
-  } catch (error) {
-    console.error('Failed to log admin action:', error);
-    // Don't throw, logging failure shouldn't block the action
-  }
+    try {
+        const { AdminLog } = await import('@/lib/models/AdminLog');
+        await AdminLog.create({
+            adminId,
+            adminEmail,
+            action,
+            resourceType,
+            resourceId,
+            identifier,
+            details,
+            changes,
+            ipAddress: ip || 'unknown',
+            userAgent: userAgent || 'unknown',
+            timestamp: new Date(),
+        });
+    } catch (error) {
+        console.error('Failed to log admin action:', error);
+    }
 }
 
-export function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get('x-forwarded-for');
-  if (forwarded) {
-    return forwarded.split(',')[0].trim();
-  }
-  return req.headers.get('x-real-ip') || 'unknown';
+export function getClientIp(req: NextRequest | Request) {
+    const forwarded = (req as any).headers?.get?.('x-forwarded-for') || (req as any).headers?.['x-forwarded-for'];
+    if (forwarded) return forwarded.split(',')[0].trim();
+    return '127.0.0.1';
 }
 
-export function getClientUserAgent(req: NextRequest): string {
-  return req.headers.get('user-agent') || 'unknown';
+export function getClientUserAgent(req: NextRequest | Request) {
+    return (req as any).headers?.get?.('user-agent') || (req as any).headers?.['user-agent'] || 'unknown';
 }
-
-// Permission constants
-export const ADMIN_PERMISSIONS = {
-  // User management
-  VIEW_USERS: 'view:users',
-  EDIT_USERS: 'edit:users',
-  DELETE_USERS: 'delete:users',
-  BAN_USERS: 'ban:users',
-  SUSPEND_USERS: 'suspend:users',
-
-  // Product management
-  VIEW_PRODUCTS: 'view:products',
-  EDIT_PRODUCTS: 'edit:products',
-  DELETE_PRODUCTS: 'delete:products',
-  APPROVE_PRODUCTS: 'approve:products',
-  FEATURE_PRODUCTS: 'feature:products',
-
-  // Order management
-  VIEW_ORDERS: 'view:orders',
-  EDIT_ORDERS: 'edit:orders',
-  REFUND_ORDERS: 'refund:orders',
-
-  // Payment/Finance
-  VIEW_PAYMENTS: 'view:payments',
-  VIEW_FINANCE: 'view:finance',
-  MANAGE_PAYOUTS: 'manage:payouts',
-
-  // Coupon management
-  MANAGE_COUPONS: 'manage:coupons',
-  CREATE_COUPONS: 'create:coupons',
-  DELETE_COUPONS: 'delete:coupons',
-
-  // System
-  VIEW_SETTINGS: 'view:settings',
-  EDIT_SETTINGS: 'edit:settings',
-  VIEW_LOGS: 'view:logs',
-  MANAGE_ADMINS: 'manage:admins',
-
-  // Analytics
-  VIEW_ANALYTICS: 'view:analytics',
-  EXPORT_DATA: 'export:data',
-};
-
-export const ADMIN_ROLES = {
-  ADMIN: {
-    name: 'admin',
-    permissions: [
-      ADMIN_PERMISSIONS.VIEW_USERS,
-      ADMIN_PERMISSIONS.VIEW_PRODUCTS,
-      ADMIN_PERMISSIONS.VIEW_ORDERS,
-      ADMIN_PERMISSIONS.VIEW_PAYMENTS,
-      ADMIN_PERMISSIONS.VIEW_ANALYTICS,
-      ADMIN_PERMISSIONS.MANAGE_COUPONS,
-      ADMIN_PERMISSIONS.REFUND_ORDERS,
-    ],
-  },
-  SUPER_ADMIN: {
-    name: 'super-admin',
-    permissions: Object.values(ADMIN_PERMISSIONS), // All permissions
-  },
-  MODERATOR: {
-    name: 'moderator',
-    permissions: [
-      ADMIN_PERMISSIONS.VIEW_USERS,
-      ADMIN_PERMISSIONS.VIEW_PRODUCTS,
-      ADMIN_PERMISSIONS.VIEW_ORDERS,
-      ADMIN_PERMISSIONS.BAN_USERS,
-    ],
-  },
-};

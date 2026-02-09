@@ -7,7 +7,7 @@ import {
     ArrowUp, ArrowDown, Trash2, Plus, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 
 const FONTS = [
     { name: 'Inter', value: 'var(--font-inter)' },
@@ -24,7 +24,7 @@ const SECTIONS = [
 ];
 
 export default function StorefrontBuilder() {
-    const { data: session } = useSession();
+    const { user } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState('design');
     const [theme, setTheme] = useState({
@@ -104,7 +104,7 @@ export default function StorefrontBuilder() {
                         <h2 className="text-xl font-black uppercase tracking-tight">Editor</h2>
                         <div className="flex gap-2">
                             <button
-                                onClick={() => window.open(`/u/${(session?.user as any)?.username}`, '_blank')}
+                                onClick={() => window.open(`/u/${(user as any)?.username || user?.email?.split('@')[0]}`, '_blank')}
                                 className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
                             >
                                 <Eye className="w-4 h-4 text-zinc-400" />
@@ -258,11 +258,11 @@ export default function StorefrontBuilder() {
                                 {/* Bio Mock */}
                                 <div className="flex flex-col items-center text-center space-y-4">
                                     <div className="w-24 h-24 rounded-[2rem] bg-zinc-800 border-4 border-black shadow-2xl overflow-hidden">
-                                        <img src={session?.user?.image || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'} alt="Bio" className="w-full h-full object-cover" />
+                                        <img src={user?.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'} alt="Bio" className="w-full h-full object-cover" />
                                     </div>
                                     <div className="space-y-1">
-                                        <h1 className="text-2xl font-black">{session?.user?.name || 'Your Name'}</h1>
-                                        <p className="text-zinc-500 text-sm font-medium">@{(session?.user as any)?.username || 'username'}</p>
+                                        <h1 className="text-2xl font-black">{user?.displayName || 'Your Name'}</h1>
+                                        <p className="text-zinc-500 text-sm font-medium">@{(user as any)?.username || user?.email?.split('@')[0] || 'username'}</p>
                                     </div>
                                     <p className="text-xs text-zinc-400 max-w-[240px] leading-relaxed">
                                         Digital creator building tools for the future of the internet.

@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function SetupUrlPath() {
-    const { data: session, status, update } = useSession();
+    const { user, loading: authLoading, refreshUser } = useAuth();
     const router = useRouter();
     const [username, setUsername] = useState('');
     const [loading, setLoading] = useState(false);
@@ -14,10 +14,10 @@ export default function SetupUrlPath() {
     const [success, setSuccess] = useState(false);
 
     useEffect(() => {
-        if (status === 'unauthenticated') {
+        if (!authLoading && !user) {
             router.push('/auth/login');
         }
-    }, [status, router]);
+    }, [user, authLoading, router]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -47,7 +47,7 @@ export default function SetupUrlPath() {
 
             setSuccess(true);
             // Update session to reflect new username
-            await update();
+            await refreshUser();
 
             setTimeout(() => {
                 router.push('/dashboard');
@@ -58,7 +58,7 @@ export default function SetupUrlPath() {
         }
     };
 
-    if (status === 'loading') {
+    if (authLoading) {
         return (
             <div className="min-h-screen bg-[#030303] flex items-center justify-center">
                 <div className="w-10 h-10 border-2 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>

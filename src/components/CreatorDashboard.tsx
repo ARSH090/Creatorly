@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { useSession, signOut } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function CreatorDashboard() {
-    const { data: session } = useSession();
+    const { user, loading, logout } = useAuth();
     const router = useRouter();
     const [view, setView] = useState<'analytics' | 'products'>('analytics');
     const [myProducts, setMyProducts] = useState<any[]>([]);
@@ -21,9 +21,12 @@ export default function CreatorDashboard() {
     });
 
     useEffect(() => {
-        if (session?.user) {
+        if (!loading && user) {
             // If user has a temporary ID (user_xxxx), redirect to setup
-            if (session.user.username?.startsWith('user_')) {
+            // Note: username might be in customClaims or just displayName/email based logic?
+            // Assuming user object has username handling or we check email/displayName
+            const username = (user as any).username || user.email?.split('@')[0];
+            if (username?.startsWith('user_')) {
                 router.push('/setup/url-path');
                 return;
             }
@@ -33,7 +36,7 @@ export default function CreatorDashboard() {
                 .then(data => setMyProducts(data))
                 .catch(err => console.error(err));
         }
-    }, [session, router]);
+    }, [user, loading, router]);
 
     const handleAddProduct = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -111,14 +114,14 @@ export default function CreatorDashboard() {
                 </nav>
 
                 <div className="pt-8 border-t border-white/5">
-                    {session?.user && (
+                    {user && (
                         <div className="flex items-center justify-between group">
                             <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-white truncate">{session.user.name}</p>
-                                <p className="text-[10px] text-zinc-600 font-medium truncate">@{session.user.username || 'creator'}</p>
+                                <p className="text-xs font-bold text-white truncate">{user.displayName || user.email}</p>
+                                <p className="text-[10px] text-zinc-600 font-medium truncate">@{(user as any).username || user.email?.split('@')[0] || 'creator'}</p>
                             </div>
                             <button
-                                onClick={() => signOut()}
+                                onClick={() => logout()}
                                 className="p-2 text-zinc-600 hover:text-red-400 transition-colors"
                                 title="Sign Out"
                             >
@@ -158,7 +161,7 @@ export default function CreatorDashboard() {
                     <div className="max-w-6xl">
                         <div className="mb-12">
                             <h2 className="text-3xl lg:text-4xl font-medium tracking-tighter text-white mb-2">
-                                Namaste, {session?.user?.name?.split(' ')[0] || 'Creator'}.
+                                Namaste, {user?.displayName?.split(' ')[0] || user?.email?.split('@')[0] || 'Creator'}.
                             </h2>
                             <p className="text-zinc-500 font-medium">Your digital infrastructure is performing optimally.</p>
                         </div>

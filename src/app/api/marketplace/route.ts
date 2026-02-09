@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import MarketplaceItem from '@/lib/models/MarketplaceItem';
 import { z } from 'zod';
+import { withAuth } from '@/lib/firebase/withAuth';
 
 const marketplaceSchema = z.object({
     title: z.string().min(5),
@@ -55,17 +55,8 @@ export async function GET(request: NextRequest) {
  * POST /api/marketplace
  * Sell item on marketplace
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
     try {
-        const session = await getServerSession();
-
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
         const body = await request.json();
         const validation = marketplaceSchema.safeParse(body);
 
@@ -80,7 +71,7 @@ export async function POST(request: NextRequest) {
 
         const item = await MarketplaceItem.create({
             ...validation.data,
-            seller: session.user.id,
+            seller: user._id,
         });
 
         return NextResponse.json(
@@ -94,4 +85,4 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});

@@ -50,11 +50,34 @@ export async function POST(req: Request) {
         // 1. Handle One-Time Payments
         if (event.event === 'payment.captured') {
             const payment = event.payload.payment.entity;
-            await Order.findOneAndUpdate(
-                { razorpayOrderId: payment.order_id },
-                { status: 'success', razorpayPaymentId: payment.id }
-            );
-            console.log(`✅ Order ${payment.order_id} captured`);
+
+            // Amount and Currency Verification
+            const order = await Order.findOne({ razorpayOrderId: payment.order_id });
+            if (!order) {
+                console.error(`❌ Order ${payment.order_id} not found for captured payment`);
+                return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+            }
+
+            // Razorpay amount is in paise, Order amount is in INR
+            const capturedAmountInINR = payment.amount / 100;
+            if (capturedAmountInINR !== order.amount) {
+                console.error(`🚨 FRAUD ALERT: Amount mismatch for order ${order._id}. Expected ${order.amount}, got ${capturedAmountInINR}`);
+                order.status = 'failed'; // Mark as failed due to fraud attempt
+                await order.save();
+                return NextResponse.json({ error: 'Amount mismatch' }, { status: 400 });
+            }
+
+            if (payment.currency !== order.currency) {
+                console.error(`🚨 FRAUD ALERT: Currency mismatch for order ${order._id}. Expected ${order.currency}, got ${payment.currency}`);
+                return NextResponse.json({ error: 'Currency mismatch' }, { status: 400 });
+            }
+
+            order.status = 'success';
+            order.razorpayPaymentId = payment.id;
+            order.razorpaySignature = signature;
+            await order.save();
+
+            console.log(`✅ Order ${payment.order_id} captured and verified`);
         }
 
         // 2. Handle Subscription Events

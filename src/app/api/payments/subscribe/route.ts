@@ -2,7 +2,6 @@ import { razorpay } from '@/lib/payments/razorpay';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Subscription from '@/lib/models/Subscription';
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 
 export async function POST(req: Request) {
     try {

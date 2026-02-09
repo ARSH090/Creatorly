@@ -3,18 +3,12 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import Order from '@/lib/models/Order';
 import CourseProgress from '@/lib/models/CourseProgress';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/authOptions';
+import { withAuth } from '@/lib/firebase/withAuth';
 
-export async function GET(req: NextRequest, context: { params: Promise<{ slug: string }> }) {
+export const GET = withAuth(async (req, user, context: any) => {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         await connectToDatabase();
-        const userId = (session.user as any).id;
+        const userId = user._id;
 
         const { slug } = await context.params;
         const product = await Product.findOne({ slug, type: 'course' });
@@ -49,4 +43,4 @@ export async function GET(req: NextRequest, context: { params: Promise<{ slug: s
         console.error('Course API Error:', error);
         return NextResponse.json({ error: 'Failed to fetch course' }, { status: 500 });
     }
-}
+});

@@ -1,20 +1,20 @@
 'use client';
 
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
 export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-    const { status } = useSession();
+    const { user, loading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-        if (status === 'unauthenticated') {
+        if (!loading && !user) {
             router.push('/auth/login');
         }
-    }, [status, router]);
+    }, [user, loading, router]);
 
-    if (status === 'loading') {
+    if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-[#030303]">
                 <div className="flex flex-col items-center gap-4">
@@ -25,7 +25,7 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
         );
     }
 
-    if (status === 'authenticated') {
+    if (user) {
         return <>{children}</>;
     }
 

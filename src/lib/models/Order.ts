@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IOrder extends Document {
     productId: mongoose.Types.ObjectId;
     creatorId: mongoose.Types.ObjectId;
+    userId: mongoose.Types.ObjectId;
     customerEmail: string;
     amount: number;
     currency: string;
@@ -30,6 +31,7 @@ export interface IOrder extends Document {
 const OrderSchema: Schema = new Schema({
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     customerEmail: { type: String, required: true },
     amount: { type: Number, required: true },
     currency: { type: String, default: 'INR' },

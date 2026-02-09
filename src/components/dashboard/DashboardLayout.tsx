@@ -6,13 +6,13 @@ import {
     Users, Wallet, Settings, Bell, LogOut, ChevronRight,
     Sparkles, Plus, Share2, Menu, X, User, CreditCard, Folder, LifeBuoy
 } from "lucide-react";
-import { useSession, signOut } from "next-auth/react";
+import { useAuth } from "@/hooks/useAuth";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const { data: session } = useSession();
+    const { user, logout } = useAuth();
     const pathname = usePathname();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [stats, setStats] = useState<any>(null);
@@ -62,8 +62,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: 'Support', icon: LifeBuoy, href: '/dashboard/support' },
     ];
 
-    const handleSignOut = () => {
-        signOut({ callbackUrl: '/' });
+    const handleSignOut = async () => {
+        await logout();
+        window.location.href = '/';
     };
 
     return (
@@ -124,9 +125,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             <div className="flex items-center gap-3 pl-4 border-l border-white/5">
                                 <div className="text-right hidden sm:block">
                                     <p className="text-sm font-bold text-white leading-none mb-1">
-                                        {session?.user?.name || 'Creator'}
+                                        {user?.displayName || user?.email?.split('@')[0] || 'Creator'}
                                     </p>
-                                    <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">@{session?.user?.username || 'username'}</p>
+                                    <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">@{(user as any)?.username || user?.email?.split('@')[0] || 'username'}</p>
                                 </div>
                                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-white/10" />
                             </div>

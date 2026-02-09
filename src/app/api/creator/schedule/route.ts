@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import ScheduledContent from '@/lib/models/ScheduledContent';
 import { z } from 'zod';
+import { withAuth } from '@/lib/firebase/withAuth';
 
 const scheduleSchema = z.object({
     productId: z.string().min(1),
@@ -23,20 +23,11 @@ const scheduleSchema = z.object({
  * GET /api/creator/schedule
  * List scheduled content
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
     try {
-        const session = await getServerSession();
-
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
         await connectToDatabase();
 
-        const content = await ScheduledContent.find({ creatorId: session.user.id })
+        const content = await ScheduledContent.find({ creatorId: user._id })
             .populate('productId', 'name')
             .sort({ scheduledAt: 1 });
 
@@ -48,23 +39,14 @@ export async function GET(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});
 
 /**
  * POST /api/creator/schedule
  * Create scheduled content
  */
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
     try {
-        const session = await getServerSession();
-
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
         const body = await request.json();
         const validation = scheduleSchema.safeParse(body);
 
@@ -87,7 +69,7 @@ export async function POST(request: NextRequest) {
         }
 
         const scheduled = await ScheduledContent.create({
-            creatorId: session.user.id,
+            creatorId: user._id,
             productId: validation.data.productId,
             title: validation.data.title,
             description: validation.data.description,
@@ -108,23 +90,14 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});
 
 /**
  * PUT /api/creator/schedule/{id}
  * Update scheduled content
  */
-export async function PUT(request: NextRequest) {
+export const PUT = withAuth(async (request, user) => {
     try {
-        const session = await getServerSession();
-
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
         const pathname = request.nextUrl.pathname;
         const id = pathname.split('/').pop();
 
@@ -141,7 +114,7 @@ export async function PUT(request: NextRequest) {
         await connectToDatabase();
 
         const scheduled = await ScheduledContent.findOneAndUpdate(
-            { _id: id, creatorId: session.user.id, status: 'scheduled' },
+            { _id: id, creatorId: user._id, status: 'scheduled' },
             validation.data,
             { new: true }
         );
@@ -161,23 +134,14 @@ export async function PUT(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});
 
 /**
  * DELETE /api/creator/schedule/{id}
  * Delete scheduled content
  */
-export async function DELETE(request: NextRequest) {
+export const DELETE = withAuth(async (request, user) => {
     try {
-        const session = await getServerSession();
-
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
         const pathname = request.nextUrl.pathname;
         const id = pathname.split('/').pop();
 
@@ -185,7 +149,7 @@ export async function DELETE(request: NextRequest) {
 
         const result = await ScheduledContent.findOneAndDelete({
             _id: id,
-            creatorId: session.user.id,
+            creatorId: user._id,
             status: 'scheduled',
         });
 
@@ -204,4 +168,4 @@ export async function DELETE(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});

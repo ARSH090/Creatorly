@@ -1,9 +1,10 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IUser extends Document {
+    firebaseUid: string; // Firebase UID for authentication
     username: string;
     email: string;
-    password?: string;
+    password?: string; // For internal admin auth
     displayName: string;
     bio?: string;
     avatar?: string;
@@ -50,6 +51,12 @@ export interface IUser extends Document {
 }
 
 const UserSchema: Schema = new Schema({
+    firebaseUid: {
+        type: String,
+        required: true,
+        unique: true,
+        index: true,
+    },
     username: {
         type: String,
         required: true,
@@ -62,10 +69,6 @@ const UserSchema: Schema = new Schema({
         required: true,
         unique: true,
         lowercase: true,
-    },
-    password: {
-        type: String,
-        required: true,
     },
     displayName: {
         type: String,

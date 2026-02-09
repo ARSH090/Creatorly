@@ -2,25 +2,41 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import CourseProgress from '@/lib/models/CourseProgress';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/authOptions';
+import { withAuth } from '@/lib/firebase/withAuth';
 
-export async function POST(req: NextRequest, context: { params: Promise<{ slug: string }> }) {
+export const POST = withAuth(async (req, user, context: any) => {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const { lessonId } = await req.json();
         await connectToDatabase();
-        const userId = (session.user as any).id;
+        const userId = user._id;
 
         const { slug } = await context.params;
         const product = await Product.findOne({ slug });
         if (!product) {
             return NextResponse.json({ error: 'Product not found' }, { status: 404 });
         }
+
+        // --- Entitlement Verification ---
+        const [order, subscription] = await Promise.all([
+            import('@/lib/models/Order').then(m => m.default.findOne({
+                userId, // Note: Order model might use customerEmail or userId. 
+                productId: product._id,
+                status: 'success'
+            })),
+            import('@/lib/models/Subscription').then(m => m.default.findOne({
+                userId,
+                productId: product._id,
+                status: 'active'
+            }))
+        ]);
+
+        if (!order && !subscription) {
+            return NextResponse.json({
+                error: 'Unauthorized',
+                message: 'You have not purchased this course or your subscription has expired.'
+            }, { status: 403 });
+        }
+        // ------------------------------
 
         // Update progress - add lessonId to completedLessons if not already present
         const progress = await CourseProgress.findOneAndUpdate(
@@ -38,4 +54,4 @@ export async function POST(req: NextRequest, context: { params: Promise<{ slug: 
         console.error('Progress API Error:', error);
         return NextResponse.json({ error: 'Failed to update progress' }, { status: 500 });
     }
-}
+});

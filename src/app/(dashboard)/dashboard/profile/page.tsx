@@ -1,20 +1,45 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useSession } from 'next-auth/react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import { User, Mail, Shield, Bell, Save, Trash2, Camera } from 'lucide-react';
 
 export default function ProfilePage() {
-    const { data: session, update } = useSession();
+    const { user, refreshUser } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
 
     const [formData, setFormData] = useState({
-        displayName: session?.user?.name || '',
-        email: session?.user?.email || '',
-        username: (session?.user as any)?.username || '',
-        bio: (session?.user as any)?.bio || '',
+        displayName: '',
+        email: '',
+        username: '',
+        bio: '',
     });
+
+    useEffect(() => {
+        if (user) {
+            setFormData(prev => ({
+                ...prev,
+                displayName: user.displayName || '',
+                email: user.email || '',
+                username: (user as any).username || prev.username, // Fallback if already set
+            }));
+
+            // Fetch extended profile data
+            fetch('/api/user/profile')
+                .then(res => res.json())
+                .then(data => {
+                    setFormData(prev => ({
+                        ...prev,
+                        displayName: data.displayName || user.displayName || '',
+                        username: data.username || '',
+                        bio: data.bio || '',
+                        email: user.email || '' // Keep email from auth or DB
+                    }));
+                })
+                .catch(err => console.error("Failed to fetch profile", err));
+        }
+    }, [user]);
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -30,7 +55,7 @@ export default function ProfilePage() {
 
             if (res.ok) {
                 setMessage({ type: 'success', text: 'Profile updated successfully!' });
-                await update({ name: formData.displayName });
+                await refreshUser();
             } else {
                 throw new Error('Failed to update profile');
             }
@@ -58,15 +83,15 @@ export default function ProfilePage() {
                             <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-4 border-white/10 overflow-hidden mb-4">
                                 {/* Placeholder for avatar */}
                                 <div className="w-full h-full flex items-center justify-center text-white text-4xl font-black">
-                                    {(session?.user?.name || 'C').charAt(0).toUpperCase()}
+                                    {(user?.displayName || 'C').charAt(0).toUpperCase()}
                                 </div>
                             </div>
                             <button className="absolute bottom-0 right-0 p-2 bg-indigo-500 rounded-full border-2 border-[#030303] text-white hover:bg-indigo-600 transition-colors shadow-lg">
                                 <Camera className="w-4 h-4" />
                             </button>
                         </div>
-                        <h2 className="text-xl font-bold text-white mb-1">{session?.user?.name}</h2>
-                        <p className="text-zinc-500 text-sm mb-4">@{(session?.user as any)?.username || 'creator'}</p>
+                        <h2 className="text-xl font-bold text-white mb-1">{user?.displayName}</h2>
+                        <p className="text-zinc-500 text-sm mb-4">@{formData.username || 'creator'}</p>
                         <div className="flex gap-2">
                             <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-indigo-500/20">
                                 Pro Creator

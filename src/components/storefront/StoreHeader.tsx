@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Search, Menu, X, User } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import NextImage from 'next/image';
 
 interface StoreHeaderProps {
@@ -16,7 +16,7 @@ interface StoreHeaderProps {
 }
 
 export default function StoreHeader({ creator }: StoreHeaderProps) {
-    const { data: session } = useSession();
+    const { user } = useAuth();
     const [isScrolled, setIsScrolled] = useState(false);
     const { theme } = creator;
 
@@ -29,8 +29,8 @@ export default function StoreHeader({ creator }: StoreHeaderProps) {
     return (
         <header
             className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 border-b ${isScrolled
-                    ? 'bg-black/60 backdrop-blur-xl border-white/10 py-4'
-                    : 'bg-transparent border-transparent py-6'
+                ? 'bg-black/60 backdrop-blur-xl border-white/10 py-4'
+                : 'bg-transparent border-transparent py-6'
                 }`}
         >
             <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
@@ -61,7 +61,7 @@ export default function StoreHeader({ creator }: StoreHeaderProps) {
 
                     <div className="h-6 w-px bg-white/10 mx-2" />
 
-                    {session ? (
+                    {user ? (
                         <Link
                             href="/dashboard"
                             className="flex items-center gap-3 bg-white text-black px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-zinc-200 transition-all"

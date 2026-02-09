@@ -4,8 +4,9 @@ import Order from '@/lib/models/Order';
 import Subscription from '@/lib/models/Subscription';
 import Product from '@/lib/models/Product';
 import { NextResponse } from 'next/server';
+import { withAuth } from '@/lib/firebase/withAuth';
 
-export async function POST(req: Request) {
+export const POST = withAuth(async (req, user) => {
     try {
         const { amount, currency = 'INR', productId, creatorId, customerEmail } = await req.json();
 
@@ -29,8 +30,8 @@ export async function POST(req: Request) {
             }) as any;
 
             await Subscription.create({
-                userId: (req as any).userId || creatorId,
-                productId: product._id, // Fixed: use productId as per schema update
+                userId: user._id, // Use authenticated user ID
+                productId: product._id,
                 originalPrice: product.price,
                 discountAmount: 0,
                 finalPrice: product.price,
@@ -59,6 +60,7 @@ export async function POST(req: Request) {
         await Order.create({
             productId,
             creatorId,
+            userId: user._id,
             customerEmail,
             amount: amount || product.price,
             razorpayOrderId: rzpOrder.id,
@@ -75,4 +77,4 @@ export async function POST(req: Request) {
         console.error('Razorpay checkout error:', error);
         return NextResponse.json({ error: 'Failed to initiate checkout' }, { status: 500 });
     }
-}
+});

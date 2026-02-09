@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
 import Refund from '@/lib/models/Refund';
-import { getServerSession } from 'next-auth';
+import { withAuth } from '@/lib/firebase/withAuth';
 import { z } from 'zod';
 import Razorpay from 'razorpay';
 
@@ -24,17 +24,8 @@ const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request, user) => {
     try {
-        const session = await getServerSession();
-
-        if (!session) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
         const body = await request.json();
         const validation = refundSchema.safeParse(body);
 
@@ -145,19 +136,10 @@ export async function POST(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});
 
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
     try {
-        const session = await getServerSession();
-
-        if (!session) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
         await connectToDatabase();
 
         const refunds = await Refund.find({})
@@ -183,4 +165,4 @@ export async function GET(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});

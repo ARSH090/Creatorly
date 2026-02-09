@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Subscription } from '@/lib/models/Subscription';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { withAdminAuth } from '@/lib/firebase/withAuth';
 
-async function checkAdmin() {
-    const session = await getServerSession(authOptions);
-    return !!session && ((session.user as any).role === 'admin' || (session.user as any).role === 'super-admin');
-}
-
-export async function GET(req: NextRequest) {
+export const GET = withAdminAuth(async (req, user) => {
     try {
-        if (!await checkAdmin()) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         await connectToDatabase();
 
         // 1. Calculate MRR
@@ -78,4 +68,4 @@ export async function GET(req: NextRequest) {
             stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
         }, { status: 500 });
     }
-}
+});

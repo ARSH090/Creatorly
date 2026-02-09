@@ -1,22 +1,21 @@
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { FinanceDashboard } from '@/components/admin/FinanceDashboard';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/firebase/server-auth';
 import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminFinancePage() {
-  const session = await getServerSession(authOptions);
+  const user = await getCurrentUser();
 
-  if (!session) {
+  if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
     redirect('/auth/login');
   }
 
   return (
     <AdminLayout
-      adminName={session.user?.name || 'Admin'}
-      adminEmail={session.user?.email || ''}
+      adminName={user.displayName || 'Admin'}
+      adminEmail={user.email || ''}
     >
       <FinanceDashboard />
     </AdminLayout>

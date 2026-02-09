@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react';
+import { useAuth } from '@/components/providers/AuthProvider';
 import {
   LayoutDashboard,
   Users,
@@ -75,9 +75,13 @@ const navigationItems = [
   },
 ];
 
-export function AdminLayout({ children, adminName, adminEmail, onLogout }: AdminLayoutProps) {
+export function AdminLayout({ children, adminName: initialName, adminEmail: initialEmail, onLogout }: AdminLayoutProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const { user, logout } = useAuth();
+
+  const adminName = initialName || user?.displayName || 'Admin';
+  const adminEmail = initialEmail || user?.email || '';
 
   return (
     <div className="flex h-screen bg-gray-900">
@@ -126,7 +130,7 @@ export function AdminLayout({ children, adminName, adminEmail, onLogout }: Admin
             </div>
           )}
           <button
-            onClick={() => onLogout ? onLogout() : signOut({ callbackUrl: '/auth/login' })}
+            onClick={() => onLogout ? onLogout() : logout()}
             className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"
           >
             <LogOut size={18} />

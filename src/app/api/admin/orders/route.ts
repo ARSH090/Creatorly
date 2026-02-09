@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import Order from '@/lib/models/Order';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { getAdminSession, logAdminAction, getClientIp, getClientUserAgent, ADMIN_PERMISSIONS, hasPermission } from '@/lib/admin/authMiddleware';
+import { razorpay } from '@/lib/payments/razorpay';
+import { getAdminSession, logAdminAction, getClientIp, getClientUserAgent, ADMIN_PERMISSIONS, hasPermission } from '../../../../lib/admin/authMiddleware';
 
 const getOrdersSchema = z.object({
   search: z.string().optional(),
@@ -150,8 +151,21 @@ export async function POST(req: NextRequest) {
 
       // Process refund via Razorpay
       try {
-        // TODO: Implement actual Razorpay refund
+        if (!order.razorpayPaymentId) {
+          return NextResponse.json({ error: 'Razorpay Payment ID not found for this order' }, { status: 400 });
+        }
+
+        const refundResponse = await razorpay.payments.refund(order.razorpayPaymentId, {
+          amount: Math.round(refundAmt * 100), // Convert to paise
+          notes: {
+            reason,
+            adminEmail: session.email,
+            orderId: order._id.toString(),
+          },
+        });
+
         order.status = 'refunded';
+        order.razorpaySignature = refundResponse.id; // Store refund ID or use a specific field if available
         order.refund = {
           amount: refundAmt,
           reason,

@@ -1,35 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
 import Admin from '@/lib/models/Admin';
 import Order from '@/lib/models/Order';
+import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { getCurrentUser } from '@/lib/firebase/server-auth';
 
-async function checkAdminAccess(session: any) {
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+export async function checkAdminAccess() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return null; // Or throw error/return unauthorized response depending on usage
   }
 
-  await connectToDatabase();
-  const admin = await Admin.findOne({ userId: session.user.id });
-
-  if (!admin) {
-    throw new Error('Not an admin');
+  if (user.role !== 'admin' && user.role !== 'super-admin') {
+    return null;
   }
 
-  return admin;
+  return user;
 }
 
 /**
  * GET /api/admin/dashboard
  * Get overall dashboard statistics
  */
-export async function GET(request: NextRequest) {
+export const GET = withAdminAuth(async (request, user) => {
   try {
-    const session = await getServerSession();
-    const admin = await checkAdminAccess(session);
+    // Admin check is already handled by withAdminAuth
+    // user object is available directly
 
     await connectToDatabase();
+
+    // Optional: Double check Admin model presence if needed, but role check is usually enough
+    // const adminProfile = await Admin.findOne({ userId: user._id });
 
     const totalUsers = await User.countDocuments();
     const totalOrders = await Order.countDocuments();
@@ -65,8 +68,8 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Admin dashboard error:', error);
     return NextResponse.json(
-      { error: 'Access denied' },
-      { status: error instanceof Error && error.message === 'Not an admin' ? 403 : 401 }
+      { error: 'Internal server error' },
+      { status: 500 }
     );
   }
-}
+});

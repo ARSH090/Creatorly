@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import * as crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import User from '@/lib/models/User';
@@ -138,17 +139,21 @@ export async function POST(req: NextRequest) {
       userAgent
     );
 
-    // Return JWT token for admin session
-    // In production, use a proper JWT library
-    const token = Buffer.from(
-      JSON.stringify({
-        id: user._id,
-        email: user.email,
-        role: user.role,
-        permissions: user.permissions,
-        iat: Date.now(),
-      })
-    ).toString('base64');
+    // Return pseudo-signed token for admin session
+    // In production, use a proper JWT library with a secure HS256 secret
+    const payload = JSON.stringify({
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      permissions: user.permissions,
+      iat: Date.now(),
+    });
+
+    const signature = crypto.createHmac('sha256', process.env.JWT_SECRET || 'fallback-secret')
+      .update(payload)
+      .digest('hex');
+
+    const token = `${Buffer.from(payload).toString('base64')}.${signature}`;
 
     const response = NextResponse.json({
       message: 'Login successful',

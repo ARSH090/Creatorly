@@ -1,17 +1,10 @@
 import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
-import { getServerSession } from 'next-auth';
 import { NextResponse } from 'next/server';
-import { authOptions } from '@/lib/auth';
+import { withAuth } from '@/lib/firebase/withAuth';
 
-export async function POST(req: Request) {
+export const POST = withAuth(async (req, user) => {
     try {
-        const session = await getServerSession(authOptions);
-
-        if (!session?.user?.email) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const { username } = await req.json();
 
         if (!username || username.length < 3) {
@@ -32,7 +25,7 @@ export async function POST(req: Request) {
 
         // Update user
         const updatedUser = await User.findOneAndUpdate(
-            { email: session.user.email },
+            { _id: user._id },
             { username: username.toLowerCase() },
             { new: true }
         );
@@ -50,4 +43,4 @@ export async function POST(req: Request) {
         console.error('Update Username API error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

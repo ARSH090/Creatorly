@@ -1,22 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { saveInvoice } from '@/lib/services/invoice';
+import { withAuth } from '@/lib/firebase/withAuth';
 
 /**
  * GET /api/orders/{orderId}/invoice
  * Download invoice for order
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
     try {
-        const session = await getServerSession();
-
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
         const pathname = request.nextUrl.pathname;
         const orderId = pathname.split('/')[3];
 
@@ -43,4 +34,4 @@ export async function GET(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});

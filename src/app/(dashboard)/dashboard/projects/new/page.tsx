@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Lesson {
     id: string;
@@ -78,7 +78,7 @@ const PRODUCT_TYPES: { id: ProductFormData['type']; name: string; desc: string; 
 export default function NewProductWizard() {
     const [currentStep, setCurrentStep] = useState(0);
     const [isPublishing, setIsPublishing] = useState(false);
-    const { data: session } = useSession();
+    const { user } = useAuth();
     const [formData, setFormData] = useState<ProductFormData>({
         type: 'digital',
         name: '',
@@ -124,7 +124,7 @@ export default function NewProductWizard() {
                 body: JSON.stringify({
                     ...formData,
                     price: Number(formData.price),
-                    creatorId: (session?.user as any)?.id || 'mock-id'
+                    creatorId: user?.uid || 'mock-id'
                 }),
             });
 

@@ -1,23 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Plan from '@/lib/models/Plan';
-import { authOptions } from '@/lib/auth'; // Assuming authOptions is exported from lib/auth
+import { withAdminAuth } from '@/lib/firebase/withAuth';
 
-async function checkAdmin() {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user as any).role !== 'admin' && (session.user as any).role !== 'super-admin') {
-        return false;
-    }
-    return true;
-}
-
-export async function GET(req: NextRequest) {
+export const GET = withAdminAuth(async (req, user) => {
     try {
-        if (!await checkAdmin()) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         await connectToDatabase();
         const { searchParams } = new URL(req.url);
         const tier = searchParams.get('tier');
@@ -32,14 +19,10 @@ export async function GET(req: NextRequest) {
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
+});
 
-export async function POST(req: NextRequest) {
+export const POST = withAdminAuth(async (req, user) => {
     try {
-        if (!await checkAdmin()) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         await connectToDatabase();
         const body = await req.json();
 
@@ -54,4 +37,4 @@ export async function POST(req: NextRequest) {
         console.error('Plan creation error:', error);
         return NextResponse.json({ error: error.message }, { status: 400 });
     }
-}
+});

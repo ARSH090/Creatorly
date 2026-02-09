@@ -1,34 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Affiliate, AffiliateClick } from '@/lib/models/Affiliate';
-import crypto from 'crypto';
+import * as crypto from 'crypto';
 import { z } from 'zod';
+import { withAuth } from '@/lib/firebase/withAuth';
+import { getIP } from '@/lib/security/ip-detection';
 
 /**
  * GET /api/affiliates/account
  * Get affiliate account info
  */
-export async function GET(request: NextRequest) {
+export const GET = withAuth(async (request, user) => {
     try {
-        const session = await getServerSession();
-
-        if (!session?.user?.id) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 401 }
-            );
-        }
-
         await connectToDatabase();
 
-        let affiliate = await Affiliate.findOne({ creatorId: session.user.id });
+        let affiliate = await Affiliate.findOne({ creatorId: user._id });
 
         if (!affiliate) {
             // Create affiliate account on first access
             const affiliateCode = `aff_${crypto.randomBytes(8).toString('hex')}`;
             affiliate = await Affiliate.create({
-                creatorId: session.user.id,
+                creatorId: user._id,
                 affiliateCode,
                 commissionRate: 10,
             });
@@ -52,7 +44,7 @@ export async function GET(request: NextRequest) {
             { status: 500 }
         );
     }
-}
+});
 
 /**
  * POST /api/affiliates/links
@@ -85,11 +77,13 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        const ipAddress = getIP(request);
+
         // Record click
         await AffiliateClick.create({
             affiliateId: affiliate._id,
             referralCode: validation.data.affiliateCode,
-            ipAddress: request.headers.get('x-forwarded-for') || 'unknown',
+            ipAddress,
             userAgent: request.headers.get('user-agent') || 'unknown',
         });
 
@@ -102,7 +96,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             affiliateCode: validation.data.affiliateCode,
             productId: validation.data.productId,
-            trackingId: `click_${Date.now()}`,
+            trackingId: `click_${crypto.randomBytes(12).toString('hex')}`,
         });
     } catch (error) {
         console.error('Track affiliate click error:', error);

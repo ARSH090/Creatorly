@@ -2,16 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import User from '@/lib/models/User';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth/authOptions';
+import { withAuth } from '@/lib/firebase/withAuth';
 
-export async function POST(req: NextRequest) {
+export const POST = withAuth(async (req, user) => {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         const data = await req.json();
         await connectToDatabase();
 
@@ -20,11 +14,11 @@ export async function POST(req: NextRequest) {
         }
 
         // 1. Enforce Plan Limits
-        const user = await User.findById((session.user as any).id).select('planLimits');
-        const maxProducts = user?.planLimits?.maxProducts ?? 3; // Default to 3 (Free Tier) if not set
+        // user object is already the Mongoose document, so we can access planLimits directly
+        const maxProducts = user.planLimits?.maxProducts ?? 3; // Default to 3 (Free Tier) if not set
 
         const currentCount = await Product.countDocuments({
-            creatorId: (session.user as any).id,
+            creatorId: user._id,
             isActive: true
         });
 
@@ -38,7 +32,7 @@ export async function POST(req: NextRequest) {
 
         // 2. Map Wizard Data to Product Schema
         const productData = {
-            creatorId: (session.user as any).id,
+            creatorId: user._id,
             name: data.name,
             slug: data.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
             description: data.description || '',
@@ -79,7 +73,7 @@ export async function POST(req: NextRequest) {
             details: error.message
         }, { status: 500 });
     }
-}
+});
 
 export async function GET(req: NextRequest) {
     try {

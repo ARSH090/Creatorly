@@ -1,24 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { connectToDatabase } from '@/lib/db/mongodb';
-import User from '@/lib/models/User';
+import { getCurrentUser } from '@/lib/firebase/server-auth';
 
-export async function adminAuthMiddleware(req: NextRequest): Promise<{ user: any; isAdmin: boolean } | NextResponse> {
+export async function adminAuthMiddleware(req: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await getCurrentUser();
 
-    if (!session?.user?.email) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Unauthorized - No session' },
         { status: 401 }
       );
     }
 
-    await connectToDatabase();
-    const user = await User.findOne({ email: session.user.email });
-
-    if (!user || !user.role || !['admin', 'super_admin', 'super-admin'].includes(user.role)) {
+    if (!user.role || !['admin', 'super_admin', 'super-admin'].includes(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }
@@ -44,6 +38,7 @@ export async function adminAuthMiddleware(req: NextRequest): Promise<{ user: any
     );
   }
 }
+
 
 async function logAdminAction(data: any) {
   try {

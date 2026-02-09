@@ -7,11 +7,11 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 import { IProduct, IModule, ILesson } from '@/lib/models/Product';
 
 export default function CoursePlayer({ params }: { params: { username: string, slug: string } }) {
-    const { data: session, status: authStatus } = useSession();
+    const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
     const [product, setProduct] = useState<IProduct | null>(null);
@@ -43,9 +43,9 @@ export default function CoursePlayer({ params }: { params: { username: string, s
             }
         }
 
-        if (authStatus === 'authenticated') fetchCourse();
-        else if (authStatus === 'unauthenticated') router.push(`/u/${params.username}`);
-    }, [params.slug, authStatus]);
+        if (!authLoading && user) fetchCourse();
+        else if (!authLoading && !user) router.push(`/u/${params.username}`);
+    }, [params.slug, user, authLoading, router]);
 
     const handleLessonComplete = async (lessonId: string) => {
         if (completedLessons.includes(lessonId)) return;

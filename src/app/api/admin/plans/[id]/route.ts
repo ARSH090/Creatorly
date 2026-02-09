@@ -1,28 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Plan from '@/lib/models/Plan';
 import { Subscription } from '@/lib/models/Subscription';
-import { authOptions } from '@/lib/auth';
 import { validatePriceChange } from '@/lib/middleware/subscriptionMiddleware';
+import { withAdminAuth } from '@/lib/firebase/withAuth';
 
-async function checkAdmin() {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user as any).role !== 'admin' && (session.user as any).role !== 'super-admin') {
-        return false;
-    }
-    return true;
-}
-
-export async function GET(
-    req: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const GET = withAdminAuth(async (req, user, context: any) => {
     try {
-        if (!await checkAdmin()) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         await connectToDatabase();
         const { id } = await context.params;
         const plan = await Plan.findById(id);
@@ -32,17 +16,10 @@ export async function GET(
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
+});
 
-export async function PUT(
-    req: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAdminAuth(async (req, user, context: any) => {
     try {
-        if (!await checkAdmin()) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         await connectToDatabase();
         const body = await req.json();
         const { id } = await context.params;
@@ -63,17 +40,10 @@ export async function PUT(
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 400 });
     }
-}
+});
 
-export async function DELETE(
-    req: NextRequest,
-    context: { params: Promise<{ id: string }> }
-) {
+export const DELETE = withAdminAuth(async (req, user, context: any) => {
     try {
-        if (!await checkAdmin()) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
         await connectToDatabase();
 
         // Check if there are ANY subscribers (even canceled ones) for data integrity
@@ -90,4 +60,4 @@ export async function DELETE(
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
-}
+});

@@ -69,9 +69,18 @@ export function generateTOTPSecret(): {
 }
 
 export function verifyTOTPToken(secret: string, token: string): boolean {
-  // Placeholder - In production, use speakeasy library
-  // For now, accept any valid looking token
-  return /^\d{6}$/.test(token);
+  const speakeasy = require('speakeasy');
+  try {
+    return speakeasy.totp.verify({
+      secret: secret,
+      encoding: 'base32',
+      token: token,
+      window: adminSecurityConfig.totpWindowSize || 1
+    });
+  } catch (error) {
+    console.error('TOTP verification error:', error);
+    return false;
+  }
 }
 
 // ============================================================================

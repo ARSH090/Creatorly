@@ -5,10 +5,10 @@ import {
     CreditCard, Check, Sparkles, AlertCircle,
     ArrowRight, Download, Calendar, Zap, Shield
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function BillingPage() {
-    const { data: session } = useSession();
+    const { user } = useAuth();
     const [loading, setLoading] = useState(true);
     const [subscription, setSubscription] = useState<any>(null);
     const [plans, setPlans] = useState<any[]>([]);
@@ -219,10 +219,10 @@ export default function BillingPage() {
                             <button
                                 disabled={plan.isCurrent}
                                 className={`w-full py-3 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${plan.isCurrent
-                                        ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
-                                        : plan.popular
-                                            ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg shadow-indigo-500/20'
-                                            : 'bg-white text-black hover:bg-zinc-200'
+                                    ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
+                                    : plan.popular
+                                        ? 'bg-indigo-500 text-white hover:bg-indigo-600 shadow-lg shadow-indigo-500/20'
+                                        : 'bg-white text-black hover:bg-zinc-200'
                                     }`}
                             >
                                 {plan.isCurrent ? 'Current Plan' : 'Select Plan'}
