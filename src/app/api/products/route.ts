@@ -4,14 +4,22 @@ import Product from '@/lib/models/Product';
 import User from '@/lib/models/User';
 import { withAuth } from '@/lib/firebase/withAuth';
 
+import { ProductSchema } from '@/lib/validation/schemas';
+
 export const POST = withAuth(async (req, user) => {
     try {
-        const data = await req.json();
-        await connectToDatabase();
+        const body = await req.json();
+        const validation = ProductSchema.safeParse(body);
 
-        if (!data.name || !data.type || !data.price || !data.image || !data.category) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        if (!validation.success) {
+            return NextResponse.json({
+                error: 'Validation failed',
+                details: validation.error.format()
+            }, { status: 400 });
         }
+
+        const data = validation.data;
+        await connectToDatabase();
 
         // 1. Enforce Plan Limits
         // user object is already the Mongoose document, so we can access planLimits directly
@@ -30,20 +38,20 @@ export const POST = withAuth(async (req, user) => {
             }, { status: 403 });
         }
 
-        // 2. Map Wizard Data to Product Schema
+        // 2. Map Validated Data to Product Schema
         const productData = {
             creatorId: user._id,
             name: data.name,
             slug: data.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
             description: data.description || '',
-            price: Number(data.price),
-            currency: data.currency || 'INR',
-            paymentType: data.paymentType || 'one_time',
+            price: data.price,
+            currency: data.currency,
+            paymentType: 'one_time',
             category: data.category,
             image: data.image,
             type: data.type,
-            files: Array.isArray(data.files) ? data.files.map((f: any) => ({ name: f.name || 'file', url: f.url, size: f.size, mimeType: f.mimeType })) : [],
-            digitalFileUrl: data.type === 'digital' ? (data.files?.[0]?.url || data.digitalFileUrl) : undefined,
+            status: data.isPublic ? 'published' : 'draft',
+            files: data.files || [],
             accessRules: {
                 immediateAccess: true,
                 requiresApproval: false
@@ -51,10 +59,10 @@ export const POST = withAuth(async (req, user) => {
             seo: {
                 metaTitle: data.name,
                 metaDescription: (data.description || '').slice(0, 160),
-                keywords: Array.isArray(data.keywords) ? data.keywords : []
+                keywords: []
             },
-            isActive: data.isPublic ?? true,
-            isFeatured: data.isFeaturedInCollections ?? false
+            isActive: data.isPublic,
+            isFeatured: data.isFeatured || data.isFeaturedInCollections
         } as any;
 
         // 3. Create Product

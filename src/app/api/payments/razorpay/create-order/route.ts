@@ -40,6 +40,8 @@ export async function POST(req: NextRequest) {
         const amountInPaise = Math.round(amountWithTax * 100);
 
         // 2. Create Razorpay Order
+        const user = await getCurrentUser();
+
         const razorpayOrder = await razorpay.orders.create({
             amount: amountInPaise,
             currency: 'INR',
@@ -47,17 +49,18 @@ export async function POST(req: NextRequest) {
             notes: {
                 customerName: customer.name,
                 customerEmail: customer.email,
-                itemsCount: items.length
+                itemsCount: items.length,
+                userId: user?.id || 'guest',
+                productIds: items.map(i => i.productId.toString()).join(',')
             }
         });
 
         // 3. Save Order in Database
-        const user = await getCurrentUser();
 
         await Order.create({
             items,
             creatorId,
-            userId: user?.id || undefined, // Use undefined for optional field
+            userId: user?.id ? user.id : null,
             customerEmail: customer.email,
             amount: amountWithTax,
             currency: 'INR',

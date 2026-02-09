@@ -5,11 +5,11 @@ import Product from '@/lib/models/Product';
 
 export async function GET(
     req: NextRequest,
-    context: { params: Promise<{ orderId: string }> }
+    { params }: { params: { orderId: string } }
 ) {
     try {
         await connectToDatabase();
-        const { orderId } = await context.params;
+        const { orderId } = params;
 
         // 1. Fetch Order and include Product details
         const order = await Order.findById(orderId);

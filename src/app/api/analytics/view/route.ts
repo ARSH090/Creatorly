@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-// Analytics logging
+import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
 
 export async function POST(req: NextRequest) {
     try {
@@ -8,15 +8,27 @@ export async function POST(req: NextRequest) {
         const forwarded = req.headers.get('x-forwarded-for');
         const ip = forwarded ? forwarded.split(',')[0] : '127.0.0.1';
         const ua = req.headers.get('user-agent') || 'unknown';
+        const referrer = req.headers.get('referer') || '';
 
-        // Non-blocking for the user
         await connectToDatabase();
 
-        // Simple log for now, can be expanded to a dedicated Analytics model
-        console.log(`[Analytics] ${data.type} view for ${data.creatorId} from ${ip}`);
+        // Persist the analytics event with safe defaults
+        await AnalyticsEvent.create({
+            eventType: (data.type || 'page_view').slice(0, 50),
+            creatorId: data.creatorId,
+            productId: data.productId,
+            orderId: data.orderId,
+            ip,
+            userAgent: ua.slice(0, 200),
+            referrer: referrer.slice(0, 200),
+            path: (data.path || '/').slice(0, 100),
+            metadata: data.metadata || {}
+        });
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        return NextResponse.json({ success: false }, { status: 500 });
+        console.error('[Analytics] Error logging event:', error);
+        // We return 200 even if analytics fail to not break the user experience
+        return NextResponse.json({ success: false }, { status: 200 });
     }
 }

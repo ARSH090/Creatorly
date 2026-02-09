@@ -16,9 +16,10 @@ import { ProductGridSkeleton } from '@/components/storefront/ProductSkeleton';
 
 export const dynamic = 'force-dynamic';
 
-export async function generateMetadata({ params }: { params: { username: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ username: string }> }): Promise<Metadata> {
     await connectToDatabase();
-    const creator = await User.findOne({ username: params.username });
+    const { username } = await params;
+    const creator = await User.findOne({ username });
 
     if (!creator) {
         return {
@@ -43,10 +44,11 @@ export async function generateMetadata({ params }: { params: { username: string 
     };
 }
 
-export default async function CreatorStorefront({ params }: { params: { username: string } }) {
+export default async function CreatorStorefront({ params }: { params: Promise<{ username: string }> }) {
+    const { username } = await params;
     await connectToDatabase();
 
-    const creator = await User.findOne({ username: params.username });
+    const creator = await User.findOne({ username });
     if (!creator) notFound();
 
     const profile = await CreatorProfile.findOne({ creatorId: creator._id });
@@ -58,11 +60,12 @@ export default async function CreatorStorefront({ params }: { params: { username
 
     if (currentUser) {
         const orders = await Order.find({
-            userId: currentUser._id,
+            userId: currentUser.id,
             creatorId: creator._id,
             status: 'success'
         });
-        purchasedProductIds = orders.map(o => o.productId.toString());
+        // Flatten all product IDs from all items in all orders
+        purchasedProductIds = orders.flatMap(o => o.items.map(item => item.productId.toString()));
     }
 
     // Standardize theme with defaults

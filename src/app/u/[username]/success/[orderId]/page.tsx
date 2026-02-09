@@ -5,15 +5,11 @@ import User from '@/lib/models/User';
 import { notFound } from 'next/navigation';
 import { CheckCircle, Download, ArrowRight, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
+import React from 'react';
 
-export default async function PurchaseSuccessPage({
-    params
-}: {
-    params: { username: string; orderId: string }
-}) {
+export default async function SuccessPage({ params }: { params: Promise<{ username: string; orderId: string }> }) {
+    const { username, orderId } = await params;
     await connectToDatabase();
-
-    const { orderId, username } = params;
 
     const order = await Order.findById(orderId);
     if (!order || order.status !== 'success') {

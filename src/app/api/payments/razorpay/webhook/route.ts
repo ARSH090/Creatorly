@@ -38,6 +38,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ message: 'Event already processed' });
         }
 
+        // 2b. Secondary Payload-based Idempotency (CTO Hardening)
+        if (event === 'order.paid') {
+            const { id: rzpOrderId } = payload.payload.order.entity;
+            const existingOrder = await Order.findOne({ razorpayOrderId: rzpOrderId });
+            if (existingOrder && existingOrder.status === 'success') {
+                return NextResponse.json({ message: 'Order already confirmed' });
+            }
+        }
+
         console.log(`[Webhook] Processing Razorpay event: ${event}`);
 
         // 3. Handle Events

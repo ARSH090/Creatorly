@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
 import { generateDeliveryToken } from '@/lib/delivery/tokens';
 import { getCurrentUser } from '@/lib/firebase/server-auth';
+import DownloadToken from '@/lib/models/DownloadToken';
 
 export async function POST(req: NextRequest) {
     try {
@@ -22,6 +23,15 @@ export async function POST(req: NextRequest) {
             productId: productId,
             email: order.customerEmail,
             ip: req.headers.get('x-forwarded-for') || undefined
+        });
+
+        // 3. Persist Token for usage tracking
+        await DownloadToken.create({
+            token,
+            orderId: order._id,
+            productId: productId,
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+            maxUsage: 5
         });
 
         return NextResponse.json({ token });

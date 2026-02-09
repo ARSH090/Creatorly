@@ -4,6 +4,8 @@ import Order from '@/lib/models/Order';
 import CreatorProfile from '@/lib/models/CreatorProfile';
 import { withAuth } from '@/lib/firebase/withAuth';
 
+export const dynamic = 'force-dynamic';
+
 export const GET = withAuth(async (req, user, context: any) => {
     try {
         await connectToDatabase();

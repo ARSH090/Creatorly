@@ -9,11 +9,11 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
     req: NextRequest,
-    { params }: { params: Promise<{ username: string }> }
+    { params }: { params: { username: string } }
 ) {
     try {
         await connectToDatabase();
-        const { username } = await params;
+        const { username } = params;
         const { searchParams } = new URL(req.url);
         const dateStr = searchParams.get('date'); // YYYY-MM-DD
 

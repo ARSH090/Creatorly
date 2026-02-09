@@ -3,10 +3,11 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import { withAuth } from '@/lib/firebase/withAuth';
 
-export const GET = withAuth(async (req, user, { params }) => {
+export const GET = withAuth(async (req, user, { params }: { params: { id: string } }) => {
     try {
+        const { id } = params;
         await connectToDatabase();
-        const product = await Product.findOne({ _id: (params as any).id, creatorId: user._id });
+        const product = await Product.findOne({ _id: id, creatorId: user._id });
 
         if (!product) {
             return NextResponse.json({ error: 'Product not found' }, { status: 404 });
@@ -18,13 +19,14 @@ export const GET = withAuth(async (req, user, { params }) => {
     }
 });
 
-export const PATCH = withAuth(async (req, user, { params }) => {
+export const PATCH = withAuth(async (req, user, { params }: { params: { id: string } }) => {
     try {
+        const { id } = params;
         const data = await req.json();
         await connectToDatabase();
 
         const product = await Product.findOneAndUpdate(
-            { _id: (params as any).id, creatorId: user._id },
+            { _id: id, creatorId: user._id },
             { $set: { ...data, updatedAt: new Date() } },
             { new: true, runValidators: true }
         );
@@ -40,11 +42,12 @@ export const PATCH = withAuth(async (req, user, { params }) => {
     }
 });
 
-export const DELETE = withAuth(async (req, user, { params }) => {
+export const DELETE = withAuth(async (req, user, { params }: { params: { id: string } }) => {
     try {
+        const { id } = params;
         await connectToDatabase();
         const product = await Product.findOneAndUpdate(
-            { _id: (params as any).id, creatorId: user._id },
+            { _id: id, creatorId: user._id },
             { $set: { isActive: false } },
             { new: true }
         );

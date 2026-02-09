@@ -27,6 +27,7 @@ export async function connectToDatabase() {
         const opts: any = {
             ...mongoSecurityOptions,
             bufferCommands: false,
+            maxPoolSize: 10,
         };
 
         console.log('📡 Attempting MongoDB connection...');

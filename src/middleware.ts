@@ -40,8 +40,10 @@ export function middleware(req: NextRequest) {
     const isWebhook = pathname.startsWith('/api/payments/webhook');
 
     if (process.env.NODE_ENV === 'production' && isApi && isMutating && !isWebhook) {
-        // Skip CSRF for auth endpoints if needed, but generally good to keep
-        if (!pathname.startsWith('/api/auth')) {
+        // Skip CSRF for webhooks (already verified via signature)
+        const isPaymentWebhook = pathname.startsWith('/api/payments/razorpay/webhook');
+
+        if (!isPaymentWebhook && !pathname.startsWith('/api/auth')) {
             const csrfHeader = req.headers.get('x-csrf-token');
             const csrfCookie = req.cookies.get('csrfToken')?.value;
             if (!csrfHeader || !csrfCookie || csrfHeader !== csrfCookie) {
@@ -51,13 +53,12 @@ export function middleware(req: NextRequest) {
     }
 
     // Set CSRF cookie if missing
-    if (!req.cookies.get('csrfToken')) {
-        response.cookies.set('csrfToken', Math.random().toString(36).slice(2), {
-            httpOnly: false,
-            sameSite: 'lax',
-            secure: process.env.NODE_ENV === 'production'
-        });
-    }
+    response.cookies.set('csrfToken', Math.random().toString(36).slice(2), {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production'
+    });
 
     return response;
 }

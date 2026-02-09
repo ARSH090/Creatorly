@@ -10,7 +10,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 
-export default function MemberFeed({ params }: { params: { username: string } }) {
+export default function MemberFeed({ params }: { params: Promise<{ username: string }> }) {
+    const { username } = React.use(params);
     const { user, loading: authLoading } = useAuth();
     const router = useRouter();
     const [loading, setLoading] = useState(true);
@@ -20,9 +21,9 @@ export default function MemberFeed({ params }: { params: { username: string } })
         async function fetchFeed() {
             try {
                 // In a real scenario, this would check if the user has an active membership/course
-                const response = await fetch(`/api/community/${params.username}`);
+                const response = await fetch(`/api/community/${username}`);
                 if (!response.ok) {
-                    if (response.status === 403) router.push(`/u/${params.username}`);
+                    if (response.status === 403) router.push(`/u/${username}`);
                     throw new Error('Failed to fetch feed');
                 }
                 const data = await response.json();
@@ -33,7 +34,7 @@ export default function MemberFeed({ params }: { params: { username: string } })
                 setPosts([
                     {
                         id: '1',
-                        author: params.username,
+                        author: username,
                         content: "Hey everyone! Just uploaded the new presets for this month. Check them out in the digital downloads section if you're on the Pro tier! 🚀",
                         likes: 42,
                         comments: 12,
@@ -42,7 +43,7 @@ export default function MemberFeed({ params }: { params: { username: string } })
                     },
                     {
                         id: '2',
-                        author: params.username,
+                        author: username,
                         content: "Working on a new masterclass about storytelling. What's the #1 struggle you face when planning your content?",
                         likes: 89,
                         comments: 45,
@@ -55,8 +56,8 @@ export default function MemberFeed({ params }: { params: { username: string } })
         }
 
         if (!authLoading && user) fetchFeed();
-        else if (!authLoading && !user) router.push(`/u/${params.username}`);
-    }, [params.username, user, authLoading, router]);
+        else if (!authLoading && !user) router.push(`/u/${username}`);
+    }, [username, user, authLoading, router]);
 
     if (loading) {
         return (
@@ -79,7 +80,7 @@ export default function MemberFeed({ params }: { params: { username: string } })
                     </div>
                 </div>
                 <button
-                    onClick={() => router.push(`/u/${params.username}`)}
+                    onClick={() => router.push(`/u/${username}`)}
                     className="bg-white/5 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
                 >
                     Back to Store

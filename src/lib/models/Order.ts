@@ -24,12 +24,14 @@ export interface IOrder extends Document {
     downloadHistory: Date[];
     ipAddress?: string;
 
+    refundStatus: 'NONE' | 'REQUESTED' | 'COMPLETED' | 'FAILED';
     refund?: {
         amount: number;
         reason: string;
         processedAt: Date;
         status: 'completed' | 'failed' | 'pending';
     };
+    deviceFingerprint?: string;
     metadata?: Record<string, any>;
     createdAt: Date;
     updatedAt: Date;
@@ -62,12 +64,18 @@ const OrderSchema: Schema = new Schema({
     downloadHistory: [Date],
     ipAddress: String,
 
+    refundStatus: {
+        type: String,
+        enum: ['NONE', 'REQUESTED', 'COMPLETED', 'FAILED'],
+        default: 'NONE'
+    },
     refund: {
         amount: { type: Number },
         reason: { type: String },
         processedAt: { type: Date },
         status: { type: String, enum: ['completed', 'failed', 'pending'] }
     },
+    deviceFingerprint: { type: String, index: true },
 
     metadata: { type: Schema.Types.Mixed, default: {} }
 }, { timestamps: true });

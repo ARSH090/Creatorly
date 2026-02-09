@@ -65,7 +65,8 @@ export interface IProduct extends Document {
         keywords?: string[];
     };
 
-    isActive: boolean;
+    status: 'draft' | 'published' | 'archived';
+    isActive: boolean; // Keep for backward compatibility
     isFeatured: boolean;
     inventoryCount?: number; // For physical goods
 
@@ -138,6 +139,11 @@ const ProductSchema: Schema = new Schema({
         keywords: [String]
     },
 
+    status: {
+        type: String,
+        enum: ['draft', 'published', 'archived'],
+        default: 'published' // Default to published for existing data
+    },
     isActive: { type: Boolean, default: true },
     isFeatured: { type: Boolean, default: false },
     inventoryCount: { type: Number, default: 0 }

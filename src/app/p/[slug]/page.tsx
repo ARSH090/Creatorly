@@ -9,8 +9,8 @@ import RelatedProducts from '@/components/product/RelatedProducts';
 import { ChevronRight, Share2, Twitter, Linkedin, Link as LinkIcon, MessageCircle } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 
-// ISR every 24 hours
-export const revalidate = 86400;
+// ISR every 60 seconds (CTO Hardening)
+export const revalidate = 60;
 
 interface Props {
     params: Promise<{ slug: string }>;
@@ -51,14 +51,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
 }
 
-// Generate static params for common products (Optional, can be pre-fetched from DB)
+// Generate static params for common products (Optional)
 export async function generateStaticParams() {
-    // In production, fetch top 100 slugs from DB
-    return [];
+    return []; // Let them be dynamic at build time to avoid worker exit
 }
 
-export default async function ProductPage({ params }: Props) {
+export default async function ProductPage({ params, searchParams }: Props) {
     const { slug } = await params;
+    const resolvedSearchParams = await searchParams;
     const data = await getProductData(slug);
 
     if (!data) notFound();
