@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-export const dynamic = 'force-dynamic';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
 import { AdminLog } from '@/lib/models/AdminLog';
 import { adminAuthMiddleware, checkAdminPermission } from '@/lib/middleware/adminAuth';
 import { z } from 'zod';
+
+export const dynamic = 'force-dynamic';
 
 const userUpdateSchema = z.object({
   displayName: z.string().optional(),
