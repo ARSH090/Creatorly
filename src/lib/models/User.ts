@@ -142,6 +142,10 @@ const UserSchema: Schema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'Device'
     }],
+    activeSubscription: {
+        type: Schema.Types.ObjectId,
+        ref: 'Subscription'
+    },
     createdAt: {
         type: Date,
         default: Date.now,
