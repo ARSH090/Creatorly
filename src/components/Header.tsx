@@ -4,10 +4,10 @@ import React from 'react';
 
 const Header: React.FC = () => {
   return (
-    <header className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/20 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 group">
-          <Logo className="h-8" iconClassName="h-8 w-8" showText={true} />
+    <header className="fixed top-0 w-full z-50 border-b border-white/5 bg-black/40 backdrop-blur-xl">
+      <div className="max-w-7xl mx-auto px-8 h-20 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-2 group overflow-visible">
+          <Logo className="h-10" iconClassName="h-10 w-10" showText={true} />
         </Link>
 
         <div className="hidden md:flex items-center gap-8">

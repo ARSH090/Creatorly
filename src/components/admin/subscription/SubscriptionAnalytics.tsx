@@ -72,7 +72,7 @@ export default function SubscriptionAnalytics() {
 
             <Grid container spacing={3} sx={{ mb: 4 }}>
                 {stats.map((stat, i) => (
-                    <Grid item xs={12} sm={6} md={3} key={i}>
+                    <Grid size={{ xs: 12, sm: 6, md: 3 }} key={i}>
                         <Card variant="outlined" sx={{ borderRadius: 2 }}>
                             <CardContent>
                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -91,7 +91,7 @@ export default function SubscriptionAnalytics() {
             </Grid>
 
             <Grid container spacing={4}>
-                <Grid item xs={12} md={8}>
+                <Grid size={{ xs: 12, md: 8 }}>
                     <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, height: 400 }}>
                         <Typography variant="h6" gutterBottom fontWeight="bold">Revenue Distribution (Monthly)</Typography>
                         <ResponsiveContainer width="100%" height="90%">
@@ -106,7 +106,7 @@ export default function SubscriptionAnalytics() {
                     </Paper>
                 </Grid>
 
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Paper variant="outlined" sx={{ p: 3, borderRadius: 2, height: 400 }}>
                         <Typography variant="h6" gutterBottom fontWeight="bold">Active Subscribers by Tier</Typography>
                         <ResponsiveContainer width="100%" height="90%">

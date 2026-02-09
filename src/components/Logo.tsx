@@ -12,21 +12,21 @@ interface LogoProps {
 export const Logo: React.FC<LogoProps> = ({ className = "", iconClassName = "w-8 h-8", showText = true }) => {
     return (
         <div className={`flex items-center gap-3 group ${className}`}>
-            <div className={`relative overflow-hidden rounded-lg ${iconClassName} flex items-center justify-center`}> 
-                {/* Prefer raster logo if available in public/assets, otherwise fallback to SVG */}
-                {/* Place the attached image at public/assets/creatorly-logo.png for the raster logo to show */}
+            <div className={`relative overflow-hidden ${iconClassName} flex items-center justify-center transition-transform duration-300 group-hover:scale-105`}>
                 <Image
-                    src="/assets/creatorly-logo.png"
-                    alt="Creatorly logo"
-                    width={64}
-                    height={64}
+                    src="/creatorly-logo.png"
+                    alt="Creatorly Logo"
+                    width={120}
+                    height={40}
                     className="object-contain"
-                    onError={() => { /* graceful fallback handled by browser */ }}
+                    priority
                 />
             </div>
 
             {showText && (
-                <span className="text-xl font-bold text-white tracking-tight">Creatorly</span>
+                <span className="text-xl font-black text-white tracking-tighter uppercase italic">
+                    Creator<span className="text-indigo-400">ly</span>
+                </span>
             )}
         </div>
     );

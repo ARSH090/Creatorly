@@ -22,7 +22,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     return (
         <div className="min-h-screen flex flex-col bg-transparent">
             {showGlobalNav && <Header />}
-            <main className="flex-1 site-content">
+            <main className={`flex-1 site-content ${showGlobalNav ? 'pt-20' : ''}`}>
                 {children}
             </main>
             {showGlobalNav && <Footer />}

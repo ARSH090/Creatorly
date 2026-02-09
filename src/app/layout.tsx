@@ -21,6 +21,17 @@ export const metadata: Metadata = {
   description: "The all-in-one platform for Indian creators to manage stores, payments, and audience engagement with sub-second performance.",
   keywords: ["creator economy", "india", "ecommerce", "digital products", "monetization"],
   authors: [{ name: "Creatorly Team" }],
+  icons: {
+    icon: [
+      { url: "/creatorly-logo.png" },
+      { url: "/creatorly-logo.png", sizes: "32x32", type: "image/png" },
+      { url: "/creatorly-logo.png", sizes: "16x16", type: "image/png" }
+    ],
+    apple: [
+      { url: "/creatorly-logo.png" }
+    ],
+    shortcut: ["/creatorly-logo.png"]
+  },
   openGraph: {
     type: "website",
     locale: "en_IN",

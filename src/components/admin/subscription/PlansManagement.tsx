@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import {
     DataGrid,
     GridColDef,
-    GridValueGetterParams,
     GridActionsCellItem
 } from '@mui/x-data-grid';
 import {
@@ -207,17 +206,17 @@ export default function PlansManagement() {
                     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                     <Grid container spacing={3}>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Typography variant="subtitle2" color="primary" gutterBottom>Section 1: Basic Information</Typography>
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
                                 fullWidth label="Plan Name" required
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                             />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
                                 select fullWidth label="Tier" required
                                 value={formData.tier}
@@ -229,7 +228,7 @@ export default function PlansManagement() {
                                 ))}
                             </TextField>
                         </Grid>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <TextField
                                 fullWidth multiline rows={2} label="Description"
                                 value={formData.description}
@@ -237,11 +236,11 @@ export default function PlansManagement() {
                             />
                         </Grid>
 
-                        <Grid item xs={12}><Divider /></Grid>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}><Divider /></Grid>
+                        <Grid size={{ xs: 12 }}>
                             <Typography variant="subtitle2" color="primary" gutterBottom>Section 2: Pricing</Typography>
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
                                 fullWidth type="number" label="Monthly Price ($)" required
                                 value={formData.monthlyPrice}
@@ -249,7 +248,7 @@ export default function PlansManagement() {
                                 disabled={formData.tier === PlanTier.FREE}
                             />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid size={{ xs: 12, sm: 6 }}>
                             <TextField
                                 fullWidth type="number" label="Yearly Price ($)" required
                                 value={formData.yearlyPrice}
@@ -259,11 +258,11 @@ export default function PlansManagement() {
                             />
                         </Grid>
 
-                        <Grid item xs={12}><Divider /></Grid>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}><Divider /></Grid>
+                        <Grid size={{ xs: 12 }}>
                             <Typography variant="subtitle2" color="primary" gutterBottom>Section 3: Strict Limits</Typography>
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                             <TextField
                                 fullWidth type="number" label="Max Users" required
                                 value={formData.maxUsers}
@@ -271,7 +270,7 @@ export default function PlansManagement() {
                                 disabled={formData.tier === PlanTier.FREE}
                             />
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                             <TextField
                                 fullWidth type="number" label="Storage (MB)" required
                                 value={formData.maxStorageMb}
@@ -279,7 +278,7 @@ export default function PlansManagement() {
                                 disabled={formData.tier === PlanTier.FREE}
                             />
                         </Grid>
-                        <Grid item xs={12} sm={4}>
+                        <Grid size={{ xs: 12, sm: 4 }}>
                             <TextField
                                 fullWidth type="number" label="Max API Calls/Day" required
                                 value={formData.maxApiCalls}
@@ -288,8 +287,8 @@ export default function PlansManagement() {
                             />
                         </Grid>
 
-                        <Grid item xs={12}><Divider /></Grid>
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}><Divider /></Grid>
+                        <Grid size={{ xs: 12 }}>
                             <Typography variant="subtitle2" color="primary" gutterBottom>Section 4: Feature Flags</Typography>
                         </Grid>
                         {[
@@ -299,7 +298,7 @@ export default function PlansManagement() {
                             { key: 'hasTeamCollaboration', label: 'Team Collaboration' },
                             { key: 'hasWebhooks', label: 'Webhooks Access' },
                         ].map((feature) => (
-                            <Grid item xs={12} sm={6} key={feature.key}>
+                            <Grid size={{ xs: 12, sm: 6 }} key={feature.key}>
                                 <FormControlLabel
                                     control={
                                         <Switch

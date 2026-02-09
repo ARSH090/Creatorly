@@ -44,7 +44,6 @@ describe('GST Compliance Engine', () => {
 
     it('should enforce 18% default rate for undefined categories', () => {
         const amount = 100;
-        // @ts-ignore
         const result = calculateGST(amount, {
             rate: undefined,
             stateOfOrigin: 'Delhi',

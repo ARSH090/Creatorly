@@ -52,8 +52,7 @@ const PlanSchema: Schema = new Schema({
         required: true,
         min: 0,
         validate: {
-            validator: function (val: number) {
-                // @ts-ignore
+            validator: function (this: any, val: number): boolean {
                 return this.tier === PlanTier.FREE ? val === 0 : val > 0;
             },
             message: 'Monthly price must be 0 for Free tier and > 0 for paid tiers.'
@@ -64,10 +63,8 @@ const PlanSchema: Schema = new Schema({
         required: true,
         min: 0,
         validate: {
-            validator: function (val: number) {
-                // @ts-ignore
+            validator: function (this: any, val: number): boolean {
                 if (this.tier === PlanTier.FREE) return val === 0;
-                // @ts-ignore
                 return val > 0 && val < this.monthlyPrice * 12;
             },
             message: 'Yearly price must be 0 for Free tier and less than monthly * 12 for paid tiers.'
@@ -79,8 +76,7 @@ const PlanSchema: Schema = new Schema({
         type: Number,
         required: true,
         validate: {
-            validator: function (val: number) {
-                // @ts-ignore
+            validator: function (this: any, val: number): boolean {
                 return this.tier === PlanTier.FREE ? val <= 1 : val >= 1;
             },
             message: 'Free tier supports max 1 user.'
@@ -90,8 +86,7 @@ const PlanSchema: Schema = new Schema({
         type: Number,
         required: true,
         validate: {
-            validator: function (val: number) {
-                // @ts-ignore
+            validator: function (this: any, val: number): boolean {
                 return this.tier === PlanTier.FREE ? val <= 100 : val >= 1024;
             },
             message: 'Free tier supports max 100MB storage.'
@@ -101,8 +96,7 @@ const PlanSchema: Schema = new Schema({
         type: Number,
         required: true,
         validate: {
-            validator: function (val: number) {
-                // @ts-ignore
+            validator: function (this: any, val: number): boolean {
                 return this.tier === PlanTier.FREE ? val <= 1000 : val >= 10000;
             },
             message: 'Free tier supports max 1000 API calls.'
@@ -115,8 +109,7 @@ const PlanSchema: Schema = new Schema({
         type: Boolean,
         default: false,
         validate: {
-            validator: function (val: boolean) {
-                // @ts-ignore
+            validator: function (this: any, val: boolean): boolean {
                 return this.tier === PlanTier.FREE ? val === false : true;
             },
             message: 'Free tier cannot have analytics.'
@@ -126,8 +119,7 @@ const PlanSchema: Schema = new Schema({
         type: Boolean,
         default: false,
         validate: {
-            validator: function (val: boolean) {
-                // @ts-ignore
+            validator: function (this: any, val: boolean): boolean {
                 return this.tier === PlanTier.FREE ? val === false : true;
             },
             message: 'Free tier cannot have priority support.'
@@ -137,8 +129,7 @@ const PlanSchema: Schema = new Schema({
         type: Boolean,
         default: false,
         validate: {
-            validator: function (val: boolean) {
-                // @ts-ignore
+            validator: function (this: any, val: boolean): boolean {
                 return this.tier === PlanTier.FREE ? val === false : true;
             },
             message: 'Free tier cannot have custom domains.'
@@ -148,8 +139,7 @@ const PlanSchema: Schema = new Schema({
         type: Boolean,
         default: false,
         validate: {
-            validator: function (val: boolean) {
-                // @ts-ignore
+            validator: function (this: any, val: boolean): boolean {
                 return this.tier === PlanTier.FREE ? val === false : true;
             },
             message: 'Free tier cannot have team collaboration.'
@@ -159,8 +149,7 @@ const PlanSchema: Schema = new Schema({
         type: Boolean,
         default: false,
         validate: {
-            validator: function (val: boolean) {
-                // @ts-ignore
+            validator: function (this: any, val: boolean): boolean {
                 return this.tier === PlanTier.FREE ? val === false : true;
             },
             message: 'Free tier cannot have webhooks.'
@@ -173,7 +162,7 @@ const PlanSchema: Schema = new Schema({
 }, { timestamps: true });
 
 // Prevent logical errors with manual pre-save hook for complex constraints
-PlanSchema.pre('save', function (next) {
+PlanSchema.pre('save', async function (this: IPlan) {
     if (this.tier === PlanTier.FREE) {
         this.monthlyPrice = 0;
         this.yearlyPrice = 0;
@@ -186,7 +175,6 @@ PlanSchema.pre('save', function (next) {
         this.hasTeamCollaboration = false;
         this.hasWebhooks = false;
     }
-    next();
 });
 
 export const Plan = mongoose.models.Plan || mongoose.model<IPlan>('Plan', PlanSchema);

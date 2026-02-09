@@ -16,7 +16,6 @@ import {
     MenuItem,
     FormControlLabel,
     Switch,
-    Grid,
     Typography,
     Box,
     Divider,
@@ -129,24 +128,24 @@ export default function CouponsManagementEnhanced() {
     };
 
     const columns: GridColDef[] = [
-        { field: 'code', headerName: 'Code', width: 150, renderCell: (p) => <Typography fontWeight="bold" color="primary">{p.value}</Typography> },
+        { field: 'code', headerName: 'Code', width: 150, renderCell: (p: any) => <Typography fontWeight="bold" color="primary">{p.value}</Typography> },
         { field: 'discountType', headerName: 'Type', width: 130 },
         {
-            field: 'discountValue', headerName: 'Value', width: 100, renderCell: (p) => (
+            field: 'discountValue', headerName: 'Value', width: 100, renderCell: (p: any) => (
                 <span>{p.row.discountType === 'percentage' ? `${p.value}%` : `₹${p.value}`}</span>
             )
         },
         {
-            field: 'currentUses', headerName: 'Usage', width: 120, renderCell: (p) => (
+            field: 'currentUses', headerName: 'Usage', width: 120, renderCell: (p: any) => (
                 <Chip label={`${p.row.currentUses} / ${p.row.maxUses}`} size="small" variant="outlined" />
             )
         },
-        { field: 'validUntil', headerName: 'Expires', width: 150, valueGetter: (p: any) => new Date(p.value).toLocaleDateString() },
+        { field: 'validUntil', headerName: 'Expires', width: 150, valueGetter: (params: any) => new Date(params.row.validUntil).toLocaleDateString() },
         {
             field: 'isActive',
             headerName: 'Status',
             width: 100,
-            renderCell: (p) => (
+            renderCell: (p: any) => (
                 <Chip
                     label={p.value ? 'Active' : 'Inactive'}
                     color={p.value ? 'success' : 'default'}
@@ -232,8 +231,8 @@ export default function CouponsManagementEnhanced() {
                                         multiple
                                         options={plans}
                                         getOptionLabel={(option: any) => option.name}
-                                        value={plans.filter((p: any) => formData.applicablePlanIds.includes(p._id))}
-                                        onChange={(_, newValue) => setFormData({ ...formData, applicablePlanIds: newValue.map((v: any) => v._id) })}
+                                        value={plans.filter((p: any) => (formData.applicablePlanIds as any[]).includes(p._id))}
+                                        onChange={(_, newValue) => setFormData({ ...formData, applicablePlanIds: newValue.map((v: any) => v._id) as any })}
                                         renderInput={(params) => <TextField {...params} label="Select Plans" />}
                                     />
                                 )}
@@ -242,7 +241,7 @@ export default function CouponsManagementEnhanced() {
                                         multiple
                                         options={['basic', 'pro', 'enterprise']}
                                         value={formData.applicableTiers}
-                                        onChange={(_, newValue) => setFormData({ ...formData, applicableTiers: newValue })}
+                                        onChange={(_, newValue) => setFormData({ ...formData, applicableTiers: newValue as any })}
                                         renderInput={(params) => <TextField {...params} label="Select Tiers" />}
                                     />
                                 )}

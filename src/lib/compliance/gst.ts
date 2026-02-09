@@ -4,7 +4,7 @@
  */
 
 export interface GSTConfig {
-    rate: number; // Percentage
+    rate?: number; // Percentage, optional (defaults to 18%)
     stateOfOrigin: string;
     stateOfConsumption: string;
 }

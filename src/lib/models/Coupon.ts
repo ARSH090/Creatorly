@@ -54,8 +54,7 @@ const CouponSchema: Schema = new Schema({
         required: true,
         min: 0,
         validate: {
-            validator: function (val: number) {
-                // @ts-ignore
+            validator: function (this: any, val: number): boolean {
                 if (this.discountType === 'percentage') return val <= 100;
                 return true;
             },
@@ -109,8 +108,7 @@ const CouponSchema: Schema = new Schema({
         type: Date,
         required: true,
         validate: {
-            validator: function (val: Date) {
-                // @ts-ignore
+            validator: function (this: any, val: Date): boolean {
                 return val > this.validFrom;
             },
             message: 'End date must be after start date'
@@ -137,21 +135,19 @@ const CouponSchema: Schema = new Schema({
 }, { timestamps: true });
 
 // Logical Constraints
-CouponSchema.pre('save', function (next) {
+CouponSchema.pre('save', async function (this: ICoupon) {
     // Prevent coupons on free tier
-    if (this.applicableTiers && this.applicableTiers.includes('free')) {
-        return next(new Error('Coupons cannot apply to free tier'));
+    if (this.applicableTiers && (this.applicableTiers as any).includes('free')) {
+        throw new Error('Coupons cannot apply to free tier');
     }
 
     // Ensure lists are populated if limited
     if (this.appliesTo === 'specific_plans' && (!this.applicablePlanIds || this.applicablePlanIds.length === 0)) {
-        return next(new Error('Specific plans must be selected'));
+        throw new Error('Specific plans must be selected');
     }
     if (this.appliesTo === 'specific_tiers' && (!this.applicableTiers || this.applicableTiers.length === 0)) {
-        return next(new Error('Specific tiers must be selected'));
+        throw new Error('Specific tiers must be selected');
     }
-
-    next();
 });
 
 // Index for query optimization

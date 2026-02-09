@@ -6,7 +6,7 @@ export default withAuth(
     function middleware(req: NextRequest) {
         const pathname = req.nextUrl.pathname;
         const method = req.method.toUpperCase();
-        const ip = req.headers.get('x-forwarded-for') || req.ip || 'unknown';
+        const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || '127.0.0.1';
         const response = NextResponse.next();
         response.headers.set('X-Content-Type-Options', 'nosniff');
         response.headers.set('X-Frame-Options', 'DENY');

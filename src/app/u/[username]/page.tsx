@@ -107,7 +107,7 @@ export default async function CreatorStorefront({ params }: { params: { username
         >
             <StoreHeader creator={plainCreator} />
 
-            <main className="max-w-4xl mx-auto px-6 py-12 space-y-16">
+            <main className="max-w-4xl mx-auto px-6 pt-32 pb-12 space-y-16">
                 {/* Hero / Bio Section */}
                 <CreatorBio creator={plainCreator} />
 
