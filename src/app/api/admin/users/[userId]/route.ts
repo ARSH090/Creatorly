@@ -7,6 +7,7 @@ import { z } from 'zod';
 import type { RouteContext } from '@/lib/types/route-types';
 
 export const dynamic = 'force-dynamic';
+// Vercel build trigger - latest async params fix
 
 const userUpdateSchema = z.object({
   displayName: z.string().optional(),
