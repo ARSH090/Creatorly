@@ -23,7 +23,7 @@ const SecurityEventSchema: Schema = new Schema({
         required: true,
         index: true
     },
-    timestamp: { type: Date, default: Date.now, index: true },
+    timestamp: { type: Date, default: Date.now },
     userId: { type: Schema.Types.ObjectId, ref: 'User', index: true },
     ipAddress: { type: String, required: true },
     userAgent: String,
