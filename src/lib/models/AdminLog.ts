@@ -65,8 +65,7 @@ const AdminLogSchema = new Schema<IAdminLog>(
     userAgent: String,
     timestamp: {
       type: Date,
-      default: Date.now,
-      index: true,
+      default: Date.now
     },
     duration: Number,
     metadata: Schema.Types.Mixed,

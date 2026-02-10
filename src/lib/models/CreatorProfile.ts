@@ -143,7 +143,7 @@ const CreatorProfileSchema: Schema = new Schema({
     }
 }, { timestamps: true });
 
-CreatorProfileSchema.index({ customDomain: 1 });
+// Custom Domain index handled in field definition via sparse: true
 
 const CreatorProfile: Model<ICreatorProfile> = mongoose.models.CreatorProfile || mongoose.model<ICreatorProfile>('CreatorProfile', CreatorProfileSchema);
 export { CreatorProfile };

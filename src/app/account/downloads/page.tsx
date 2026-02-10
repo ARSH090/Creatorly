@@ -1,4 +1,5 @@
 import { connectToDatabase } from '@/lib/db/mongodb';
+export const dynamic = 'force-dynamic';
 import Order from '@/lib/models/Order';
 import { getCurrentUser } from '@/lib/firebase/server-auth';
 import Image from 'next/image';

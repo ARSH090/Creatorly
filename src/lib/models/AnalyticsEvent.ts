@@ -42,8 +42,7 @@ const AnalyticsEventSchema: Schema = new Schema({
     metadata: Schema.Types.Mixed,
     createdAt: {
         type: Date,
-        default: Date.now,
-        index: true
+        default: Date.now
     }
 });
 
