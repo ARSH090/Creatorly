@@ -8,6 +8,7 @@ interface CartItem {
     image: string;
     quantity: number;
     type: string;
+    creator: string;
 }
 
 interface CheckoutState {

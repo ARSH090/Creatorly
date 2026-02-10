@@ -6,37 +6,18 @@ import { ArrowLeft, Trash2, ShoppingBag, ShieldCheck, CreditCard, ChevronRight }
 import CouponModal from '@/components/checkout/CouponModal';
 import { motion } from 'framer-motion';
 
-export default function CartPage() {
-    // Mock Cart Data
-    const [cartItems, setCartItems] = useState([
-        {
-            id: '1',
-            name: 'Photography Masterclass 2024',
-            price: 2999,
-            image: "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?q=80&w=2000&auto=format&fit=crop",
-            creator: "Rohan Patel"
-        },
-        {
-            id: '2',
-            name: 'Lightroom Presets Vol. 2',
-            price: 999,
-            image: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?q=80&w=2000&auto=format&fit=crop",
-            creator: "Rohan Patel"
-        }
-    ]);
+import { useCheckoutStore } from '@/lib/store/useCheckoutStore';
 
+export default function CartPage() {
+    const { cart: cartItems, removeFromCart: removeItem, setStep } = useCheckoutStore();
     const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
     const [discount, setDiscount] = useState(0);
 
-    const subtotal = cartItems.reduce((acc, item) => acc + item.price, 0);
+    const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const total = subtotal - discount;
 
-    const removeItem = (id: string) => {
-        setCartItems(cartItems.filter(item => item.id !== id));
-    };
-
     const handleApplyCoupon = async (code: string) => {
-        // Mock coupon logic
+        // Real coupon logic would fetch from /api/coupons/validate
         if (code === 'FIRST10') {
             setDiscount(subtotal * 0.1);
             return true;
@@ -167,10 +148,10 @@ export default function CartPage() {
                                     <span className="font-bold text-gray-900 text-lg">₹{total}</span>
                                 </div>
 
-                                <button className="w-full bg-black text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 active:scale-95 transition-all flex items-center justify-center gap-2 group shadow-lg shadow-black/20">
-                                    <span>To Payment</span>
+                                <Link href="/checkout" className="w-full bg-black text-white py-4 rounded-xl font-bold text-lg hover:bg-gray-800 active:scale-95 transition-all flex items-center justify-center gap-2 group shadow-lg shadow-black/20">
+                                    <span>To Checkout</span>
                                     <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                                </button>
+                                </Link>
 
                                 <p className="text-center text-xs text-gray-400 mt-4 leading-relaxed hidden lg:block">
                                     By placing this order you agree to our Terms of Service and Privacy Policy.

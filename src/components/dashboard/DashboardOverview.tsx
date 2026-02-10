@@ -13,26 +13,29 @@ export default function DashboardOverview() {
     const [analytics, setAnalytics] = useState<any>(null);
 
     useEffect(() => {
-        // Mock data for initial render to prevent layout shift/errors
-        setAnalytics({
-            todayRevenue: 4500,
-            todayVisitors: 124,
-            productsCount: 12,
-            pendingPayout: 12450,
-            revenueChange: 12.5,
-            visitorChange: -2.3,
-            totalProducts: 8,
-            repeatRate: 24,
-            recentOrders: [
-                { id: 'ORD-001', customerEmail: 'rahul@example.com', amount: 499, time: '2m ago' },
-                { id: 'ORD-002', customerEmail: 'priya@outlook.com', amount: 1299, time: '15m ago' },
-                { id: 'ORD-003', customerEmail: 'arun.k@gmail.com', amount: 499, time: '1h ago' },
-            ]
-        });
+        const fetchAnalytics = async () => {
+            try {
+                const res = await fetch('/api/creator/analytics');
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                setAnalytics(data);
+            } catch (err) {
+                console.error('Failed to load analytics:', err);
+                // Fallback to minimal zeros if fetch fails
+                setAnalytics({
+                    todayRevenue: 0,
+                    todayVisitors: 0,
+                    totalProducts: 0,
+                    pendingPayout: 0,
+                    revenueChange: 0,
+                    visitorChange: 0,
+                    repeatRate: 0,
+                    recentOrders: []
+                });
+            }
+        };
 
-        // fetch('/api/creator/analytics')
-        //   .then(res => res.json())
-        //   .then(data => setAnalytics(data));
+        fetchAnalytics();
     }, []);
 
     const stats = [

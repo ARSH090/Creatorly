@@ -2,9 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
 import CreatorProfile from '@/lib/models/CreatorProfile';
+import CommunityPost from '@/lib/models/CommunityPost';
 import { withAuth } from '@/lib/firebase/withAuth';
 
 export const dynamic = 'force-dynamic';
+
+function formatTimeAgo(date: Date) {
+    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    let interval = seconds / 31536000;
+    if (interval > 1) return Math.floor(interval) + "y ago";
+    interval = seconds / 2592000;
+    if (interval > 1) return Math.floor(interval) + "mo ago";
+    interval = seconds / 86400;
+    if (interval > 1) return Math.floor(interval) + "d ago";
+    interval = seconds / 3600;
+    if (interval > 1) return Math.floor(interval) + "h ago";
+    interval = seconds / 60;
+    if (interval > 1) return Math.floor(interval) + "m ago";
+    return Math.floor(seconds) + "s ago";
+}
 
 export const GET = withAuth(async (req, user, context: any) => {
     try {
@@ -30,28 +46,22 @@ export const GET = withAuth(async (req, user, context: any) => {
             return NextResponse.json({ error: 'Access denied' }, { status: 403 });
         }
 
-        // 3. Mock Feed Posts (These would normally come from a CommunityPost model)
-        const posts = [
-            {
-                id: '1',
-                author: username,
-                content: "Hey everyone! Just uploaded the new presets for this month. Check them out in the digital downloads section if you're on the Pro tier! 🚀",
-                likes: 42,
-                comments: 12,
-                timestamp: '2 hours ago',
-                image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000'
-            },
-            {
-                id: '2',
-                author: username,
-                content: "Working on a new masterclass about storytelling. What's the #1 struggle you face when planning your content?",
-                likes: 89,
-                comments: 45,
-                timestamp: '1 day ago'
-            }
-        ];
+        // 3. Fetch Real Feed Posts
+        const posts = await CommunityPost.find({ creatorId: user._id })
+            .sort({ createdAt: -1 })
+            .limit(20);
 
-        return NextResponse.json({ posts });
+        return NextResponse.json({
+            posts: posts.map(post => ({
+                id: post._id.toString(),
+                author: username,
+                content: post.content,
+                likes: post.likes || 0,
+                comments: post.comments || 0,
+                timestamp: formatTimeAgo(post.createdAt),
+                image: post.image
+            }))
+        });
 
     } catch (error: any) {
         console.error('Community API Error:', error);

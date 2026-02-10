@@ -16,10 +16,15 @@ export default function OrderReview() {
     const handleCompletePurchase = async () => {
         setIsProcessing(true);
         // This will be wired to Stripe/Razorpay in Prompt 8
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        console.log('[Order] Purchase completed!');
+        // For launch readiness, we ensure the PLACEHOLDER logic redirects to the RIGHT structural path
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const username = cart[0]?.creator || 'default';
+        const orderId = 'real-verification-needed'; // This will be the actual Order._id from Razorpay webhook
+
+        setIsProcessing(false);
         clearCart();
-        window.location.href = '/checkout/success?id=mock-order-id'; // Redirect to success page
+        window.location.href = `/u/${username}/success/${orderId}`;
     };
 
     return (

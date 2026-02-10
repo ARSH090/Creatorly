@@ -22,32 +22,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // Mock data for now if APIs aren't ready, to prevent crashes
-                // In real impl, these would be:
-                // const [statsRes, notificationsRes] = await Promise.all([
-                //   fetch('/api/creator/dashboard'),
-                //   fetch('/api/notifications')
-                // ]);
+                const res = await fetch('/api/creator/analytics');
+                const data = await res.json();
 
-                // setStats(await statsRes.json());
-                // setNotifications(await notificationsRes.json());
+                if (data.error) throw new Error(data.error);
 
                 setStats({
-                    productsCount: 12,
-                    pendingOrders: 3,
-                    pendingPayout: '12,450',
-                    todayRevenue: '4,500',
-                    todayVisitors: 124
+                    productsCount: data.totalProducts,
+                    pendingOrders: 0, // Logic for pending orders can be added later
+                    pendingPayout: data.pendingPayout.toLocaleString('en-IN'),
+                    todayRevenue: data.todayRevenue.toLocaleString('en-IN'),
+                    todayVisitors: data.todayVisitors
                 });
-                setNotifications([1, 2]); // Mock notifications
+
+                setNotifications([]); // No unread notifications by default for launch
             } catch (error) {
                 console.error('Failed to fetch dashboard data:', error);
             }
         };
 
         fetchDashboardData();
-        // const interval = setInterval(fetchDashboardData, 30000); // Refresh every 30s
-        // return () => clearInterval(interval);
     }, []);
 
     const navigation = [
