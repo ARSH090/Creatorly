@@ -8,7 +8,7 @@ import {
     createUserWithEmailAndPassword,
     signOut as firebaseSignOut,
     GoogleAuthProvider,
-    signInWithPopup,
+    signInWithRedirect,
     sendPasswordResetEmail,
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase/client';
@@ -86,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const signInWithGoogle = async () => {
         const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
+        await signInWithRedirect(auth, provider);
     };
 
     const signOut = async () => {

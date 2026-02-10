@@ -30,14 +30,14 @@ const nextConfig: NextConfig = {
           // CSP: Content Security Policy
           {
             key: 'Content-Security-Policy',
-            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://checkout.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.razorpay.com wss: ws:;"
+            value: "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://checkout.razorpay.com https://apis.google.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' https: data:; font-src 'self' data: https://fonts.gstatic.com; frame-src 'self' https://accounts.google.com https://checkout.razorpay.com; connect-src 'self' https://api.razorpay.com https://*.googleapis.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com wss: ws:;"
           },
           // X-Content-Type-Options: Prevent MIME sniffing
           {
             key: 'X-Content-Type-Options',
             value: 'nosniff'
           },
-          // X-Frame-Options: Clickjacking protection
+          // X-Frame-Options: Clickjacking protection (ALLOW-FROM logic is better handled via frame-ancestors in CSP, but keeping DENY for general safety or switching to SAMEORIGIN if needed)
           {
             key: 'X-Frame-Options',
             value: 'DENY'
@@ -56,15 +56,6 @@ const nextConfig: NextConfig = {
           {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=(), payment=()'
-          },
-          // Cross-Origin policies
-          {
-            key: 'Cross-Origin-Embedder-Policy',
-            value: 'require-corp'
-          },
-          {
-            key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin'
           }
         ]
       }

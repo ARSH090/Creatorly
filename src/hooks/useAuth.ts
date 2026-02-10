@@ -5,7 +5,7 @@ import {
     User,
     signInWithEmailAndPassword,
     createUserWithEmailAndPassword,
-    signInWithPopup,
+    signInWithRedirect,
     GoogleAuthProvider,
     signOut as firebaseSignOut,
     sendPasswordResetEmail
@@ -59,7 +59,7 @@ export function useAuth(): UseAuthReturn {
 
     const signInWithGoogle = async () => {
         const provider = new GoogleAuthProvider();
-        await signInWithPopup(auth, provider);
+        await signInWithRedirect(auth, provider);
     };
 
     const signOut = async () => {
