@@ -17,10 +17,10 @@ const userUpdateSchema = z.object({
 
 export async function GET(
   req: NextRequest,
-  context: RouteContext<{ userId: string }>
+  { params }: { params: Promise<{ userId: string }> }
 ): Promise<Response> {
   try {
-    const { userId } = await context.params;
+    const { userId } = await params;
     const authResult = await adminAuthMiddleware(req);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -51,10 +51,10 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  context: RouteContext<{ userId: string }>
+  { params }: { params: Promise<{ userId: string }> }
 ): Promise<Response> {
   try {
-    const { userId } = await context.params;
+    const { userId } = await params;
     const authResult = await adminAuthMiddleware(req);
     if (authResult instanceof NextResponse) {
       return authResult;
@@ -119,10 +119,10 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  context: RouteContext<{ userId: string }>
+  { params }: { params: Promise<{ userId: string }> }
 ): Promise<Response> {
   try {
-    const { userId } = await context.params;
+    const { userId } = await params;
     const authResult = await adminAuthMiddleware(req);
     if (authResult instanceof NextResponse) {
       return authResult;
