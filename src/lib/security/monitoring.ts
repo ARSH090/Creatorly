@@ -51,22 +51,11 @@ export enum SecurityEventType {
   SSL_CERTIFICATE_EXPIRING = 'SSL_CERTIFICATE_EXPIRING'
 }
 
-// ============================================================================
-// SECURITY EVENT DATA STRUCTURE
-// ============================================================================
+import { ISecurityEvent } from '../models/SecurityEvent';
 
-export interface SecurityEvent {
-  eventId: string;
-  eventType: SecurityEventType;
-  severity: 'low' | 'medium' | 'high' | 'critical';
-  timestamp: Date;
-  userId?: string;
-  ipAddress: string;
-  userAgent?: string;
-  context: Record<string, any>;
-  acknowledged: boolean;
-  acknowledgedBy?: string;
-  acknowledgedAt?: Date;
+// We map SecurityEventType to the DB's eventType string
+export interface SecurityEvent extends Omit<ISecurityEvent, keyof import('mongoose').Document> {
+  eventType: SecurityEventType | string;
 }
 
 // ============================================================================
@@ -109,49 +98,41 @@ const severityMap: Record<SecurityEventType, 'low' | 'medium' | 'high' | 'critic
   [SecurityEventType.SSL_CERTIFICATE_EXPIRING]: 'medium'
 };
 
-// ============================================================================
-// EVENT STORAGE
-// ============================================================================
+import SecurityEventModel from '../models/SecurityEvent';
+import { connectToDatabase } from '../db/mongodb';
 
-const securityEvents: SecurityEvent[] = [];
-const eventIdMap = new Map<string, SecurityEvent>();
-
-export function recordSecurityEvent(
+export async function recordSecurityEvent(
   eventType: SecurityEventType,
   context: Record<string, any>,
   ipAddress: string = 'unknown',
   userId?: string,
   userAgent?: string
-): SecurityEvent {
-  const event: SecurityEvent = {
-    eventId: crypto.randomBytes(8).toString('hex'),
-    eventType,
-    severity: severityMap[eventType],
-    timestamp: new Date(),
-    userId,
-    ipAddress,
-    userAgent,
-    context,
-    acknowledged: false
-  };
+): Promise<any> {
+  try {
+    const event = {
+      eventId: crypto.randomBytes(8).toString('hex'),
+      eventType,
+      severity: severityMap[eventType],
+      timestamp: new Date(),
+      userId,
+      ipAddress,
+      userAgent,
+      context,
+      acknowledged: false
+    };
 
-  securityEvents.push(event);
-  eventIdMap.set(event.eventId, event);
+    await connectToDatabase();
+    await SecurityEventModel.create(event);
 
-  // Keep last 50000 events
-  if (securityEvents.length > 50000) {
-    const removed = securityEvents.shift();
-    if (removed) {
-      eventIdMap.delete(removed.eventId);
+    // Trigger alerts for critical/high severity
+    if (event.severity === 'critical' || event.severity === 'high') {
+      sendSecurityAlert(event as any);
     }
-  }
 
-  // Trigger alerts for critical/high severity
-  if (event.severity === 'critical' || event.severity === 'high') {
-    sendSecurityAlert(event);
+    return event;
+  } catch (error) {
+    console.error('Failed to record security event:', error);
   }
-
-  return event;
 }
 
 // ============================================================================
@@ -233,20 +214,40 @@ async function sendAlert(event: SecurityEvent, channel: string) {
 // ALERT CHANNELS
 // ============================================================================
 
+import { sendEmail } from '../services/email';
+
 async function sendEmailAlert(event: SecurityEvent, recipients: string[]) {
   const subject = `🚨 Security Alert - ${event.eventType}`;
-  const body = `
-Security Event Detected:
-Event Type: ${event.eventType}
-Severity: ${event.severity.toUpperCase()}
-Time: ${event.timestamp.toISOString()}
-User: ${event.userId || 'N/A'}
-IP Address: ${event.ipAddress}
-Context: ${JSON.stringify(event.context)}
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <body style="font-family: sans-serif; line-height: 1.5; color: #333;">
+        <div style="max-width: 600px; margin: 0 auto; border: 1px solid #e1e4e8; border-radius: 6px; padding: 20px;">
+          <h2 style="color: #d73a49; border-bottom: 1px solid #e1e4e8; padding-bottom: 10px;">Security Alert Detected</h2>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 5px 0; font-weight: bold;">Event Type:</td><td>${event.eventType}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: bold;">Severity:</td><td style="color: ${event.severity === 'critical' ? '#d73a49' : '#f66a0a'}">${event.severity.toUpperCase()}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: bold;">Time:</td><td>${event.timestamp.toISOString()}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: bold;">User:</td><td>${event.userId || 'Guest'}</td></tr>
+            <tr><td style="padding: 5px 0; font-weight: bold;">IP Address:</td><td>${event.ipAddress}</td></tr>
+          </table>
+          <div style="margin-top: 20px; padding: 10px; background: #f6f8fa; border-radius: 6px;">
+            <strong style="display: block; margin-bottom: 5px;">Context:</strong>
+            <pre style="white-space: pre-wrap; margin: 0; font-size: 12px;">${JSON.stringify(event.context, null, 2)}</pre>
+          </div>
+          <div style="margin-top: 20px; font-size: 12px; color: #586069; border-top: 1px solid #e1e4e8; padding-top: 10px;">
+            This is an automated security alert from Creatorly.
+          </div>
+        </div>
+      </body>
+    </html>
   `;
 
-  // TODO: Implement email service
-  console.log(`📧 Email alert (not implemented): ${subject}`);
+  for (const to of recipients) {
+    if (to) {
+      await sendEmail({ to, subject, html });
+    }
+  }
 }
 
 async function sendSMSAlert(event: SecurityEvent, recipients: string[]) {
@@ -309,7 +310,11 @@ async function sendWebhookAlert(event: SecurityEvent) {
 // EVENT QUERYING
 // ============================================================================
 
-export function getSecurityEvents(
+// ============================================================================
+// DATABASE QUERYING (FOR DASHBOARD)
+// ============================================================================
+
+export async function getSecurityEventsDB(
   filters?: {
     eventType?: SecurityEventType;
     severity?: 'low' | 'medium' | 'high' | 'critical';
@@ -317,42 +322,135 @@ export function getSecurityEvents(
     endTime?: Date;
     acknowledged?: boolean;
   },
-  limit: number = 100
-): SecurityEvent[] {
-  let events = securityEvents;
+  limit: number = 20
+): Promise<any[]> {
+  try {
+    await connectToDatabase();
+    const query: any = {};
 
-  if (filters?.eventType) {
-    events = events.filter(e => e.eventType === filters.eventType);
+    if (filters?.eventType) query.eventType = filters.eventType;
+    if (filters?.severity) query.severity = filters.severity;
+    if (filters?.acknowledged !== undefined) query.acknowledged = filters.acknowledged;
+
+    if (filters?.startTime || filters?.endTime) {
+      query.timestamp = {};
+      if (filters?.startTime) query.timestamp.$gte = filters.startTime;
+      if (filters?.endTime) query.timestamp.$lte = filters.endTime;
+    }
+
+    return await SecurityEventModel.find(query)
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .lean();
+  } catch (error) {
+    console.error('getSecurityEventsDB error:', error);
+    return [];
   }
-
-  if (filters?.severity) {
-    events = events.filter(e => e.severity === filters.severity);
-  }
-
-  if (filters?.startTime) {
-    events = events.filter(e => e.timestamp >= filters.startTime!);
-  }
-
-  if (filters?.endTime) {
-    events = events.filter(e => e.timestamp <= filters.endTime!);
-  }
-
-  if (filters?.acknowledged !== undefined) {
-    events = events.filter(e => e.acknowledged === filters.acknowledged);
-  }
-
-  return events.slice(-limit);
 }
 
-export function acknowledgeEvent(eventId: string, acknowledgedBy: string): boolean {
-  const event = eventIdMap.get(eventId);
-  if (!event) return false;
+export async function getSecurityMetricsDB(): Promise<SecurityMetrics> {
+  try {
+    await connectToDatabase();
+    const stats = await SecurityEventModel.aggregate([
+      {
+        $group: {
+          _id: '$severity',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
 
-  event.acknowledged = true;
-  event.acknowledgedBy = acknowledgedBy;
-  event.acknowledgedAt = new Date();
+    const metricsMap: any = { critical: 0, high: 0, medium: 0, low: 0 };
+    stats.forEach(s => metricsMap[s._id] = s.count);
 
-  return true;
+    const totalEvents = stats.reduce((sum, s) => sum + s.count, 0);
+    const unacknowledgedCritical = await SecurityEventModel.countDocuments({
+      severity: 'critical',
+      acknowledged: false
+    });
+
+    const topEvents = await SecurityEventModel.aggregate([
+      { $group: { _id: '$eventType', count: { $sum: 1 } } },
+      { $sort: { count: -1 } },
+      { $limit: 5 }
+    ]);
+
+    return {
+      totalEvents,
+      criticalEvents: metricsMap.critical,
+      highEvents: metricsMap.high,
+      mediumEvents: metricsMap.medium,
+      lowEvents: metricsMap.low,
+      unacknowledgedCritical,
+      averageResponseTime: 0, // TBD: Implement in DB
+      topEventTypes: topEvents.map(t => ({ type: t._id as SecurityEventType, count: t.count }))
+    };
+  } catch (error) {
+    console.error('getSecurityMetricsDB error:', error);
+    return {
+      totalEvents: 0,
+      criticalEvents: 0,
+      highEvents: 0,
+      mediumEvents: 0,
+      lowEvents: 0,
+      unacknowledgedCritical: 0,
+      averageResponseTime: 0,
+      topEventTypes: []
+    };
+  }
+}
+
+export async function getSecurityEvents(
+  filters?: {
+    eventType?: SecurityEventType | string;
+    severity?: 'low' | 'medium' | 'high' | 'critical';
+    startTime?: Date;
+    endTime?: Date;
+    acknowledged?: boolean;
+  },
+  limit: number = 20
+): Promise<any[]> {
+  try {
+    await connectToDatabase();
+    const query: any = {};
+
+    if (filters?.eventType) query.eventType = filters.eventType;
+    if (filters?.severity) query.severity = filters.severity;
+    if (filters?.acknowledged !== undefined) query.acknowledged = filters.acknowledged;
+
+    if (filters?.startTime || filters?.endTime) {
+      query.timestamp = {};
+      if (filters?.startTime) query.timestamp.$gte = filters.startTime;
+      if (filters?.endTime) query.timestamp.$lte = filters.endTime;
+    }
+
+    return await SecurityEventModel.find(query)
+      .sort({ timestamp: -1 })
+      .limit(limit)
+      .lean();
+  } catch (error) {
+    console.error('getSecurityEvents error:', error);
+    return [];
+  }
+}
+
+export async function acknowledgeEvent(eventId: string, acknowledgedBy: string): Promise<boolean> {
+  try {
+    await connectToDatabase();
+    const result = await SecurityEventModel.findOneAndUpdate(
+      { eventId },
+      {
+        acknowledged: true,
+        acknowledgedBy,
+        acknowledgedAt: new Date()
+      },
+      { new: true }
+    );
+    return !!result;
+  } catch (error) {
+    console.error('acknowledgeEvent error:', error);
+    return false;
+  }
 }
 
 // ============================================================================
@@ -370,50 +468,8 @@ export interface SecurityMetrics {
   topEventTypes: Array<{ type: SecurityEventType; count: number }>;
 }
 
-export function getSecurityMetrics(): SecurityMetrics {
-  const events = securityEvents;
-
-  const criticalEvents = events.filter(e => e.severity === 'critical').length;
-  const highEvents = events.filter(e => e.severity === 'high').length;
-  const mediumEvents = events.filter(e => e.severity === 'medium').length;
-  const lowEvents = events.filter(e => e.severity === 'low').length;
-
-  const unacknowledgedCritical = events.filter(
-    e => e.severity === 'critical' && !e.acknowledged
-  ).length;
-
-  // Calculate average response time
-  const acknowledgedEvents = events.filter(e => e.acknowledged && e.acknowledgedAt);
-  const avgResponseTime =
-    acknowledgedEvents.length > 0
-      ? acknowledgedEvents.reduce((sum, e) => {
-          const responseTime =
-            (e.acknowledgedAt!.getTime() - e.timestamp.getTime()) / 1000;
-          return sum + responseTime;
-        }, 0) / acknowledgedEvents.length
-      : 0;
-
-  // Get top event types
-  const eventTypeCounts = new Map<SecurityEventType, number>();
-  events.forEach(e => {
-    eventTypeCounts.set(e.eventType, (eventTypeCounts.get(e.eventType) || 0) + 1);
-  });
-
-  const topEventTypes = Array.from(eventTypeCounts.entries())
-    .map(([type, count]) => ({ type, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
-
-  return {
-    totalEvents: events.length,
-    criticalEvents,
-    highEvents,
-    mediumEvents,
-    lowEvents,
-    unacknowledgedCritical,
-    averageResponseTime: avgResponseTime,
-    topEventTypes
-  };
+export async function getSecurityMetrics(): Promise<SecurityMetrics> {
+  return await getSecurityMetricsDB();
 }
 
 // ============================================================================
@@ -432,8 +488,8 @@ export interface IncidentResponse {
 
 const incidents: IncidentResponse[] = [];
 
-export function detectAndCreateIncident(severity: 'critical' | 'high'): IncidentResponse | null {
-  const recentCriticalEvents = getSecurityEvents({
+export async function detectAndCreateIncident(severity: 'critical' | 'high'): Promise<IncidentResponse | null> {
+  const recentCriticalEvents = await getSecurityEvents({
     severity,
     acknowledged: false,
     startTime: new Date(Date.now() - 5 * 60 * 1000) // Last 5 minutes

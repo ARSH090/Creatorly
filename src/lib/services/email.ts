@@ -231,3 +231,36 @@ export async function sendDownloadInstructionsEmail(
     html,
   });
 }
+
+export async function sendNewsletterWelcomeEmail(email: string, creatorName: string) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Inter', sans-serif; background-color: #030303; color: #ffffff; padding: 40px; }
+          .container { max-width: 600px; margin: 0 auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; text-align: center; }
+          .header { font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 16px; }
+          .content { color: #888; font-size: 16px; line-height: 1.6; margin-bottom: 30px; }
+          .btn { display: inline-block; background: #6366f1; color: #fff; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 0.1em; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">WELCOME TO THE INNER CIRCLE</div>
+          <div class="content">
+            <p>You've successfully subscribed to <strong>${creatorName}'s</strong> newsletter on Creatorly.</p>
+            <p>Stay tuned for exclusive updates, early access to new products, and behind-the-scenes content.</p>
+          </div>
+          <a href="${process.env.NEXTAUTH_URL}/u/${creatorName.toLowerCase()}" class="btn">Visit My Store</a>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Welcome to ${creatorName}'s Newsletter!`,
+    html
+  });
+}

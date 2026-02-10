@@ -8,6 +8,11 @@ import {
     verifyRazorpaySignature,
     preventWebhookReplay
 } from '@/lib/security/payment-fraud-detection';
+import {
+    sendPaymentConfirmationEmail,
+    sendDownloadInstructionsEmail
+} from '@/lib/services/email';
+import { notifyOrderCreated } from '@/lib/services/notifications';
 
 export async function POST(req: Request) {
     try {
@@ -46,8 +51,6 @@ export async function POST(req: Request) {
             event: event.event,
         });
 
-        // Continue with event handling...
-
         // 1. Handle One-Time Payments
         if (event.event === 'payment.captured') {
             const payment = event.payload.payment.entity;
@@ -78,17 +81,42 @@ export async function POST(req: Request) {
             order.razorpaySignature = signature;
             await order.save();
 
-            // 4. Handle Booking Confirmation
+            // 4. Handle Fulfillment & Notifications
+
+            // A. Send Receipt & Download Instructions
+            await sendPaymentConfirmationEmail(
+                order.customerEmail,
+                order._id.toString(),
+                order.amount,
+                order.items.map(i => ({ name: i.name, quantity: i.quantity, price: i.price }))
+            );
+
+            const digitalItems = order.items.filter(i => i.type === 'digital' || i.type === 'course');
+            if (digitalItems.length > 0) {
+                await sendDownloadInstructionsEmail(
+                    order.customerEmail,
+                    order._id.toString(),
+                    digitalItems.map(i => ({ name: i.name, productId: i.productId.toString() }))
+                );
+            }
+
+            // B. Notify Creator
+            await notifyOrderCreated(
+                order.creatorId.toString(),
+                order._id.toString(),
+                order.amount,
+                order.items[0]?.name || 'Product'
+            );
+
+            // C. Handle Booking Confirmation
             if (order.metadata?.bookingId) {
                 const booking = await Booking.findById(order.metadata.bookingId);
                 if (booking) {
                     booking.status = 'confirmed';
                     // Store payment link in booking
-                    booking.meetLink = `https://meet.google.com/placeholder-${booking._id}`; // Placeholder until Google Meet API
+                    booking.meetLink = `https://meet.google.com/placeholder-${booking._id}`; // Placeholder 
                     await booking.save();
                     console.log(`📅 Booking ${booking._id} confirmed for order ${order._id}`);
-
-                    // TODO: Trigger Google Calendar Sync / Email Notifications
                 }
             }
 
@@ -107,8 +135,8 @@ export async function POST(req: Request) {
         if (event.event === 'subscription.charged') {
             const sub = event.payload.subscription.entity;
             const payment = event.payload.payment.entity;
-            // You could create a recurring revenue log/order here
             console.log(`💰 Subscription recurring payment for ${sub.id}`);
+            // TODO: Log recurring payment in a Revenue table
         }
 
         if (event.event === 'subscription.cancelled') {

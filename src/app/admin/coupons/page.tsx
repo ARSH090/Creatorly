@@ -1,9 +1,9 @@
 import { getCurrentUser } from '@/lib/firebase/server-auth';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { CouponsManagement } from '@/components/admin/CouponsManagement';
 import { redirect } from 'next/navigation';
+import CouponsManagement from '@/components/admin/LazyCoupons';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function AdminCouponsPage() {
   const user = await getCurrentUser();

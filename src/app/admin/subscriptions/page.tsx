@@ -1,9 +1,9 @@
 import { getCurrentUser } from '@/lib/firebase/server-auth';
 import { redirect } from 'next/navigation';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import SubscriptionsPageContent from '@/components/admin/subscription/SubscriptionsPageContent';
+import SubscriptionsPageContent from '@/components/admin/subscription/LazySubscriptions';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function AdminSubscriptionsPage() {
     const user = await getCurrentUser();

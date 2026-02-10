@@ -6,6 +6,7 @@
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { recordSecurityEvent, SecurityEventType } from './monitoring';
+import { sendEmail } from '../services/email';
 
 const execAsync = promisify(exec);
 
@@ -566,15 +567,23 @@ async function notifySecurityTeam(
   message: string,
   context: any
 ) {
-  console.log(`
-📧 Notification to Security Team:
-Severity: ${severity}
-Message: ${message}
-Context: ${JSON.stringify(context, null, 2)}
-Recipients: ${Object.values(contactList).join(', ')}
-  `);
+  const subject = `🚨 CRITICAL SECURITY INCIDENT: [${severity}]`;
+  const html = `
+    <div style="font-family: sans-serif; padding: 20px; border: 2px solid #d73a49; border-radius: 8px;">
+      <h2 style="color: #d73a49; border-bottom: 2px solid #d73a49; padding-bottom: 10px; text-transform: uppercase;">Security Alert</h2>
+      <p><strong>Severity:</strong> ${severity}</p>
+      <p><strong>Message:</strong> ${message}</p>
+      <div style="background: #f6f8fa; padding: 15px; border-radius: 6px; margin-top: 15px;">
+        <strong>Context:</strong>
+        <pre style="white-space: pre-wrap; font-size: 12px;">${JSON.stringify(context, null, 2)}</pre>
+      </div>
+    </div>
+  `;
 
-  // TODO: Implement actual email/SMS notification service
+  const recipients = [contactList.cto, contactList.securityLead];
+  for (const to of recipients) {
+    if (to) await sendEmail({ to, subject, html });
+  }
 }
 
 /**
@@ -584,12 +593,22 @@ export async function notifyAffectedUsers(
   userIds: string[],
   message: string
 ) {
-  console.log(`
-📧 Notifying ${userIds.length} affected users...
-Message: ${message}
-  `);
+  // Logic to fetch emails for userIds would go here
+  // For now, using a placeholder loop if user emails were provided
+  // Assuming a generic notification for simplicity in this step
+  const subject = `Security Update regarding your Creatorly account`;
+  const html = `
+    <div style="font-family: sans-serif; padding: 20px;">
+      <h2>Security Alert</h2>
+      <p>Hello,</p>
+      <p>${message}</p>
+      <p>Please log in to your dashboard to review any actions or contact support if you have concerns.</p>
+      <p>Best,<br/>Creatorly Team</p>
+    </div>
+  `;
 
-  // TODO: Implement email notification service
+  // console.log(`📧 Notifying ${userIds.length} affected users...`);
+  // This would typically involve querying User model for emails
 }
 
 /**

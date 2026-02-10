@@ -5,6 +5,7 @@
  */
 
 import crypto from 'crypto';
+import { sendEmail } from '../services/email';
 
 // In-memory storage for admin security state
 const adminLogs = new Map<string, any>();
@@ -331,7 +332,23 @@ Details: ${JSON.stringify(details)}
   `;
 
   console.warn(alertMessage);
-  // TODO: Implement alerting (Slack webhook, Email, SMS)
+
+  sendEmail({
+    to: process.env.SECURITY_ALERT_EMAIL || 'admin-security@creatorly.com',
+    subject: `🚨 Admin Security Alert: ${eventType}`,
+    html: `
+      <div style="font-family: sans-serif; padding: 20px; border: 2px solid #eb5757; border-radius: 8px;">
+        <h2 style="color: #eb5757; text-transform: uppercase;">Critical Admin Event</h2>
+        <p><strong>Admin ID:</strong> ${adminId}</p>
+        <p><strong>Event Type:</strong> ${eventType}</p>
+        <p><strong>Time:</strong> ${new Date().toISOString()}</p>
+        <div style="background: #fdf2f2; padding: 15px; border-radius: 6px; margin-top: 15px;">
+          <strong>Details:</strong>
+          <pre style="white-space: pre-wrap; font-size: 12px;">${JSON.stringify(details, null, 2)}</pre>
+        </div>
+      </div>
+    `
+  }).catch(err => console.error('Failed to send admin security email:', err));
 }
 
 // ============================================================================

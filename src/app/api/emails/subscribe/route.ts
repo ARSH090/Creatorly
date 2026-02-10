@@ -1,11 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { NewsletterLead } from '@/lib/models/NewsletterLead';
-
+import User from '@/lib/models/User';
 import { NewsletterSchema } from '@/lib/validation/schemas';
+import { sendNewsletterWelcomeEmail } from '@/lib/services/email';
+import { RateLimiter } from '@/lib/security/rate-limiter';
 
 export async function POST(req: NextRequest) {
     try {
+        const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+        const isAllowed = await RateLimiter.check('newsletter_subscribe', 5, 10 * 60 * 1000, ip);
+
+        if (!isAllowed) {
+            return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+        }
+
         const body = await req.json();
         const validation = NewsletterSchema.safeParse(body);
 
@@ -20,8 +29,12 @@ export async function POST(req: NextRequest) {
 
         await connectToDatabase();
 
-        // Use UPSERT logic to handle re-subscriptions or duplicate attempts
-        await NewsletterLead.findOneAndUpdate(
+        // 1. Fetch Creator Info for personalization
+        const creator = await User.findById(creatorId).select('displayName').lean();
+        const creatorName = creator?.displayName || 'a Creator';
+
+        // 2. Use UPSERT logic to handle re-subscriptions or duplicate attempts
+        const lead = await NewsletterLead.findOneAndUpdate(
             { email, creatorId },
             {
                 status: 'active',
@@ -29,6 +42,9 @@ export async function POST(req: NextRequest) {
             },
             { upsert: true, new: true }
         );
+
+        // 3. Trigger Welcome Email
+        await sendNewsletterWelcomeEmail(email, creatorName);
 
         return NextResponse.json({ success: true, message: 'Subscribed successfully' });
     } catch (error: any) {
