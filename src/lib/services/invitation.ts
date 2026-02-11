@@ -1,4 +1,6 @@
+import mongoose from 'mongoose';
 import crypto from 'crypto';
+
 import Membership, { MembershipRole, MembershipStatus } from '@/lib/models/Membership';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Team } from '@/lib/models/Team';
@@ -92,17 +94,20 @@ export class InvitationService {
         await membership.save();
 
         // 🟢 IN-APP NOTIFICATION: Notify the inviter
-        try {
-            const { NotificationService } = await import('@/lib/services/notification');
-            await NotificationService.send({
-                userId: membership.invitedBy.toString(),
-                type: 'team_invite',
-                title: 'Invitation Accepted',
-                message: `${membership.invitedEmail} has joined your team.`
-            });
-        } catch (e) {
-            console.error('Failed to send notification:', e);
+        if (membership.invitedBy) {
+            try {
+                const { NotificationService } = await import('@/lib/services/notification');
+                await NotificationService.send({
+                    userId: membership.invitedBy.toString(),
+                    type: 'team_invite',
+                    title: 'Invitation Accepted',
+                    message: `${membership.invitedEmail} has joined your team.`
+                });
+            } catch (e) {
+                console.error('Failed to send notification:', e);
+            }
         }
+
 
         return membership;
 
