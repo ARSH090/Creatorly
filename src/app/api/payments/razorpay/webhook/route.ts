@@ -55,18 +55,34 @@ export async function POST(req: NextRequest) {
         switch (event) {
             case 'order.paid': {
                 const { id: razorpayOrderId } = payload.payload.order.entity;
-                const { id: paymentId } = payload.payload.payment.entity;
+                const { id: paymentId, amount: receivedAmount } = payload.payload.payment.entity;
+
+                // RECAlCULATE from DB to prevent tampering
+                const order = await Order.findOne({ razorpayOrderId });
+                if (!order) throw new Error('Order not found');
+
+                const recalculatedAmount = order.items.reduce((sum, item) => {
+                    return sum + (item.price * item.quantity);
+                }, 0) * 100; // Convert to paise
+
+                const amountMismatch = Math.abs(recalculatedAmount - receivedAmount) > 1; // 1 paisa tolerance
+
+                if (amountMismatch) {
+                    console.error(`[Fraud] Amount mismatch detected for Order ${order._id}: Expected ${recalculatedAmount}, got ${receivedAmount}`);
+                    order.status = 'failed';
+                    order.metadata = { ...order.metadata, fraudWarning: 'Amount Mismatch', receivedAmount, expectedAmount: recalculatedAmount };
+                    await order.save();
+
+                    // In production, you might want to create a FraudAlert record here
+                    return NextResponse.json({ error: 'Fraud detected: Amount Mismatch' }, { status: 400 });
+                }
 
                 // Update Order Status
-                const order = await Order.findOneAndUpdate(
-                    { razorpayOrderId },
-                    {
-                        status: 'success',
-                        razorpayPaymentId: paymentId,
-                        razorpaySignature: signature // Technically not the window signature but good for audit
-                    },
-                    { new: true }
-                );
+                order.status = 'success';
+                order.razorpayPaymentId = paymentId;
+                order.razorpaySignature = signature;
+                await order.save();
+
 
                 if (order) {
                     console.log(`[Webhook] Order ${order._id} confirmed for ${order.customerEmail}`);

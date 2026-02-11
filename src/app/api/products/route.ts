@@ -22,28 +22,29 @@ export const POST = withAuth(async (req, user) => {
         await connectToDatabase();
 
         // 1. Enforce Plan Limits
-        // user object is already the Mongoose document, so we can access planLimits directly
-        const maxProducts = user.planLimits?.maxProducts ?? 3; // Default to 3 (Free Tier) if not set
-
+        const maxProducts = user.planLimits?.maxProducts ?? 3;
         const currentCount = await Product.countDocuments({
             creatorId: user._id,
-            isActive: true
+            status: { $in: ['published', 'active'] }
         });
 
         if (currentCount >= maxProducts) {
             return NextResponse.json({
                 error: 'Plan limit reached',
-                message: `You have reached the maximum of ${maxProducts} products for your plan. Please upgrade to add more.`,
-                code: 'LIMIT_EXCEEDED'
+                current: currentCount,
+                limit: maxProducts,
+                upgradeUrl: '/dashboard/upgrade'
             }, { status: 403 });
         }
+
+        const { sanitizeHTML } = await import('@/lib/security/sanitization');
 
         // 2. Map Validated Data to Product Schema
         const productData = {
             creatorId: user._id,
             name: data.name,
             slug: data.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
-            description: data.description || '',
+            description: sanitizeHTML(data.description || ''),
             price: data.price,
             currency: data.currency,
             paymentType: 'one_time',
@@ -51,6 +52,7 @@ export const POST = withAuth(async (req, user) => {
             image: data.image,
             type: data.type,
             status: data.isPublic ? 'published' : 'draft',
+
             files: data.files || [],
             accessRules: {
                 immediateAccess: true,

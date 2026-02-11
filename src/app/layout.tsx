@@ -52,8 +52,11 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://creatorly.in"),
 };
 
-import { AuthProvider } from '@/components/providers/AuthProvider';
+import { AuthProvider } from '@/lib/firebase/AuthProvider';
 import ClientLayout from '@/components/layout/ClientLayout';
+import ErrorBoundary from './error-boundary';
+import { SpeedInsights } from "@vercel/speed-insights/next";
+import { Analytics } from "@vercel/analytics/react";
 
 export default function RootLayout({
   children,
@@ -61,15 +64,44 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <AuthProvider>
-          <ClientLayout>
-            {children}
-          </ClientLayout>
-        </AuthProvider>
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link
+          rel="preconnect"
+          href="https://fonts.googleapis.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
+        {/* Preload critical API routes */}
+        <link
+          rel="prefetch"
+          href="/api/creator/analytics"
+          as="fetch"
+          crossOrigin="anonymous"
+        />
+        {/* DNS prefetch for external services */}
+        <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
+        <link rel="dns-prefetch" href="https://graph.facebook.com" />
+        <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+
         <Script src="https://checkout.razorpay.com/v1/checkout.js" />
+      </head>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ErrorBoundary>
+          <AuthProvider>
+            <ClientLayout>
+              {children}
+            </ClientLayout>
+          </AuthProvider>
+        </ErrorBoundary>
+        <SpeedInsights />
+        <Analytics />
       </body>
     </html>
   );
 }
+

@@ -4,7 +4,9 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Payout from '@/lib/models/Payout';
 import { AdminLog } from '@/lib/models/AdminLog';
 import { adminAuthMiddleware, checkAdminPermission } from '@/lib/middleware/adminAuth';
+import User from '@/lib/models/User';
 import { z } from 'zod';
+
 import Razorpay from 'razorpay';
 
 const payoutProcessSchema = z.object({
@@ -95,7 +97,30 @@ export async function POST(req: NextRequest) {
 
     for (const payout of payouts) {
       try {
+        // Fetch User to check for frozen/held status
+        const creator = await User.findById(payout.creatorId);
+        if (!creator) throw new Error('Creator not found');
+
+        const isPayoutBlocked = creator.payoutStatus === 'held' || creator.status === 'suspended' || creator.isSuspended;
+
+        if (isPayoutBlocked) {
+          await AdminLog.create({
+            adminId: auth.user._id,
+            adminEmail: auth.user.email,
+            action: 'PAYOUT_BLOCKED_FROZEN',
+            resource: 'PAYOUT',
+            resourceId: payout._id,
+            description: `Blocked payout for frozen/held account: ${creator.email}`,
+            ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+            status: 'failed',
+            metadata: { reason: 'User frozen or payout held', creatorId: creator._id }
+          });
+          results.push({ payoutId: payout._id, status: 'failed', error: 'Payouts are currently suspended for this account' });
+          continue;
+        }
+
         if (validation.data.status === 'approved') {
+
           // Process through Razorpay
           const transferResponse = await razorpay.transfers.create({
             account: payout.creatorId.toString(),

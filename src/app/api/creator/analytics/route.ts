@@ -7,7 +7,12 @@ import { withCreatorAuth } from '@/lib/firebase/withAuth';
 
 async function handler(req: NextRequest, user: any) {
     try {
+        const { analyticsRateLimit } = await import('@/lib/security/analyticsLimiter');
+        const limitResult = await analyticsRateLimit(req);
+        if (limitResult) return limitResult;
+
         const creatorId = user._id;
+
         await connectToDatabase();
 
         // 1. Get today's start and end timestamps

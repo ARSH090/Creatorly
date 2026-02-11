@@ -350,32 +350,39 @@ export function verifyRazorpaySignature(
 }
 
 // ============================================================================
-// WEBHOOK REPLAY ATTACK PREVENTION
+// WEBHOOK REPLAY ATTACK PREVENTION (REDIS VERSION)
 // ============================================================================
 
-const processedWebhooks = new Set<string>();
-const WEBHOOK_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+import redis from '@/lib/db/redis';
 
-export function validateWebhookTimestamp(timestamp: string): boolean {
-  const webhookTime = new Date(timestamp).getTime();
+
+const WEBHOOK_EXPIRY_S = 86400; // 24 hours
+
+export function validateWebhookTimestamp(timestamp: string | number): boolean {
+  const webhookTime = typeof timestamp === 'number' ? timestamp : new Date(timestamp).getTime();
   const currentTime = Date.now();
+  const FIVE_MINUTES = 5 * 60 * 1000;
 
-  return Math.abs(currentTime - webhookTime) < WEBHOOK_EXPIRY_MS;
+  return Math.abs(currentTime - webhookTime) < FIVE_MINUTES;
 }
 
-export function preventWebhookReplay(webhookId: string): boolean {
-  if (processedWebhooks.has(webhookId)) {
+export async function preventWebhookReplay(webhookId: string): Promise<boolean> {
+  if (!redis) return true; // Fail-secure/safe: assume not a replay if Redis is missing (or handle differently)
+
+  const key = `webhook:processed:${webhookId}`;
+
+
+  // Try to set key, returns 'OK' if successful, null if exists
+  const result = await redis.set(key, '1', 'EX', WEBHOOK_EXPIRY_S, 'NX');
+
+  if (!result) {
     console.warn(`Webhook replay detected: ${webhookId}`);
     return false;
   }
 
-  processedWebhooks.add(webhookId);
-
-  // Cleanup old entries
-  setTimeout(() => processedWebhooks.delete(webhookId), WEBHOOK_EXPIRY_MS);
-
   return true;
 }
+
 
 // ============================================================================
 // MANUAL REVIEW QUEUE

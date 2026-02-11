@@ -1,3 +1,9 @@
 {
-    "cleanUrls": true
+    "cleanUrls": true,
+    "crons": [
+        {
+            "path": "/api/cron/refresh-tokens?secret=YOUR_CRON_SECRET_PLACEHOLDER",
+            "schedule": "0 3 * * *"
+        }
+    ]
 }
