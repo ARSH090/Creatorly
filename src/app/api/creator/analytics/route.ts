@@ -51,15 +51,39 @@ async function handler(req: NextRequest, user: any) {
             time: formatTimeAgo(order.createdAt)
         }));
 
-        // 6. Calculate Changes & Engagement Score
-        const revenueChange = 0; // Comparisons could be added with historical data
-        const visitorChange = 0;
-        const repeatRate = 0;
-        const pendingPayout = todayRevenue * 0.9;
+        // 6. Calculate Yesterday's Stats for Comparison
+        const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
+        const endOfYesterday = new Date(startOfToday.getTime() - 1);
 
-        // Engagement Score = (Revenue Weight * 0.7) + (Visitor Weight * 0.3)
-        // Normalized for a daily "Pulse" score
+        const [yesterdayOrders, yesterdayVisitors] = await Promise.all([
+            Order.find({
+                creatorId,
+                status: 'success',
+                createdAt: { $gte: startOfYesterday, $lte: endOfYesterday }
+            }),
+            AnalyticsEvent.countDocuments({
+                creatorId,
+                eventType: 'page_view',
+                createdAt: { $gte: startOfYesterday, $lte: endOfYesterday }
+            })
+        ]);
+
+        const yesterdayRevenue = yesterdayOrders.reduce((acc, order) => acc + (order.amount || 0), 0);
+
+        // 7. Calculate Percentage Changes
+        const calculateChange = (current: number, previous: number) => {
+            if (previous === 0) return current > 0 ? 100 : 0;
+            return Math.round(((current - previous) / previous) * 100);
+        };
+
+        const revenueChange = calculateChange(todayRevenue, yesterdayRevenue);
+        const visitorChange = calculateChange(todayVisitors, yesterdayVisitors);
+
+        // 8. engagement Score Calculation
+        const repeatRate = 0; // In production, calculate based on customer email frequency
+        const pendingPayout = todayRevenue * 0.9;
         const engagementScore = Math.min(100, Math.round((todayRevenue / 500) * 70 + (todayVisitors / 10) * 30));
+
 
 
         // 6. Calculate Storage Usage

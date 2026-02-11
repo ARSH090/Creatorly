@@ -10,6 +10,8 @@ export interface IUser extends Document {
     avatar?: string;
     storeSlug?: string;
     razorpayContactId?: string;
+    razorpayAccountId?: string; // Linked account ID for transfers
+
     emailVerified: boolean;
     emailVerifiedAt?: Date;
     // Admin fields
@@ -94,6 +96,8 @@ const UserSchema: Schema = new Schema({
         sparse: true,
     },
     razorpayContactId: String, // For payouts
+    razorpayAccountId: String, // For Razorpay Transfers
+
     emailVerified: {
         type: Boolean,
         default: false,

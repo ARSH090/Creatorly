@@ -240,6 +240,16 @@ export async function POST(req: NextRequest) {
                 break;
             }
 
+            default: {
+                console.log(`[Webhook] Received unhandled Razorpay event: ${event}`);
+                // Optional: Log to Analytics for observability
+                await AnalyticsEvent.create({
+                    eventType: 'payment_webhook_unhandled',
+                    path: '/webhook/razorpay',
+                    metadata: { event, payload: payload.payload }
+                });
+                break;
+            }
         }
 
         // 4. Record Event as Processed

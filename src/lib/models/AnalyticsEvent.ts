@@ -1,7 +1,8 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IAnalyticsEvent extends Document {
-    eventType: 'page_view' | 'product_view' | 'checkout_start' | 'purchase' | 'download';
+    eventType: 'page_view' | 'product_view' | 'checkout_start' | 'purchase' | 'download' | 'error' | 'performance';
+
     creatorId: mongoose.Types.ObjectId;
     productId?: mongoose.Types.ObjectId;
     orderId?: mongoose.Types.ObjectId;

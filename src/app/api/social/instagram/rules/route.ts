@@ -44,10 +44,16 @@ export const POST = withAuth(async (req, user) => {
         // const plan = await Plan.findById(user.planId);
         // if (plan.limits.automations <= currentRulesCount) return 402;
 
-        const rule = await AutoReplyRule.create({
+        const { sanitizeHTML } = await import('@/lib/security/sanitization');
+
+        const ruleData = {
             ...result.data,
+            replyText: sanitizeHTML(result.data.replyText),
             creatorId: user._id
-        });
+        };
+
+        const rule = await AutoReplyRule.create(ruleData);
+
 
         return NextResponse.json({ rule }, { status: 201 });
     } catch (error) {

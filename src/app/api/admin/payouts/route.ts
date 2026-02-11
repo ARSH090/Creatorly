@@ -120,13 +120,17 @@ export async function POST(req: NextRequest) {
         }
 
         if (validation.data.status === 'approved') {
+          if (!creator.razorpayAccountId) {
+            throw new Error(`Creator ${creator.email} does not have a linked Razorpay account ID.`);
+          }
 
-          // Process through Razorpay
+          // Process through Razorpay Transfers
           const transferResponse = await razorpay.transfers.create({
-            account: payout.creatorId.toString(),
+            account: creator.razorpayAccountId, // Corrected: Use linked account ID
             amount: payout.amount * 100, // Convert to paise
             currency: 'INR',
           });
+
 
           payout.status = 'processed';
           payout.transactionId = transferResponse.id;

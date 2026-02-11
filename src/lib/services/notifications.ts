@@ -3,10 +3,10 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 
 export interface NotificationPayload {
   userId: string;
-  type: 'order' | 'payout' | 'message' | 'system' | 'promotion';
+  type: 'order' | 'payout' | 'message' | 'system' | 'promotion' | 'team_invite' | 'content_published' | 'content_failed' | 'payment_success' | 'payment_failed' | 'usage_alert' | 'comment';
   title: string;
   message: string;
-  data?: Record<string, any>;
+  metadata?: Record<string, any>;
 }
 
 /**
@@ -18,10 +18,10 @@ export async function sendInAppNotification(payload: NotificationPayload) {
 
     const notification = await Notification.create({
       userId: payload.userId,
-      type: payload.type,
+      type: payload.type as any, // Cast to any to handle overlapping enums or just align perfectly
       title: payload.title,
       message: payload.message,
-      data: payload.data,
+      metadata: payload.metadata,
       read: false,
     });
 
@@ -40,18 +40,18 @@ export async function sendInAppNotification(payload: NotificationPayload) {
  * WhatsApp notification
  */
 export async function sendWhatsAppNotification(to: string, message: string) {
-    console.log(`📱 [WhatsApp] Sending to ${to}: ${message}`);
+  console.log(`📱 [WhatsApp] Sending to ${to}: ${message}`);
 
-    // In production, connect to Interakt/Twilio/Wati API
-    // Example for Interakt:
-    /*
-    await fetch('https://api.interakt.ai/v1/public/message/', {
-      method: 'POST',
-      headers: { 'Authorization': `Basic ${process.env.INTERAKT_API_KEY}` },
-      body: JSON.stringify({ full_phone_number: to, ... })
-    });
-    */
-    return true;
+  // In production, connect to Interakt/Twilio/Wati API
+  // Example for Interakt:
+  /*
+  await fetch('https://api.interakt.ai/v1/public/message/', {
+    method: 'POST',
+    headers: { 'Authorization': `Basic ${process.env.INTERAKT_API_KEY}` },
+    body: JSON.stringify({ full_phone_number: to, ... })
+  });
+  */
+  return true;
 }
 
 /**
@@ -63,7 +63,7 @@ export async function notifyOrderCreated(creatorId: string, orderId: string, amo
     type: 'order',
     title: 'New Order',
     message: `You received a new order for ${productName}`,
-    data: { orderId, amount, productName },
+    metadata: { orderId, amount, productName },
   });
 }
 
@@ -73,6 +73,6 @@ export async function notifyPayout(creatorId: string, amount: number) {
     type: 'payout',
     title: 'Payout Processed',
     message: `Payout of ₹${(amount / 100).toFixed(2)} has been processed`,
-    data: { amount },
+    metadata: { amount },
   });
 }

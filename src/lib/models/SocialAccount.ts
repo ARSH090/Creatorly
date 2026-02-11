@@ -36,8 +36,9 @@ const SocialAccountSchema: Schema = new Schema({
     pageId: { type: String, required: true },
     instagramBusinessId: { type: String, required: true, unique: true, index: true },
     pageAccessToken: { type: String, required: true },
-    tokenIV: { type: String, required: true, default: '' },
-    tokenTag: { type: String, required: true, default: '' },
+    tokenIV: { type: String, required: true }, // IV must be provided
+    tokenTag: { type: String, required: true }, // GCM Tag must be provided
+
     tokenExpiresAt: Date,
     tokenStatus: { type: String, enum: ['valid', 'expired', 'revoked'], default: 'valid', index: true },
     lastTokenCheck: { type: Date, default: Date.now },

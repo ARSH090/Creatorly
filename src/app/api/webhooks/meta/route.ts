@@ -54,14 +54,16 @@ export async function POST(req: NextRequest) {
             receivedAt: new Date()
         });
 
-        // 3. Process Entries (Async loop)
+        // 3. Process Entries (Parallel execution to prevent timeout)
+        const tasks: Promise<any>[] = [];
+
         for (const entry of body.entry) {
             const igId = entry.id;
             const account = await SocialAccount.findOne({ instagramBusinessId: igId, isActive: true });
 
             if (!account) continue;
 
-            // Decrypt page access token with AES-256-GCM
+            // Decrypt page access token
             if (!account.pageAccessToken || !account.tokenIV || !account.tokenTag) {
                 console.warn('SocialAccount has missing encryption fields; skipping automation for', igId);
                 continue;
@@ -75,17 +77,22 @@ export async function POST(req: NextRequest) {
 
             if (entry.messaging) {
                 for (const messageEvent of entry.messaging) {
-                    await handleMessageEvent(messageEvent, account.userId.toString(), decryptedToken, account.instagramBusinessId);
+                    tasks.push(handleMessageEvent(messageEvent, account.userId.toString(), decryptedToken, account.instagramBusinessId));
                 }
             } else if (entry.changes) {
-
                 for (const change of entry.changes) {
                     if (change.field === 'feed') {
-                        await handleCommentEvent(change.value, account.userId.toString(), igId, decryptedToken);
+                        tasks.push(handleCommentEvent(change.value, account.userId.toString(), igId, decryptedToken));
                     }
                 }
             }
         }
+
+        // Wait for all automations to complete or fail in parallel
+        if (tasks.length > 0) {
+            await Promise.allSettled(tasks);
+        }
+
 
         // Mark as processed
         eventLog.processed = true;

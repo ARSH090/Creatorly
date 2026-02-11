@@ -10,11 +10,17 @@ export async function analyticsRateLimit(req: NextRequest, limit: number = 30, w
     const ip = req.headers.get('x-forwarded-for') || 'anonymous';
     const key = `ratelimit:analytics:${ip}`;
 
+    if (!redis) {
+        console.warn('Redis client not available - skipping rate limit');
+        return null;
+    }
+
     const current = await redis.incr(key);
 
     if (current === 1) {
         await redis.expire(key, windowSeconds);
     }
+
 
     if (current > limit) {
         return NextResponse.json({

@@ -52,9 +52,22 @@ export async function GET(
         order.ipAddress = ip;
         await order.save();
 
-        // 6. Redirect to the secure Cloud Storage URL (or proxy the file)
-        // For now, we redirect to the file URL. In production, this should be a signed URL.
-        return NextResponse.redirect(product.digitalFileUrl);
+        // 6. Redirect to the secure Cloud Storage URL using a Presigned URL
+        // Extract S3 key from the URL
+        let s3Key = '';
+        const fileUrl = product.digitalFileUrl;
+        try {
+            const url = new URL(fileUrl);
+            s3Key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+        } catch (e) {
+            s3Key = fileUrl;
+        }
+
+        const { getPresignedDownloadUrl } = await import('@/lib/storage/s3');
+        const presignedUrl = await getPresignedDownloadUrl(s3Key);
+
+        return NextResponse.redirect(presignedUrl);
+
 
     } catch (error: any) {
         console.error('Delivery Error:', error);

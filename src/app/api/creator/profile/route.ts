@@ -63,6 +63,13 @@ export const PATCH = withAuth(async (req, user) => {
             profile.layout = data.layout;
         }
 
+        // Update Description (Bio) with Sanitization
+        if (data.description !== undefined) {
+            const { sanitizeHTML } = await import('@/lib/security/sanitization');
+            profile.description = sanitizeHTML(data.description || '');
+        }
+
+
 
         await profile.save();
 

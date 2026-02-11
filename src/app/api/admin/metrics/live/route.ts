@@ -20,13 +20,15 @@ export async function GET(req: NextRequest) {
         await connectToDatabase();
 
         const now = new Date();
-        const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+        const sixtyMinutesAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
         const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
         // 1. Signups in the last hour
         const signupsLastHour = await User.countDocuments({
-            createdAt: { $gte: oneHourAgo }
+            createdAt: { $gte: sixtyMinutesAgo }
         });
+
 
         // 2. Revenue in the last 24h
         const ordersLast24h = await Order.find({
@@ -41,11 +43,30 @@ export async function GET(req: NextRequest) {
             updatedAt: { $gte: new Date(now.getTime() - 15 * 60 * 1000) }
         });
 
-        // 4. System Health (Basic check)
-        // We assume 0.0% if no errors in last hour, otherwise calculate from AnalyticsEvent
-        // For simplicity here, we return a mock health score or 0 failures
-        const errorRate = 0.02; // Mock for UI demo
-        const apiLatency = 145; // Mock for UI demo
+        // 4. System Health (Real Monitoring)
+        const { AnalyticsEvent } = await import('@/lib/models/AnalyticsEvent');
+
+        const [totalEvents, errorEvents, latencyEvents] = await Promise.all([
+            AnalyticsEvent.countDocuments({ createdAt: { $gte: sixtyMinutesAgo } }),
+            AnalyticsEvent.countDocuments({
+                eventType: 'error',
+                createdAt: { $gte: sixtyMinutesAgo }
+            }),
+            AnalyticsEvent.find({
+                eventType: 'performance',
+                createdAt: { $gte: sixtyMinutesAgo }
+            }).limit(100)
+        ]);
+
+        const errorRate = totalEvents > 0 ? (errorEvents / totalEvents) : 0;
+
+        // Calculate average latency from performance events in metadata
+        const avgLatency = latencyEvents.length > 0
+            ? latencyEvents.reduce((acc, e) => acc + (e.metadata?.latency || 0), 0) / latencyEvents.length
+            : 120; // Default baseline if no data
+
+        const apiLatency = Math.round(avgLatency);
+
 
         return NextResponse.json({
             signups: signupsLastHour,
