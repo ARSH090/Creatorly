@@ -11,7 +11,12 @@ export default async function SuccessPage({ params }: { params: Promise<{ userna
     const { username, orderId } = await params;
     await connectToDatabase();
 
-    const order = await Order.findById(orderId);
+    let order = await Order.findById(orderId);
+    if (!order) {
+        // Fallback: Lookup by razorpayOrderId
+        order = await Order.findOne({ razorpayOrderId: orderId });
+    }
+
     if (!order || order.status !== 'success') {
         notFound();
     }

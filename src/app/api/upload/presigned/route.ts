@@ -20,9 +20,9 @@ export const POST = withAuth(async (req, user) => {
 
         return NextResponse.json({
             uploadUrl,
-            key,
-            publicUrl: `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`
+            key
         });
+
 
     } catch (error: any) {
         console.error('Presigned URL Error:', error);

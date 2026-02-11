@@ -30,12 +30,15 @@ export interface IOrder extends Document {
         reason: string;
         processedAt: Date;
         status: 'completed' | 'failed' | 'pending';
+        refundId?: string;
     };
     deviceFingerprint?: string;
     metadata?: Record<string, any>;
     createdAt: Date;
     updatedAt: Date;
+    deletedAt?: Date;
 }
+
 
 const OrderSchema: Schema = new Schema({
     items: [{
@@ -73,12 +76,15 @@ const OrderSchema: Schema = new Schema({
         amount: { type: Number },
         reason: { type: String },
         processedAt: { type: Date },
-        status: { type: String, enum: ['completed', 'failed', 'pending'] }
+        status: { type: String, enum: ['completed', 'failed', 'pending'] },
+        refundId: { type: String }
     },
     deviceFingerprint: { type: String, index: true },
 
-    metadata: { type: Schema.Types.Mixed, default: {} }
+    metadata: { type: Schema.Types.Mixed, default: {} },
+    deletedAt: { type: Date, index: true }
 }, { timestamps: true });
+
 
 // Indexes for performance
 OrderSchema.index({ creatorId: 1, createdAt: -1 });

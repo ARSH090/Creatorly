@@ -22,7 +22,12 @@ export interface ISubscription extends Document {
 
     createdAt: Date;
     updatedAt: Date;
+    deletedAt?: Date;
+    lastPaymentId?: string;
+    renewalCount: number;
 }
+
+
 
 const SubscriptionSchema: Schema = new Schema({
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
@@ -77,7 +82,12 @@ const SubscriptionSchema: Schema = new Schema({
 
     razorpaySubscriptionId: { type: String, sparse: true, unique: true },
     razorpayCustomerId: { type: String },
+    lastPaymentId: { type: String },
+    renewalCount: { type: Number, default: 0 },
+    deletedAt: { type: Date, index: true }
 }, { timestamps: true });
+
+
 
 // Integrity check on save
 SubscriptionSchema.pre('validate', function (this: any, next: any) {

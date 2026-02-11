@@ -5,6 +5,7 @@ import NextImage from 'next/image';
 import { ShoppingBag, Star, Zap, TrendingUp, Eye, Play, Lock, FileText, Users, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { useCheckoutStore } from '@/lib/store/useCheckoutStore';
 
 interface ProductCardProps {
     product: {
@@ -31,6 +32,7 @@ interface ProductCardProps {
 export default function ProductCard({ product, creator, theme, hasAccess }: ProductCardProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
+    const { addToCart, setStep } = useCheckoutStore();
     const router = useRouter();
 
     const handleAction = async () => {
@@ -48,50 +50,23 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
         try {
             setIsCheckingOut(true);
 
-            // 1. Create Order on Backend
-            const response = await fetch('/api/payments/razorpay', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    amount: product.price,
-                    productId: product.id,
-                    creatorId: creator.id,
-                    customerEmail: 'customer@example.com', // In real app, prompt for email if guest
-                }),
+            // Standardize: Add to cart and proceed
+            addToCart({
+                id: product.id,
+                name: product.name,
+                price: product.price,
+                image: product.image,
+                quantity: 1,
+                type: product.type,
+                creator: creator.username
             });
 
-            const data = await response.json();
-            if (!response.ok) throw new Error(data.error || 'Checkout failed');
-
-            // 2. Open Razorpay Checkout
-            const options = {
-                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-                amount: data.amount,
-                currency: data.currency,
-                name: 'Creatorly',
-                description: `Purchase: ${product.name}`,
-                image: '/logo.png',
-                order_id: data.id,
-                handler: function (response: any) {
-                    // This is for client-side redirection. 
-                    // The webhook will handle status update in DB.
-                    router.push(`/u/${creator.username}/success/${data.id}`);
-                },
-                prefill: {
-                    name: 'Customer',
-                    email: 'customer@example.com',
-                },
-                theme: {
-                    color: theme.primaryColor,
-                },
-            };
-
-            const rzp = new (window as any).Razorpay(options);
-            rzp.open();
+            // Redirect to Cart for review/details
+            router.push('/cart');
 
         } catch (error) {
             console.error('Checkout Error:', error);
-            alert('Payment initialization failed. Please try again.');
+            alert('Could not add to cart. Please try again.');
         } finally {
             setIsCheckingOut(false);
         }

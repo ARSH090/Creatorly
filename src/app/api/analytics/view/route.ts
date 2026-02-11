@@ -5,10 +5,24 @@ import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
 export async function POST(req: NextRequest) {
     try {
         const data = await req.json();
-        const forwarded = req.headers.get('x-forwarded-for');
-        const ip = forwarded ? forwarded.split(',')[0] : '127.0.0.1';
+        const forwarded = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '';
+        const ip = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
         const ua = req.headers.get('user-agent') || 'unknown';
         const referrer = req.headers.get('referer') || '';
+
+        // 1. Bot Detection (Basic)
+        const isBot = /bot|spider|crawl|slurp|adsbot/i.test(ua);
+        if (isBot) return NextResponse.json({ success: true, bot: true });
+
+        // 2. Redis-backed Rate Limiting (1 view per 10 mins per IP per profile)
+        const { RedisRateLimiter } = await import('@/lib/security/redis-rate-limiter');
+        const limitKey = `analytics:${data.creatorId}:${ip}`;
+        const isAllowed = await RedisRateLimiter.check(limitKey, 1, 10 * 60 * 1000, ip);
+
+        if (!isAllowed) {
+            return NextResponse.json({ success: true, throttled: true });
+        }
+
 
         await connectToDatabase();
 

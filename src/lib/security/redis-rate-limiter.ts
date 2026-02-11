@@ -8,29 +8,34 @@ export class RedisRateLimiter {
     static async check(key: string, limit: number, windowMs: number, identifier: string) {
         try {
             if (!redis) {
-                // Fallback to in-memory naive limiter if Redis not configured
-                // This is intentionally simple; production should use Redis.
-                // Keep a simple static map to avoid blowing up import complexity here.
-                // eslint-disable-next-line @typescript-eslint/no-var-requires
+                if (process.env.NODE_ENV === 'production') {
+                    console.error('[CRITICAL] Redis not configured in production. Rate limiting is degraded.');
+                }
                 const { RateLimiter } = require('@/lib/security/rate-limiter');
                 return RateLimiter.check(key, limit, windowMs, identifier);
             }
 
             const rkey = `ratelimit:${key}:${identifier}`;
             const now = Date.now();
-            const ttl = Math.ceil(windowMs / 1000);
 
-            // Use Redis INCR with EXPIRE for atomic counting
-            const count = await redis.incr(rkey);
-            if (count === 1) {
-                await redis.expire(rkey, ttl);
-            }
+            // Distributed Sliding Window using Sorted Sets (Enterprise Grade)
+            const transaction = redis.multi();
+            const minTime = now - windowMs;
 
-            return count <= limit;
+            transaction.zremrangebyscore(rkey, 0, minTime);
+            transaction.zadd(rkey, now.toString(), now.toString());
+            transaction.zcard(rkey);
+            transaction.expire(rkey, Math.ceil(windowMs / 1000));
+
+            const results = await transaction.exec();
+            if (!results) return true;
+
+            const currentCount = results[2][1] as number;
+            return currentCount <= limit;
         } catch (err) {
-            console.error('RedisRateLimiter error, falling back:', err);
-            // Allow by default on error to avoid blocking users; log so ops can fix it.
+            console.error('RedisRateLimiter failure:', err);
             return true;
         }
     }
+
 }

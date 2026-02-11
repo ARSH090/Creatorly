@@ -28,9 +28,11 @@ export interface IPlan extends Document {
     isActive: boolean;
     isVisible: boolean;
     sortOrder: number;
+    razorpayPlanId?: string;
     createdAt: Date;
     updatedAt: Date;
 }
+
 
 const PlanSchema: Schema = new Schema({
     name: { type: String, required: true, unique: true, trim: true },
@@ -159,7 +161,9 @@ const PlanSchema: Schema = new Schema({
     isActive: { type: Boolean, default: true, index: true },
     isVisible: { type: Boolean, default: true, index: true },
     sortOrder: { type: Number, default: 0 },
+    razorpayPlanId: { type: String, sparse: true, unique: true }
 }, { timestamps: true });
+
 
 // Prevent logical errors with manual pre-save hook for complex constraints
 PlanSchema.pre('save', async function (this: IPlan) {

@@ -5,6 +5,8 @@ import Order from '@/lib/models/Order';
 import Subscription from '@/lib/models/Subscription';
 import ProcessedWebhook from '@/lib/models/ProcessedWebhook';
 import { sendPaymentConfirmationEmail, sendDownloadInstructionsEmail } from '@/lib/services/email';
+import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
+
 
 export async function POST(req: NextRequest) {
     try {
@@ -89,32 +91,136 @@ export async function POST(req: NextRequest) {
                         order._id.toString(),
                         items
                     );
+
+                    await AnalyticsEvent.create({
+                        eventType: 'purchase',
+                        creatorId: order.creatorId,
+                        orderId: order._id,
+                        amount: order.amount,
+                        path: '/webhook/razorpay',
+                        metadata: { razorpayOrderId, paymentId }
+                    });
+
+                    // 🟢 IN-APP NOTIFICATION: Notify the creator of a new sale
+                    try {
+                        const { NotificationService } = await import('@/lib/services/notification');
+                        await NotificationService.send({
+                            userId: order.creatorId.toString(),
+                            type: 'payment_success',
+                            title: 'New Sale! 💰',
+                            message: `You just received a payment of ₹${order.amount} from ${order.customerEmail}.`,
+                            link: `/dashboard/orders/${order._id}`
+                        });
+                    } catch (e) {
+                        console.error('Failed to send sale notification:', e);
+                    }
                 }
+
+
                 break;
             }
 
             case 'subscription.activated': {
+                const { id: subscriptionId, customer_id: rzpCustomerId } = payload.payload.subscription.entity;
+                const sub = await Subscription.findOneAndUpdate(
+                    { razorpaySubscriptionId: subscriptionId },
+                    { status: 'active', activatedAt: new Date(), razorpayCustomerId: rzpCustomerId },
+                    { new: true }
+                );
+
+                if (sub) {
+                    // Update User to link this subscription
+                    const User = (await import('@/lib/models/User')).default;
+                    await User.findByIdAndUpdate(sub.userId, {
+                        activeSubscription: sub._id,
+                        status: 'active' // Ensure user is active
+                    });
+                    console.log(`[Webhook] User ${sub.userId} linked to active subscription ${sub._id}`);
+
+                    // Log Analytics Event
+                    await AnalyticsEvent.create({
+                        eventType: 'subscription',
+                        creatorId: sub.userId, // Subscriptions are user-level
+                        productId: sub.productId,
+                        metadata: { subscriptionId, razorpayCustomerId: rzpCustomerId }
+                    });
+                }
+
+                break;
+            }
+
+
+            case 'subscription.charged': {
+                const { id: subscriptionId } = payload.payload.subscription.entity;
+                const { id: paymentId } = payload.payload.payment.entity;
+
+                // Handle renewal: Extend endDate and update status
+                const subscription = await Subscription.findOneAndUpdate(
+                    { razorpaySubscriptionId: subscriptionId },
+                    {
+                        status: 'active',
+                        lastPaymentId: paymentId,
+                        $inc: { renewalCount: 1 }
+                    },
+                    { new: true }
+                );
+
+                if (subscription) {
+                    // Extend by another period (monthly/yearly)
+                    const days = subscription.billingPeriod === 'yearly' ? 365 : 30;
+                    subscription.endDate = new Date(subscription.endDate.getTime() + days * 24 * 60 * 60 * 1000);
+                    await subscription.save();
+                    console.log(`[Webhook] Subscription ${subscriptionId} renewed until ${subscription.endDate}`);
+                }
+                break;
+            }
+
+            case 'subscription.cancelled': {
                 const { id: subscriptionId } = payload.payload.subscription.entity;
                 await Subscription.findOneAndUpdate(
                     { razorpaySubscriptionId: subscriptionId },
-                    { status: 'active', activatedAt: new Date() }
+                    { status: 'canceled', autoRenew: false }
                 );
+                console.log(`[Webhook] Subscription ${subscriptionId} cancelled`);
                 break;
             }
 
-            case 'subscription.charged': {
-                // Handle renewal
+            case 'refund.processed': {
+                const { id: refundId, order_id: razorpayOrderId, amount } = payload.payload.refund.entity;
+                await Order.findOneAndUpdate(
+                    { razorpayOrderId },
+                    {
+                        status: 'refunded',
+                        refundStatus: 'COMPLETED',
+                        refund: {
+                            amount: amount / 100, // Convert from paise
+                            status: 'completed',
+                            processedAt: new Date(),
+                            refundId: refundId
+                        }
+                    }
+                );
+                console.log(`[Webhook] Refund processed for order ${razorpayOrderId}`);
                 break;
             }
+
 
             case 'payment.failed': {
                 const { order_id: razorpayOrderId } = payload.payload.payment.entity;
-                await Order.findOneAndUpdate(
+                const order = await Order.findOneAndUpdate(
                     { razorpayOrderId },
-                    { status: 'failed' }
+                    { status: 'failed' },
+                    { new: true }
                 );
+
+                if (order) {
+                    const { sendPaymentFailureEmail } = await import('@/lib/services/email');
+                    await sendPaymentFailureEmail(order.customerEmail, order._id.toString());
+                    console.log(`[Webhook] Payment failure email sent to ${order.customerEmail}`);
+                }
                 break;
             }
+
         }
 
         // 4. Record Event as Processed

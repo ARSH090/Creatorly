@@ -72,7 +72,9 @@ export interface IProduct extends Document {
 
     createdAt: Date;
     updatedAt: Date;
+    deletedAt?: Date;
 }
+
 
 const ProductSchema: Schema = new Schema({
     creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -146,8 +148,10 @@ const ProductSchema: Schema = new Schema({
     },
     isActive: { type: Boolean, default: true },
     isFeatured: { type: Boolean, default: false },
-    inventoryCount: { type: Number, default: 0 }
+    inventoryCount: { type: Number, default: 0 },
+    deletedAt: { type: Date, index: true }
 }, { timestamps: true });
+
 
 // Performance & Discovery Indexes
 ProductSchema.index({ creatorId: 1, type: 1 });

@@ -7,7 +7,6 @@ import { Check } from 'lucide-react';
 const STEPS = [
     { id: 'cart', label: 'Cart' },
     { id: 'customer', label: 'Details' },
-    { id: 'payment', label: 'Payment' },
     { id: 'review', label: 'Review' }
 ];
 
@@ -37,10 +36,10 @@ export default function CheckoutStepper() {
                                 onClick={() => idx < currentIdx && setStep(s.id as any)}
                                 disabled={idx > currentIdx}
                                 className={`w-8 h-8 rounded-full flex items-center justify-center transition-all border-2 ${isCompleted
-                                        ? 'bg-indigo-500 border-indigo-500 text-white'
-                                        : isActive
-                                            ? 'bg-black border-indigo-500 text-indigo-500'
-                                            : 'bg-black border-white/10 text-zinc-600'
+                                    ? 'bg-indigo-500 border-indigo-500 text-white'
+                                    : isActive
+                                        ? 'bg-black border-indigo-500 text-indigo-500'
+                                        : 'bg-black border-white/10 text-zinc-600'
                                     }`}
                             >
                                 {isCompleted ? <Check size={14} /> : <span className="text-xs font-black">{idx + 1}</span>}

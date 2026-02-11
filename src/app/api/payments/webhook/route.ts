@@ -3,6 +3,9 @@ import Order from '@/lib/models/Order';
 import Subscription from '@/lib/models/Subscription';
 import Booking from '@/lib/models/Booking';
 import ProcessedWebhook from '@/lib/models/ProcessedWebhook';
+import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
+import User from '@/lib/models/User';
+import { recordSecurityEvent, SecurityEventType } from '@/lib/security/monitoring';
 import { NextResponse } from 'next/server';
 import {
     verifyRazorpaySignature,
@@ -80,6 +83,43 @@ export async function POST(req: Request) {
             order.razorpayPaymentId = payment.id;
             order.razorpaySignature = signature;
             await order.save();
+
+            // 3. Governance Alert: Check if Creator is suspended
+            const creator = await User.findById(order.creatorId);
+            if (creator && (creator.isSuspended || creator.status === 'suspended')) {
+                console.error(`🚨 GOVERNANCE ALERT: Payment captured for SUSPENDED creator ${creator.username} (Order: ${order._id})`);
+                await recordSecurityEvent(
+                    SecurityEventType.ADMIN_ACTION,
+                    {
+                        alert: 'Payment Captured for Suspended Entity',
+                        orderId: order._id,
+                        creatorId: creator._id,
+                        creatorUsername: creator.username,
+                        amount: order.amount
+                    },
+                    req.headers.get('x-forwarded-for') || 'unknown',
+                    creator._id.toString()
+                );
+            }
+
+            // 3.5 Record Analytics Event (Conversion)
+            try {
+                await AnalyticsEvent.create({
+                    eventType: 'purchase',
+                    creatorId: order.creatorId,
+                    productId: order.items[0]?.productId,
+                    orderId: order._id,
+                    path: '/checkout',
+                    metadata: {
+                        amount: order.amount,
+                        currency: order.currency,
+                        itemsCount: order.items.length
+                    }
+                });
+            } catch (aErr) {
+                console.error('Failed to record conversion analytics:', aErr);
+                // Don't fail the webhook for analytics errors
+            }
 
             // 4. Handle Fulfillment & Notifications
 

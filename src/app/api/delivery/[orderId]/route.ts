@@ -12,7 +12,11 @@ export async function GET(
         const { orderId } = await params;
 
         // 1. Fetch Order and include Product details
-        const order = await Order.findById(orderId);
+        let order = await Order.findById(orderId);
+        if (!order) {
+            order = await Order.findOne({ razorpayOrderId: orderId });
+        }
+
         if (!order) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }

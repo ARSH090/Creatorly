@@ -110,7 +110,14 @@ const CreatorProfileSchema: Schema = new Schema({
         order: Number
     }],
 
-    customDomain: { type: String, sparse: true },
+    customDomain: {
+        type: String,
+        unique: true,
+        sparse: true,
+        lowercase: true,
+        trim: true
+    },
+
     isCustomDomainVerified: { type: Boolean, default: false },
 
     features: {

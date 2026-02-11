@@ -8,6 +8,7 @@ import { Metadata } from 'next';
 import StoreHeader from '@/components/storefront/StoreHeader';
 import CreatorBio from '@/components/storefront/CreatorBio';
 import ProductGrid from '@/components/storefront/ProductGrid';
+import { ShieldAlert } from 'lucide-react';
 
 import { getCurrentUser } from '@/lib/firebase/server-auth';
 import Order from '@/lib/models/Order';
@@ -50,6 +51,25 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
 
     const creator = await User.findOne({ username });
     if (!creator) notFound();
+
+    if (creator.isSuspended || creator.status === 'suspended') {
+        return (
+            <div className="min-h-screen bg-black flex items-center justify-center p-6 text-center">
+                <div className="max-w-md space-y-6">
+                    <div className="w-20 h-20 bg-rose-500/10 border border-rose-500/20 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-rose-500/20">
+                        <ShieldAlert className="w-10 h-10 text-rose-500" />
+                    </div>
+                    <div className="space-y-2">
+                        <h1 className="text-3xl font-black text-white uppercase tracking-tighter italic">Storefront Locked</h1>
+                        <p className="text-zinc-500 text-sm font-medium">This creator storefront has been temporarily suspended by the platform governance board due to a policy violation or maintenance.</p>
+                    </div>
+                    <div className="pt-6 border-t border-white/5">
+                        <p className="text-[10px] font-black text-zinc-700 uppercase tracking-[0.3em]">Protected by Creatorly Entity Oversight</p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     const profile = await CreatorProfile.findOne({ creatorId: creator._id });
     const products = await ProductModel.find({ creatorId: creator._id, isActive: true }).sort({ isFeatured: -1, createdAt: -1 }) as IProduct[];
@@ -114,21 +134,22 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
 
             <main className="max-w-4xl mx-auto px-6 pt-32 pb-12 space-y-16 relative">
                 {/* Intent/View Tracker (Anti-Gravity) */}
-                <script
-                    dangerouslySetInnerHTML={{
-                        __html: `
-                        fetch('/api/analytics/view', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ 
-                                type: 'bio_page', 
-                                creatorId: '${creator._id}',
-                                path: window.location.pathname,
-                                referrer: document.referrer
-                            })
-                        }).catch(() => {});
-                    `}}
-                />
+                {/* Server-Side View Tracker (Production-Safe) */}
+                {await (async () => {
+                    const { AnalyticsEvent: EventModel } = await import('@/lib/models/AnalyticsEvent');
+                    // Async fire-and-forget server-side logging
+                    EventModel.create({
+                        eventType: 'page_view',
+                        creatorId: creator._id,
+                        path: `/u/${username}`,
+                        metadata: {
+                            isDirect: true,
+                            source: 'server-component'
+                        }
+                    }).catch(console.error);
+                    return null;
+                })()}
+
 
                 {/* Hero / Bio Section */}
                 <CreatorBio creator={plainCreator} />

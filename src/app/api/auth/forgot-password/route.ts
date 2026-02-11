@@ -5,6 +5,8 @@ import VerificationToken from '@/lib/models/VerificationToken';
 import { sendPasswordResetEmail } from '@/lib/services/email';
 import { z } from 'zod';
 import crypto from 'crypto';
+import { RedisRateLimiter } from '@/lib/security/redis-rate-limiter';
+
 
 const forgotPasswordSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -12,7 +14,17 @@ const forgotPasswordSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const forwarded = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '';
+    const ip = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
+
+    // 1. Rate Limiting (3 attempts per hour to prevent email spam/enumeration)
+    const isAllowed = await RedisRateLimiter.check('forgot-password', 3, 60 * 60 * 1000, ip);
+    if (!isAllowed) {
+      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
+    }
+
     const body = await request.json();
+
     const validation = forgotPasswordSchema.safeParse(body);
 
     if (!validation.success) {

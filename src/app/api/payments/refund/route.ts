@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import Order from '@/lib/models/Order';
-import Refund from '@/lib/models/Refund';
+import OrderModel from '@/lib/models/Order';
+import RefundModel from '@/lib/models/Refund';
+
 import { withAuth } from '@/lib/firebase/withAuth';
 import { z } from 'zod';
 import Razorpay from 'razorpay';
@@ -38,10 +39,11 @@ export const POST = withAuth(async (request, user) => {
 
         await connectToDatabase();
 
-        const order = await Order.findOne({
+        const order = await OrderModel.findOne({
             _id: validation.data.orderId,
             status: 'success',
         });
+
 
         if (!order) {
             return NextResponse.json(
@@ -58,10 +60,11 @@ export const POST = withAuth(async (request, user) => {
         }
 
         // Check if refund already requested
-        const existingRefund = await Refund.findOne({
+        const existingRefund = await RefundModel.findOne({
             orderId: validation.data.orderId,
             status: { $in: ['pending', 'initiated'] },
         });
+
 
         if (existingRefund) {
             return NextResponse.json(
@@ -71,7 +74,7 @@ export const POST = withAuth(async (request, user) => {
         }
 
         // Create refund record
-        const refund = await Refund.create({
+        const refund = await RefundModel.create({
             orderId: order._id,
             razorpayPaymentId: order.razorpayPaymentId,
             amount: order.amount,
@@ -79,6 +82,7 @@ export const POST = withAuth(async (request, user) => {
             notes: validation.data.notes,
             status: 'pending',
         });
+
 
         // Initiate refund with Razorpay
         try {
@@ -142,10 +146,11 @@ export const GET = withAuth(async (request, user) => {
     try {
         await connectToDatabase();
 
-        const refunds = await Refund.find({})
+        const refunds = await RefundModel.find({})
             .populate('orderId')
             .sort({ createdAt: -1 })
             .limit(50);
+
 
         return NextResponse.json({
             refunds: refunds.map((r) => ({

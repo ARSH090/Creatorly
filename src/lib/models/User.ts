@@ -22,6 +22,15 @@ export interface IUser extends Document {
     suspensionReason?: string;
     suspendedAt?: Date;
     suspendedBy?: string;
+    // Governance & Payouts
+    payoutStatus?: 'enabled' | 'held' | 'disabled';
+    payoutHoldReason?: string;
+    suspensionHistory?: Array<{
+        status: string;
+        reason: string;
+        date: Date;
+        adminId: string;
+    }>;
     // 2FA
     twoFactorEnabled?: boolean;
     twoFactorSecret?: string;
@@ -36,19 +45,22 @@ export interface IUser extends Document {
     }>;
     failedLoginAttempts?: number;
     lastFailedLoginAt?: Date;
-    createdAt: Date;
-    updatedAt: Date;
-    // Security & Limits
+    activeSubscription?: any; // Populated field
+    deletedAt?: Date; // Soft-delete support
+    aiUsageCount: number;
+    storageUsageMb?: number;
     planLimits?: {
         maxProducts: number;
         maxStorageMb: number;
         maxTeamMembers: number;
+        maxAiGenerations: number;
         customDomain: boolean;
         canRemoveBranding: boolean;
     };
-    verifiedDevices?: mongoose.Types.ObjectId[]; // Array of trusted device IDs
-    activeSubscription?: any; // Populated field
 }
+
+
+
 
 const UserSchema: Schema = new Schema({
     firebaseUid: {
@@ -111,6 +123,20 @@ const UserSchema: Schema = new Schema({
     suspensionReason: String,
     suspendedAt: Date,
     suspendedBy: String,
+    // Governance & Payouts
+    payoutStatus: {
+        type: String,
+        enum: ['enabled', 'held', 'disabled'],
+        default: 'enabled',
+        index: true
+    },
+    payoutHoldReason: String,
+    suspensionHistory: [{
+        status: String,
+        reason: String,
+        date: { type: Date, default: Date.now },
+        adminId: String
+    }],
     // 2FA
     twoFactorEnabled: {
         type: Boolean,
@@ -138,6 +164,7 @@ const UserSchema: Schema = new Schema({
         maxProducts: { type: Number, default: 3 },
         maxStorageMb: { type: Number, default: 100 },
         maxTeamMembers: { type: Number, default: 1 },
+        maxAiGenerations: { type: Number, default: 10 },
         customDomain: { type: Boolean, default: false },
         canRemoveBranding: { type: Boolean, default: false },
     },
@@ -149,15 +176,22 @@ const UserSchema: Schema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'Subscription'
     },
-    createdAt: {
+    deletedAt: {
         type: Date,
-        default: Date.now,
+        index: true
     },
-    updatedAt: {
-        type: Date,
-        default: Date.now,
+    aiUsageCount: {
+        type: Number,
+        default: 0
     },
-});
+    storageUsageMb: {
+        type: Number,
+        default: 0
+    }
+}, { timestamps: true });
+
+
+
 
 // Admin query indexes
 UserSchema.index({ role: 1, isSuspended: 1 });

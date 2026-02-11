@@ -5,13 +5,27 @@ import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
 import { verifyDeliveryToken } from '@/lib/delivery/tokens';
 import DownloadToken from '@/lib/models/DownloadToken';
+import { getPresignedDownloadUrl } from '@/lib/storage/s3';
+import { RedisRateLimiter } from '@/lib/security/redis-rate-limiter';
+
+
 
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ token: string }> }
 ) {
     try {
+        const forwarded = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || '';
+        const ip = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
+
+        // 1. Rate Limiting (5 downloads per hour per IP to prevent scraping)
+        const isAllowed = await RedisRateLimiter.check('download', 5, 60 * 60 * 1000, ip);
+        if (!isAllowed) {
+            return NextResponse.json({ error: 'Too many download requests. Please try again later.' }, { status: 429 });
+        }
+
         const { token } = await params;
+
         const payload = verifyDeliveryToken(token);
 
         if (!payload) {
@@ -43,7 +57,6 @@ export async function GET(
         }
 
         // 4. Update Download Stats (Persistent Token & Order)
-        const ip = req.headers.get('x-forwarded-for') || 'unknown';
         const ua = req.headers.get('user-agent') || 'unknown';
         const fingerprint = createHash('sha256').update(ip + ua).digest('hex');
 
@@ -58,11 +71,27 @@ export async function GET(
         order.deviceFingerprint = fingerprint; // Capture for audit
         await order.save();
 
+
         // 4. Redirect to secure file (Cloaking the real URL)
-        // In a real S3 integration, we would generate a presigned URL here.
-        // For now, we redirect to the file URL stored in the product (assuming public/protected Cloudinary/S3)
-        // If it's a private S3 bucket, we'd use await getSignedUrl(...) from AWS SDK
-        return NextResponse.redirect(product.image); // placeholder, product.downloadUrl would be better
+        // Extract S3 key from the URL (Assuming format: https://bucket.s3.region.amazonaws.com/key)
+        const fileUrl = product.digitalFileUrl || (product.files && product.files.length > 0 ? product.files[0].url : product.image);
+
+        if (!fileUrl) {
+            return NextResponse.json({ error: 'No file associated with this product' }, { status: 404 });
+        }
+
+        let s3Key = '';
+        try {
+            const url = new URL(fileUrl);
+            s3Key = url.pathname.startsWith('/') ? url.pathname.slice(1) : url.pathname;
+        } catch (e) {
+            // If not a valid URL, assume it's already a key
+            s3Key = fileUrl;
+        }
+
+        const presignedUrl = await getPresignedDownloadUrl(s3Key);
+        return NextResponse.redirect(presignedUrl);
+
 
     } catch (error: any) {
         console.error('Download API Error:', error);

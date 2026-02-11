@@ -46,11 +46,26 @@ async function handler(req: NextRequest, user: any) {
             time: formatTimeAgo(order.createdAt)
         }));
 
-        // 6. Basic mock for changes (logic can be expanded to compare with yesterday)
-        const revenueChange = 0;
+        // 6. Calculate Changes & Engagement Score
+        const revenueChange = 0; // Comparisons could be added with historical data
         const visitorChange = 0;
         const repeatRate = 0;
         const pendingPayout = todayRevenue * 0.9;
+
+        // Engagement Score = (Revenue Weight * 0.7) + (Visitor Weight * 0.3)
+        // Normalized for a daily "Pulse" score
+        const engagementScore = Math.min(100, Math.round((todayRevenue / 500) * 70 + (todayVisitors / 10) * 30));
+
+
+        // 6. Calculate Storage Usage
+        const products = await Product.find({ creatorId });
+        let totalStorageBytes = 0;
+        products.forEach(p => {
+            p.files?.forEach(f => {
+                totalStorageBytes += (f.size || 0);
+            });
+        });
+        const storageUsageMb = Math.round(totalStorageBytes / (1024 * 1024));
 
         return NextResponse.json({
             todayRevenue,
@@ -60,8 +75,25 @@ async function handler(req: NextRequest, user: any) {
             revenueChange,
             visitorChange,
             repeatRate,
-            recentOrders
+            recentOrders,
+            engagementScore,
+
+            usage: {
+                ai: {
+                    used: user.aiUsageCount || 0,
+                    limit: user.planLimits?.maxAiGenerations || 10
+                },
+                storage: {
+                    used: storageUsageMb,
+                    limit: user.planLimits?.maxStorageMb || 100
+                },
+                products: {
+                    used: totalProducts,
+                    limit: user.planLimits?.maxProducts || 3
+                }
+            }
         });
+
     } catch (error) {
         console.error('[Dashboard Stats] Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

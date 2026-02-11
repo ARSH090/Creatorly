@@ -17,9 +17,11 @@ export interface IScheduledContent extends Document {
     hashtags: string[];
     imageUrl?: string;
     videoUrl?: string;
-    createdAt: Date;
-    updatedAt: Date;
+    error?: string;
+    deletedAt?: Date;
 }
+
+
 
 const ScheduledContentSchema: Schema = new Schema({
     creatorId: {
@@ -61,15 +63,11 @@ const ScheduledContentSchema: Schema = new Schema({
     hashtags: [String],
     imageUrl: String,
     videoUrl: String,
-    createdAt: {
-        type: Date,
-        default: Date.now,
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now,
-    },
-});
+    error: String,
+    deletedAt: { type: Date, index: true }
+
+}, { timestamps: true });
+
 
 export default (mongoose.models.ScheduledContent as Model<IScheduledContent>) ||
     mongoose.model<IScheduledContent>('ScheduledContent', ScheduledContentSchema);

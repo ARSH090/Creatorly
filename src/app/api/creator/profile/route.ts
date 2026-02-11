@@ -41,10 +41,31 @@ export const PATCH = withAuth(async (req, user) => {
             };
         }
 
-        // Update Layout/Structure (If we add a field for it)
-        // profile.layout = data.layout; 
+        // Update Custom Domain
+        if (data.customDomain) {
+            const domain = data.customDomain.toLowerCase().trim();
+            const existing = await CreatorProfile.findOne({
+                customDomain: domain,
+                userId: { $ne: userId }
+            });
+
+            if (existing) {
+                return NextResponse.json({
+                    error: 'DOMAIN_ALREADY_IN_USE',
+                    message: 'This custom domain is already claimed by another creator.'
+                }, { status: 409 });
+            }
+            profile.customDomain = domain;
+        }
+
+        // Update Layout / Reordering
+        if (data.layout && Array.isArray(data.layout)) {
+            profile.layout = data.layout;
+        }
+
 
         await profile.save();
+
 
         return NextResponse.json({
             success: true,

@@ -2,29 +2,99 @@
 
 import React, { useState } from 'react';
 import { useCheckoutStore } from '@/lib/store/useCheckoutStore';
-import { ShieldCheck, ArrowRight, ChevronLeft, Loader2, Sparkles } from 'lucide-react';
+import { ShieldCheck, ArrowRight, ChevronLeft, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import Image from 'next/image';
+
+declare global {
+    interface Window {
+        Razorpay: any;
+    }
+}
 
 export default function OrderReview() {
     const { cart, customer, setStep, clearCart } = useCheckoutStore();
     const [isProcessing, setIsProcessing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+    const subtotal = cart.reduce((acc: number, item: any) => acc + (item.price * item.quantity), 0);
     const tax = subtotal * 0.18;
     const total = subtotal + tax;
 
+    const loadRazorpayScript = () => {
+        return new Promise((resolve) => {
+            const script = document.createElement('script');
+            script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+            script.onload = () => resolve(true);
+            script.onerror = () => resolve(false);
+            document.body.appendChild(script);
+        });
+    };
+
     const handleCompletePurchase = async () => {
         setIsProcessing(true);
-        // This will be wired to Stripe/Razorpay in Prompt 8
-        // For launch readiness, we ensure the PLACEHOLDER logic redirects to the RIGHT structural path
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        setError(null);
 
-        const username = cart[0]?.creator || 'default';
-        const orderId = 'real-verification-needed'; // This will be the actual Order._id from Razorpay webhook
+        try {
+            // 1. Load Razorpay Script
+            const isLoaded = await loadRazorpayScript();
+            if (!isLoaded) {
+                throw new Error('Razorpay SDK failed to load. Please check your connection.');
+            }
 
-        setIsProcessing(false);
-        clearCart();
-        window.location.href = `/u/${username}/success/${orderId}`;
+            // 2. Create Order on Backend
+            const response = await fetch('/api/payments/razorpay/create-order', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cart, customer })
+            });
+
+            const order = await response.json();
+            if (order.error) throw new Error(order.error);
+
+            // 3. Open Razorpay Modal
+            const options = {
+                key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+                amount: order.amount,
+                currency: order.currency,
+                name: 'Creatorly',
+                description: `Purchase from ${cart[0]?.creator || 'Creatorly'}`,
+                image: '/logo.png',
+                order_id: order.id,
+                handler: function (response: any) {
+                    console.log('[Razorpay] Payment Success:', response);
+                    clearCart();
+                    const username = cart[0]?.creator || 'default';
+                    // We can't easily get the Order._id here without an additional API check, 
+                    // but we can pass the RAZORPAY_ORDER_ID to the success page which can then look up the Order._id
+                    window.location.href = `/u/${username}/success/${order.id}`;
+                },
+                prefill: {
+                    name: customer.name,
+                    email: customer.email,
+                    contact: customer.phone,
+                },
+                theme: {
+                    color: '#6366f1',
+                },
+                modal: {
+                    ondismiss: function () {
+                        setIsProcessing(false);
+                    }
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response: any) {
+                setError(`Payment Failed: ${response.error.description}`);
+                setIsProcessing(false);
+            });
+            rzp.open();
+
+        } catch (err: any) {
+            console.error('[Checkout Error]:', err);
+            setError(err.message || 'Payment initialization failed. Please try again.');
+            setIsProcessing(false);
+        }
     };
 
     return (
@@ -81,6 +151,13 @@ export default function OrderReview() {
                             <span className="text-4xl font-black italic tracking-tighter">₹{total.toLocaleString()}</span>
                         </div>
                     </div>
+
+                    {error && (
+                        <div className="flex items-center gap-2 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-[10px] font-bold uppercase tracking-widest">
+                            <AlertCircle size={14} />
+                            {error}
+                        </div>
+                    )}
 
                     <button
                         onClick={handleCompletePurchase}

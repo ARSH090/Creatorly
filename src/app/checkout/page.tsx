@@ -39,7 +39,6 @@ export default function CheckoutPage() {
                 <div className="mt-16">
                     {step === 'cart' && <CartSummary />}
                     {step === 'customer' && <CustomerInfoForm />}
-                    {step === 'payment' && <RazorpayCheckout />}
                     {step === 'review' && <OrderReview />}
                 </div>
             </main>

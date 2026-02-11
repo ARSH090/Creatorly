@@ -14,49 +14,43 @@ export default function BillingPage() {
     const [plans, setPlans] = useState<any[]>([]);
 
     useEffect(() => {
-        // Mocking billing data
-        setSubscription({
-            planName: 'Basic Creator',
-            status: 'active',
-            price: 499,
-            billingPeriod: 'monthly',
-            nextBillingDate: 'Mar 12, 2024',
-            features: [
-                'Unlimited Storefronts',
-                '5% Transaction Fee',
-                'Community Support',
-                'Basic Analytics'
-            ]
-        });
+        async function loadBilling() {
+            try {
+                // Fetch live plans
+                const plansRes = await fetch('/api/plans');
+                const plansData = await plansRes.json();
+                setPlans(plansData);
 
-        setPlans([
-            {
-                name: 'Basic',
-                price: 499,
-                period: 'month',
-                description: 'Perfect for getting started.',
-                features: ['Unlimited Storefronts', '5% Fee', 'Basic Analytics'],
-                isCurrent: true
-            },
-            {
-                name: 'Pro',
-                price: 1299,
-                period: 'month',
-                description: 'Best for growing creators.',
-                features: ['Custom Domains', '2% Fee', 'Advanced Analytics', 'Team Members (3)'],
-                popular: true
-            },
-            {
-                name: 'Enterprise',
-                price: 4999,
-                period: 'month',
-                description: 'For power users and agencies.',
-                features: ['White-labeling', '0.5% Fee', 'Priority Support', 'API Access'],
+                // Mock subscription for now as we don't have a real sub fetch yet,
+                // but we standardize the placeholder to be realistic based on user data
+                setSubscription({
+                    planName: (user as any)?.activeSubscription?.name || 'Basic Creator',
+                    status: 'active',
+                    price: plansData.find((p: any) => p.isCurrent)?.price || 499,
+                    billingPeriod: 'monthly',
+                    nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                    }),
+                    features: [
+                        'Unlimited Storefronts',
+                        '5% Transaction Fee',
+                        'Community Support',
+                        'Basic Analytics'
+                    ]
+                });
+            } catch (err) {
+                console.error('Failed to load billing details:', err);
+            } finally {
+                setLoading(false);
             }
-        ]);
+        }
 
-        setLoading(false);
-    }, []);
+        if (user) {
+            loadBilling();
+        }
+    }, [user]);
 
     if (loading) return <div className="animate-pulse">Loading...</div>;
 

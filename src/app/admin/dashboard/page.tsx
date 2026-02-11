@@ -1,4 +1,6 @@
 import AdminDashboardMetrics from '@/components/admin/DashboardMetrics';
+import GrowthTrendCard from '@/components/admin/GrowthTrendCard';
+import UserManagement from '@/components/admin/UserManagement';
 import { Shield, TrendingUp, AlertTriangle } from 'lucide-react';
 import { getCurrentUser } from '@/lib/firebase/server-auth';
 import { redirect } from 'next/navigation';
@@ -73,7 +75,7 @@ export default async function AdminDashboard() {
                     className="flex items-start gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 transition-all cursor-pointer group/item"
                   >
                     <div className={`w-2.5 h-2.5 rounded-full mt-2 shrink-0 animate-pulse ${event.severity === 'critical' ? 'bg-rose-500' :
-                        event.severity === 'high' ? 'bg-orange-500' : 'bg-amber-400'
+                      event.severity === 'high' ? 'bg-orange-500' : 'bg-amber-400'
                       }`} />
                     <div className="flex-1">
                       <div className="flex justify-between items-start">
@@ -108,20 +110,15 @@ export default async function AdminDashboard() {
                 <div className="w-2 h-6 bg-indigo-500 rounded-full" />
                 Growth Trajectory
               </h2>
-              <div className="h-64 flex flex-col items-center justify-center rounded-3xl border border-dashed border-white/10 text-zinc-500 bg-black/20 group-hover:border-indigo-500/50 transition-colors">
-                <div className="w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center mb-6">
-                  <TrendingUp className="w-8 h-8 text-indigo-500" />
-                </div>
-                <p className="font-bold text-sm text-center px-10 tracking-tight">
-                  Visual analytics engine warming up.
-                </p>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 mt-2">
-                  Analytics • Ready for Hook
-                </p>
-              </div>
+              <GrowthTrendCard />
             </div>
           </div>
         </div>
+
+        {/* User Management Section */}
+        <section className="space-y-6">
+          <UserManagement />
+        </section>
       </div>
     </div>
   );

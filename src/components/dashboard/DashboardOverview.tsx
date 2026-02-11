@@ -8,9 +8,26 @@ import Link from 'next/link';
 // Assuming recharts is available based on previous context or requirements, otherwise will use simple visual placeholders to avoid build breaks if package missing.
 // Checking imports first - implementing with simple visual fallback for robust build, can enhance with Recharts if confirmed.
 
+import { WelcomeTour } from './WelcomeTour';
+
 export default function DashboardOverview() {
     // Fetch real data from backend
     const [analytics, setAnalytics] = useState<any>(null);
+    const [showTour, setShowTour] = useState(false);
+
+    useEffect(() => {
+        const hasSeenTour = localStorage.getItem('creatorly_tour_done');
+        if (!hasSeenTour) {
+            const timer = setTimeout(() => setShowTour(true), 1500);
+            return () => clearTimeout(timer);
+        }
+    }, []);
+
+    const handleTourClose = () => {
+        localStorage.setItem('creatorly_tour_done', 'true');
+        setShowTour(false);
+    };
+
 
     useEffect(() => {
         const fetchAnalytics = async () => {
@@ -79,7 +96,9 @@ export default function DashboardOverview() {
 
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
+            <WelcomeTour run={showTour} onClose={handleTourClose} />
             {/* Welcome Card */}
+
             <div className="bg-gradient-to-r from-indigo-900/50 to-purple-900/50 rounded-3xl p-8 border border-indigo-500/20 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 blur-[100px] rounded-full -mr-16 -mt-16" />
 
@@ -160,29 +179,40 @@ export default function DashboardOverview() {
                             <div className="space-y-3">
                                 <div className="flex justify-between items-end">
                                     <div>
-                                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Storage Used</p>
-                                        <p className="text-sm font-bold text-white">2.5 GB / 10 GB</p>
+                                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">AI Generations</p>
+                                        <p className="text-sm font-bold text-white">
+                                            {analytics?.usage?.ai?.used || 0} / {analytics?.usage?.ai?.limit || 10}
+                                        </p>
                                     </div>
-                                    <span className="text-xs font-bold text-indigo-400">25%</span>
+                                    <span className="text-xs font-bold text-emerald-400">
+                                        {Math.round(((analytics?.usage?.ai?.used || 0) / (analytics?.usage?.ai?.limit || 10)) * 100)}%
+                                    </span>
                                 </div>
                                 <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-white/5">
-                                    <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{ width: '25%' }} />
+                                    <div
+                                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-500"
+                                        style={{ width: `${Math.min(100, Math.round(((analytics?.usage?.ai?.used || 0) / (analytics?.usage?.ai?.limit || 10)) * 100))}%` }}
+                                    />
                                 </div>
                             </div>
-
                             <div className="space-y-3">
                                 <div className="flex justify-between items-end">
                                     <div>
-                                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">API Requests</p>
-                                        <p className="text-sm font-bold text-white">1,200 / 5,000</p>
+                                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Storage Used</p>
+                                        <p className="text-sm font-bold text-white">
+                                            {analytics?.usage?.storage?.used || 0} MB / {analytics?.usage?.storage?.limit || 100} MB
+                                        </p>
                                     </div>
-                                    <span className="text-xs font-bold text-purple-400">24%</span>
+                                    <span className="text-xs font-bold text-indigo-400">
+                                        {Math.round(((analytics?.usage?.storage?.used || 0) / (analytics?.usage?.storage?.limit || 100)) * 100)}%
+                                    </span>
                                 </div>
                                 <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-white/5">
-                                    <div className="h-full bg-gradient-to-r from-purple-500 to-pink-500" style={{ width: '24%' }} />
+                                    <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{ width: `${Math.min(100, Math.round(((analytics?.usage?.storage?.used || 0) / (analytics?.usage?.storage?.limit || 100)) * 100))}%` }} />
                                 </div>
                             </div>
                         </div>
+
                     </div>
 
                     <div className="bg-indigo-500/5 rounded-3xl p-8 border border-indigo-500/20">

@@ -264,3 +264,44 @@ export async function sendNewsletterWelcomeEmail(email: string, creatorName: str
     html
   });
 }
+
+export async function sendPaymentFailureEmail(email: string, orderId: string) {
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 40px; background: #fff; border: 1px solid #eee; border-radius: 12px;">
+      <h2 style="color: #e11d48;">Payment Failed</h2>
+      <p>We're sorry, but your payment for order <strong>#${orderId.slice(-6)}</strong> could not be processed.</p>
+      <p>This could be due to insufficient funds, an expired card, or a temporary issue with your bank.</p>
+      <div style="margin: 30px 0;">
+        <a href="${process.env.NEXTAUTH_URL}/checkout/retry?orderId=${orderId}" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">Retry Payment</a>
+      </div>
+      <p style="font-size: 12px; color: #666;">If you have any questions, please contact our support team.</p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Action Required: Payment Failed for Order #${orderId.slice(-6)}`,
+    html
+  });
+}
+
+export async function sendUsageWarningEmail(email: string, resource: string, percentage: number) {
+  const isLimit = percentage >= 100;
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 40px; background: #fff; border: 1px solid #eee; border-radius: 12px;">
+      <h2 style="color: ${isLimit ? '#e11d48' : '#f59e0b'};">${isLimit ? 'Limit Reached' : 'Usage Warning'}</h2>
+      <p>You have used <strong>${percentage}%</strong> of your monthly ${resource} allowance.</p>
+      <p>${isLimit ? 'You have reached your limit. Please upgrade to continue using this service.' : 'You are approaching your limit. Consider upgrading to avoid any interruptions.'}</p>
+      <div style="margin: 30px 0;">
+        <a href="${process.env.NEXTAUTH_URL}/billing" style="display: inline-block; padding: 12px 24px; background: #6366f1; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">Upgrade Plan</a>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `${isLimit ? 'Critical' : 'Alert'}: ${resource} Usage at ${percentage}%`,
+    html
+  });
+}
+

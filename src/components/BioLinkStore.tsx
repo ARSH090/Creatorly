@@ -36,9 +36,23 @@ const BioLinkStore: React.FC<BioLinkStoreProps> = ({
     const [loading, setLoading] = useState(false);
 
     async function handlePurchase(product: Product) {
+        // Track the click/view event
+        try {
+            fetch('/api/analytics/view', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    eventType: 'product_view',
+                    productId: product.id,
+                    creatorId: products[0]?.id // Using context or passed ID
+                })
+            }).catch(() => { }); // Fire and forget
+        } catch (e) { }
+
         setLoading(true);
         try {
             const gst = calculateGST(product.price, {
+
                 rate: IndianHSNRates[product.type] || 18,
                 stateOfOrigin: 'Delhi',
                 stateOfConsumption: 'Maharashtra'

@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const s3Client = new S3Client({
@@ -24,14 +25,35 @@ export async function getPresignedUploadUrl(
         const url = await getSignedUrl(s3Client, command, { expiresIn });
         return url;
     } catch (error) {
-        console.error('Error generating presigned URL:', error);
+        console.error('Error generating presigned upload URL:', error);
         throw error;
     }
 }
+
+export async function getPresignedDownloadUrl(
+    key: string,
+    expiresIn = 3600
+) {
+    const command = new GetObjectCommand({
+        Bucket: process.env.AWS_S3_BUCKET,
+        Key: key,
+    });
+
+    try {
+        const url = await getSignedUrl(s3Client, command, { expiresIn });
+        return url;
+    } catch (error) {
+        console.error('Error generating presigned download URL:', error);
+        throw error;
+    }
+}
+
 
 export function getPublicUrl(key: string) {
     if (process.env.NEXT_PUBLIC_S3_DOMAIN) {
         return `${process.env.NEXT_PUBLIC_S3_DOMAIN}/${key}`;
     }
+    // Fallback to standard S3 domain if environment variable is missing (but this might fail if bucket is private)
     return `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 }
+
