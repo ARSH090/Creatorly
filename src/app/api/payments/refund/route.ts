@@ -98,7 +98,7 @@ export const POST = withAuth(async (request, user) => {
             );
 
             // Update refund with Razorpay ref
-            await Refund.updateOne(
+            await RefundModel.updateOne(
                 { _id: refund._id },
                 {
                     razorpayRefundId: refundResponse.id,
@@ -106,6 +106,7 @@ export const POST = withAuth(async (request, user) => {
                     processedAt: new Date(),
                 }
             );
+
 
             return NextResponse.json({
                 message: 'Refund initiated successfully',
@@ -120,13 +121,14 @@ export const POST = withAuth(async (request, user) => {
             console.error('Razorpay refund error:', razorpayError);
 
             // Update as failed
-            await Refund.updateOne(
+            await RefundModel.updateOne(
                 { _id: refund._id },
                 {
                     status: 'failed',
                     notes: `Failed: ${String(razorpayError)}`,
                 }
             );
+
 
             return NextResponse.json(
                 { error: 'Failed to process refund with payment gateway' },
