@@ -24,15 +24,16 @@ export class MetaGraphService {
         return response.data.access_token;
     }
 
+
     /**
-     * Sends a DM to an Instagram user with exponential backoff retry logic
+     * Sends a DM to an Instagram user. 
+     * Retries are handled by the QueueJob processor, not here.
      */
     static async sendDirectMessage(params: {
         recipientId: string;
         message: string;
         accessToken: string;
-    }, attempt = 1): Promise<MetaMessageResponse> {
-        const MAX_ATTEMPTS = 3;
+    }): Promise<MetaMessageResponse> {
         try {
             const response = await axios.post(
                 `${GRAPH_BASE_URL}/${VERSION}/me/messages`,
@@ -47,16 +48,20 @@ export class MetaGraphService {
             );
             return response.data;
         } catch (error: any) {
-            const isRetryable = error.response?.status >= 500 || error.code === 'ECONNABORTED';
+            // Standardize error for the queue processor
+            const status = error.response?.status;
+            const metaError = error.response?.data?.error;
 
-            if (isRetryable && attempt < MAX_ATTEMPTS) {
-                const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 2s, 4s...
-                await new Promise(resolve => setTimeout(resolve, delay));
-                return this.sendDirectMessage(params, attempt + 1);
-            }
+            const errorInfo = {
+                status,
+                message: metaError?.message || error.message,
+                code: metaError?.code,
+                isRetryable: status >= 500 || error.code === 'ECONNABORTED' || status === 429
+            };
 
-            console.error(`Meta API Error (Attempt ${attempt}):`, error.response?.data || error.message);
-            throw new Error(error.response?.data?.error?.message || 'Failed to send Meta message after retries');
+            const enrichedError: any = new Error(JSON.stringify(errorInfo));
+            enrichedError.isRetryable = errorInfo.isRetryable;
+            throw enrichedError;
         }
     }
 

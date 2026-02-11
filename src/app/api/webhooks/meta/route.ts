@@ -8,6 +8,7 @@ import { DMLog } from '@/lib/models/DMLog';
 import { decryptTokenGCM } from '@/lib/security/encryption';
 import { MetaGraphService } from '@/lib/services/meta';
 import { metaRateLimiter } from '@/lib/security/ratelimit';
+import { QueueJob } from '@/lib/models/QueueJob';
 
 /**
  * GET Handler for Webhook Verification
@@ -235,25 +236,37 @@ function isMatch(text: string, rule: any): boolean {
 /**
  * Final Automation Execution
  */
+/**
+ * Final Automation Execution (Queued)
+ */
 async function executeAutomation(rule: any, recipientId: string, accessToken: string, creatorId: string, source: 'dm' | 'comment') {
     try {
-        await MetaGraphService.sendDirectMessage({
-            recipientId,
-            message: rule.replyText,
-            accessToken
+        // Persist job to MongoDB Queue for reliable delivery
+        await QueueJob.create({
+            type: 'dm_delivery',
+            payload: {
+                recipientId,
+                text: rule.replyText,
+                accessToken,
+                creatorId,
+                ruleId: rule._id,
+                source
+            },
+            status: 'pending',
+            nextRunAt: new Date() // ready immediately
         });
 
-        await DMLog.create({
-            creatorId,
-            recipientId,
-            ruleId: rule._id,
-            triggerSource: source,
-            status: 'success',
-            messageSent: rule.replyText,
-            lastInteractionAt: new Date()
-        });
+        // Optional: Trigger worker immediately for lower latency
+        // In Vercel, this is "fire and forget". We don't await the result to keep webhook fast.
+        fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/workers/process-queue`, {
+            headers: { 'Authorization': `Bearer ${process.env.CRON_SECRET}` }
+        }).catch(err => console.error('Failed to trigger worker:', err));
+
+        console.log(`[Queue] Enqueued DM for ${recipientId}`);
 
     } catch (error: any) {
+        console.error('Failed to enqueue job:', error);
+        // Fallback log prevents silent failures if DB is accessible
         await DMLog.create({
             creatorId,
             recipientId,
@@ -261,8 +274,7 @@ async function executeAutomation(rule: any, recipientId: string, accessToken: st
             triggerSource: source,
             status: 'failed',
             messageSent: rule.replyText,
-            errorDetails: error.message
+            errorDetails: `Queue creation failed: ${error.message}`
         });
-
     }
 }

@@ -21,8 +21,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // Fetch dashboard data
     useEffect(() => {
         const fetchDashboardData = async () => {
+            if (!user) return; // Wait for user
             try {
-                const res = await fetch('/api/creator/analytics');
+                // Get fresh token if needed, or use the one from context if available/reliable
+                // But context 'token' might be null initially. 
+                // Safest to get ID token directly from user object or use context token if populated.
+                const tokenIds = await user.getIdToken();
+
+                const res = await fetch('/api/creator/analytics', {
+                    headers: {
+                        'Authorization': `Bearer ${tokenIds}`
+                    }
+                });
                 const data = await res.json();
 
                 if (data.error) throw new Error(data.error);
@@ -30,8 +40,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 setStats({
                     productsCount: data.totalProducts,
                     pendingOrders: 0, // Logic for pending orders can be added later
-                    pendingPayout: data.pendingPayout.toLocaleString('en-IN'),
-                    todayRevenue: data.todayRevenue.toLocaleString('en-IN'),
+                    pendingPayout: (data.pendingPayout || 0).toLocaleString('en-IN'),
+                    todayRevenue: (data.todayRevenue || 0).toLocaleString('en-IN'),
                     todayVisitors: data.todayVisitors
                 });
 
@@ -42,7 +52,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         };
 
         fetchDashboardData();
-    }, []);
+    }, [user]);
 
     const navigation = [
         { name: 'Overview', icon: LayoutDashboard, href: '/dashboard', badge: null },

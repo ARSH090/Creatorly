@@ -77,13 +77,7 @@ export default function RootLayout({
           href="https://fonts.gstatic.com"
           crossOrigin="anonymous"
         />
-        {/* Preload critical API routes */}
-        <link
-          rel="prefetch"
-          href="/api/creator/analytics"
-          as="fetch"
-          crossOrigin="anonymous"
-        />
+
         {/* DNS prefetch for external services */}
         <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
         <link rel="dns-prefetch" href="https://graph.facebook.com" />

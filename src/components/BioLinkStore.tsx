@@ -35,6 +35,22 @@ const BioLinkStore: React.FC<BioLinkStoreProps> = ({
 
     const [loading, setLoading] = useState(false);
 
+    React.useEffect(() => {
+        // Track page view for BioLinkStore
+        try {
+            fetch('/api/analytics/view', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    eventType: 'page_view',
+                    creatorId: products[0]?.id ? 'unknown' : 'unknown', // Ideally passed or derived
+                    path: window.location.pathname,
+                    metadata: { source: 'bio_link_store' }
+                })
+            }).catch(() => { });
+        } catch (e) { }
+    }, []);
+
     async function handlePurchase(product: Product) {
         // Track the click/view event
         try {

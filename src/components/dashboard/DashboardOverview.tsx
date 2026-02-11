@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Users, ShoppingBag, Wallet, Eye, ArrowRight, Plus, Zap } from "lucide-react";
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 
 // NOTE: Recharts is needed for charts. If not installed, these will need to be installed.
 // Assuming recharts is available based on previous context or requirements, otherwise will use simple visual placeholders to avoid build breaks if package missing.
@@ -14,6 +15,7 @@ export default function DashboardOverview() {
     // Fetch real data from backend
     const [analytics, setAnalytics] = useState<any>(null);
     const [showTour, setShowTour] = useState(false);
+    const { user } = useAuth();
 
     useEffect(() => {
         const hasSeenTour = localStorage.getItem('creatorly_tour_done');
@@ -28,11 +30,16 @@ export default function DashboardOverview() {
         setShowTour(false);
     };
 
-
     useEffect(() => {
         const fetchAnalytics = async () => {
+            if (!user) return;
             try {
-                const res = await fetch('/api/creator/analytics');
+                const tokenIds = await user.getIdToken();
+                const res = await fetch('/api/creator/analytics', {
+                    headers: {
+                        'Authorization': `Bearer ${tokenIds}`
+                    }
+                });
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
                 setAnalytics(data);
@@ -53,7 +60,7 @@ export default function DashboardOverview() {
         };
 
         fetchAnalytics();
-    }, []);
+    }, [user]);
 
     const stats = [
         {
