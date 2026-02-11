@@ -52,7 +52,8 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://creatorly.in"),
 };
 
-import { AuthProvider } from '@/lib/firebase/AuthProvider';
+import { AuthProvider } from '@/components/providers/AuthProvider';
+
 import ClientLayout from '@/components/layout/ClientLayout';
 import ErrorBoundary from './error-boundary';
 import { SpeedInsights } from "@vercel/speed-insights/next";
