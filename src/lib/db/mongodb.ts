@@ -1,11 +1,7 @@
 import mongoose from 'mongoose';
 import { mongoSecurityOptions } from '@/lib/security/database-security';
 
-const MONGODB_URI = process.env.MONGODB_URI!;
-
-if (!MONGODB_URI) {
-    throw new Error('Please define MONGODB_URI in .env.local');
-}
+const MONGODB_URI = process.env.MONGODB_URI;
 
 /**
  * Global is used here to maintain a cached connection across hot reloads
@@ -19,6 +15,12 @@ if (!cached) {
 }
 
 export async function connectToDatabase() {
+    // Check for MONGODB_URI at connection time, not module load time
+    if (!MONGODB_URI) {
+        console.error('❌ MONGODB_URI is not defined in environment variables');
+        throw new Error('Please define MONGODB_URI in your environment variables');
+    }
+
     if (cached.conn) {
         return cached.conn;
     }
