@@ -96,9 +96,12 @@ export async function POST(req: NextRequest) {
                         eventType: 'purchase',
                         creatorId: order.creatorId,
                         orderId: order._id,
-                        amount: order.amount,
                         path: '/webhook/razorpay',
-                        metadata: { razorpayOrderId, paymentId }
+                        metadata: {
+                            amount: order.amount,
+                            razorpayOrderId,
+                            paymentId
+                        }
                     });
 
                     // 🟢 IN-APP NOTIFICATION: Notify the creator of a new sale
