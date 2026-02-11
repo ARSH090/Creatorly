@@ -1,15 +1,48 @@
 import { Redis } from 'ioredis';
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
+const REDIS_URL = process.env.REDIS_URL;
 
 class RateLimiter {
-    private redis: Redis;
+    private redis: Redis | null = null;
 
     constructor() {
-        this.redis = new Redis(REDIS_URL, {
-            maxRetriesPerRequest: 3,
-            retryStrategy: (times) => Math.min(times * 50, 2000),
-        });
+        // Only initialize Redis if URL is configured
+        if (REDIS_URL) {
+            const redisOptions: any = {
+                maxRetriesPerRequest: 3,
+                retryStrategy: (times: number) => {
+                    if (times > 3) {
+                        console.warn('Redis connection failed after 3 retries, rate limiting disabled');
+                        return null;
+                    }
+                    return Math.min(times * 50, 2000);
+                },
+                lazyConnect: true,
+                enableOfflineQueue: false,
+            };
+
+            // Add TLS config if using rediss:// protocol (Upstash)
+            if (REDIS_URL.startsWith('rediss://')) {
+                redisOptions.tls = {
+                    rejectUnauthorized: false, // Required for Upstash
+                };
+            }
+
+            this.redis = new Redis(REDIS_URL, redisOptions);
+
+            // Handle errors gracefully
+            this.redis.on('error', (err) => {
+                console.warn('Redis rate limiter error (falling back to no rate limit):', err.message);
+            });
+
+            // Try to connect, but don't crash if it fails
+            this.redis.connect().catch((err) => {
+                console.warn('Failed to connect Redis for rate limiting:', err.message);
+                this.redis = null;
+            });
+        } else {
+            console.warn('⚠ REDIS_URL not set — rate limiting disabled');
+        }
     }
 
     /**
@@ -19,17 +52,32 @@ class RateLimiter {
      * @param window Time window in seconds
      */
     async isRateLimited(key: string, limit: number, window: number): Promise<boolean> {
-        const count = await this.redis.incr(key);
-        if (count === 1) {
-            await this.redis.expire(key, window);
+        // If Redis is not available, allow all requests (fail open)
+        if (!this.redis) {
+            return false;
         }
-        return count > limit;
+
+        try {
+            const count = await this.redis.incr(key);
+            if (count === 1) {
+                await this.redis.expire(key, window);
+            }
+            return count > limit;
+        } catch (error) {
+            console.error('Rate limit check failed:', error);
+            return false; // Fail open - allow request if Redis is down
+        }
     }
 
     /**
      * Specific rate limiters for Meta Automation
      */
     async checkMetaQuota(creatorId: string, recipientId: string): Promise<{ limited: boolean; reason?: string }> {
+        // If Redis is not available, allow all requests
+        if (!this.redis) {
+            return { limited: false };
+        }
+
         // 1. Global creator quota (prevent platform hammering)
         // 50 DMs per minute per creator
         if (await this.isRateLimited(`meta:limit:c:${creatorId}`, 50, 60)) {

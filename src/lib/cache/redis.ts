@@ -1,22 +1,52 @@
 import Redis from 'ioredis';
 
-// Initialize Redis client
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: parseInt(process.env.REDIS_PORT || '6379'),
-  password: process.env.REDIS_PASSWORD,
-  db: parseInt(process.env.REDIS_DB || '0'),
-  retryStrategy: (times) => {
-    const delay = Math.min(times * 50, 2000);
-    return delay;
-  },
-  enableReadyCheck: false,
-  enableOfflineQueue: false,
-});
+// Check if Redis URL is configured
+const REDIS_URL = process.env.REDIS_URL || process.env.REDIS_HOST;
 
-redis.on('error', (err) => console.error('Redis error:', err));
-redis.on('connect', () => console.log('Redis connected'));
-redis.on('disconnect', () => console.log('Redis disconnected'));
+let redis: Redis | null = null;
+
+// Only initialize Redis if URL is provided
+if (REDIS_URL) {
+  const redisOptions: any = {
+    retryStrategy: (times: number) => {
+      if (times > 3) {
+        console.warn('Redis connection failed after 3 retries, falling back to no-cache mode');
+        return null; // Stop retrying
+      }
+      const delay = Math.min(times * 50, 2000);
+      return delay;
+    },
+    enableReadyCheck: false,
+    enableOfflineQueue: false,
+    lazyConnect: true, // Don't connect immediately
+  };
+
+  // Add TLS config if using rediss:// protocol (Upstash)
+  if (REDIS_URL.startsWith('rediss://')) {
+    redisOptions.tls = {
+      rejectUnauthorized: false, // Required for Upstash
+    };
+  }
+
+  redis = new Redis(REDIS_URL, redisOptions);
+
+  // Handle errors gracefully
+  redis.on('error', (err) => {
+    console.warn('Redis connection error (falling back to no-cache):', err.message);
+  });
+
+  redis.on('connect', () => console.log('✓ Redis connected'));
+  redis.on('disconnect', () => console.log('Redis disconnected'));
+
+  // Try to connect, but don't crash if it fails
+  redis.connect().catch((err) => {
+    console.warn('Failed to connect to Redis, running without cache:', err.message);
+    redis = null;
+  });
+} else {
+  console.warn('⚠ REDIS_URL not set — caching disabled (in-memory fallback)');
+}
+
 
 interface CacheOptions {
   ttl?: number; // Time to live in seconds
@@ -27,6 +57,7 @@ interface CacheOptions {
  * Get value from cache
  */
 export async function getCachedValue<T>(key: string): Promise<T | null> {
+  if (!redis) return null;
   try {
     const value = await redis.get(key);
     return value ? JSON.parse(value) : null;
@@ -44,6 +75,7 @@ export async function setCachedValue<T>(
   value: T,
   options: CacheOptions = {}
 ): Promise<boolean> {
+  if (!redis) return false;
   try {
     const serialized = JSON.stringify(value);
     const ttl = options.ttl || 3600; // Default 1 hour
@@ -72,6 +104,7 @@ export async function setCachedValue<T>(
  * Delete cache key
  */
 export async function deleteCachedValue(key: string): Promise<boolean> {
+  if (!redis) return false;
   try {
     await redis.del(key);
     return true;
@@ -85,6 +118,7 @@ export async function deleteCachedValue(key: string): Promise<boolean> {
  * Invalidate all keys with specific tag
  */
 export async function invalidateByTag(tag: string): Promise<number> {
+  if (!redis) return 0;
   try {
     const keys = await redis.smembers(`tag:${tag}`);
     if (keys.length === 0) return 0;
@@ -151,6 +185,7 @@ export async function cachedQuery<T>(
  * Clear entire cache (use with caution)
  */
 export async function clearAllCache(): Promise<number> {
+  if (!redis) return 0;
   try {
     const keys = await redis.keys('*');
     if (keys.length === 0) return 0;
@@ -166,6 +201,7 @@ export async function clearAllCache(): Promise<number> {
  * Get cache stats
  */
 export async function getCacheStats() {
+  if (!redis) return null;
   try {
     const info = await redis.info('stats');
     const keys = await redis.dbsize();
