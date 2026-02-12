@@ -14,6 +14,14 @@ async function handler(req: NextRequest, user: any) {
     await connectToDatabase();
 
     const creator = await User.findById(user._id);
+
+    if (!creator) {
+        return NextResponse.json(
+            { success: false, error: 'User not found' },
+            { status: 404 }
+        );
+    }
+
     const plan = creator.plan || 'free';
 
     // Get plan limits
