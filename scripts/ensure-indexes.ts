@@ -12,7 +12,7 @@ import { Order } from '../src/lib/models/Order';
 import { AnalyticsEvent } from '../src/lib/models/AnalyticsEvent';
 import Coupon from '../src/lib/models/Coupon';
 import { Affiliate } from '../src/lib/models/Affiliate';
-import { Payout } from '../src/lib/models/Payout';
+import Payout from '../src/lib/models/Payout';
 
 async function ensureIndexes() {
     const mongoUri = process.env.MONGODB_URI;
@@ -23,7 +23,7 @@ async function ensureIndexes() {
     await mongoose.connect(mongoUri);
     console.log('✅ Connected to MongoDB\n');
 
-    const indexed Models = [
+    const indexedModels = [
         { name: 'User', model: User },
         { name: 'Product', model: Product },
         { name: 'Order', model: Order },

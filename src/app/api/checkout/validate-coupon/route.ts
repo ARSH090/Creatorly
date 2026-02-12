@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
         if (!result.valid) {
             return NextResponse.json(
-                { success: false, error: result.reason || 'Invalid coupon' },
+                { success: false, error: result.error || 'Invalid coupon' },
                 { status: 400 }
             );
         }

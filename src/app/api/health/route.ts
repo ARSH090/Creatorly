@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { redis } from '@/lib/redis';
+import { redis } from '@/lib/db/redis';
 
 /**
  * GET /api/health
