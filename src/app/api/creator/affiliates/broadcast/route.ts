@@ -41,7 +41,6 @@ async function handler(req: NextRequest, user: any) {
 
     // TODO: Integrate with email service (SendGrid, Resend, etc.)
     // For now, just return success with count
-    const affiliateEmails = affiliates.map(a => (a.affiliateId as any)?.email).filter(Boolean);
 
     console.log(`Broadcasting to ${affiliateEmails.length} affiliates:`, subject);
 

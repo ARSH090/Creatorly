@@ -1,4 +1,4 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Document, Schema, Model } from 'mongoose';
 
 export interface ICoupon extends Document {
     code: string;
@@ -112,10 +112,11 @@ couponSchema.index({ code: 1 });
 couponSchema.index({ status: 1 });
 couponSchema.index({ validFrom: 1, validUntil: 1 });
 
-// Update timestamp on save
+// Update `updatedAt` on every save
 couponSchema.pre('save', function (next) {
     this.updatedAt = new Date();
     next();
 });
 
-export default mongoose.models.Coupon || mongoose.model<ICoupon>('Coupon', couponSchema);
+const Coupon: Model<ICoupon> = mongoose.models.Coupon || mongoose.model<ICoupon>('Coupon', couponSchema);
+export default Coupon;

@@ -5,10 +5,14 @@ export interface IAffiliate extends Document {
     affiliateCode: string;
     commissionRate: number;
     totalEarnings: number;
+    totalCommission: number;
+    paidCommission: number;
     referrals: number;
     clicks: number;
     conversions: number;
+    status: 'pending' | 'active' | 'suspended';
     isActive: boolean;
+    paidAt?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -37,6 +41,14 @@ const AffiliateSchema: Schema = new Schema({
         type: Number,
         default: 0,
     },
+    totalCommission: {
+        type: Number,
+        default: 0,
+    },
+    paidCommission: {
+        type: Number,
+        default: 0,
+    },
     referrals: {
         type: Number,
         default: 0,
@@ -49,9 +61,17 @@ const AffiliateSchema: Schema = new Schema({
         type: Number,
         default: 0,
     },
+    status: {
+        type: String,
+        enum: ['pending', 'active', 'suspended'],
+        default: 'active',
+    },
     isActive: {
         type: Boolean,
         default: true,
+    },
+    paidAt: {
+        type: Date,
     },
     createdAt: {
         type: Date,

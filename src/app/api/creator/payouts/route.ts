@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { Payout } from '@/lib/models/Payout';
+import Payout from '@/lib/models/Payout';
 import { Order } from '@/lib/models/Order';
 import { withCreatorAuth } from '@/lib/firebase/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';

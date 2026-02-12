@@ -11,12 +11,17 @@ export interface IOrder extends Document {
     creatorId: mongoose.Types.ObjectId;
     userId: mongoose.Types.ObjectId;
     customerEmail: string;
+    customerName?: string;
     amount: number;
+    total: number;
     currency: string;
     razorpayOrderId: string;
     razorpayPaymentId?: string;
     razorpaySignature?: string;
     status: 'pending' | 'success' | 'failed' | 'refunded';
+    paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+    paidAt?: Date;
+    commissionAmount?: number;
 
     // Delivery & Tracking
     downloadCount: number;
@@ -25,6 +30,11 @@ export interface IOrder extends Document {
     ipAddress?: string;
 
     refundStatus: 'NONE' | 'REQUESTED' | 'COMPLETED' | 'FAILED';
+    refundAmount?: number;
+    refundReason?: string;
+    refundedAt?: Date;
+    refundedBy?: mongoose.Types.ObjectId;
+    razorpayRefundId?: string;
     refund?: {
         amount: number;
         reason: string;
@@ -51,7 +61,9 @@ const OrderSchema: Schema = new Schema({
     creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     customerEmail: { type: String, required: true },
+    customerName: { type: String },
     amount: { type: Number, required: true },
+    total: { type: Number, required: true },
     currency: { type: String, default: 'INR' },
     razorpayOrderId: { type: String, required: true, unique: true },
     razorpayPaymentId: { type: String },
@@ -61,6 +73,13 @@ const OrderSchema: Schema = new Schema({
         enum: ['pending', 'success', 'failed', 'refunded'],
         default: 'pending'
     },
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'paid', 'failed', 'refunded'],
+        default: 'pending'
+    },
+    paidAt: { type: Date },
+    commissionAmount: { type: Number, default: 0 },
 
     downloadCount: { type: Number, default: 0 },
     downloadLimit: { type: Number, default: 3 },
@@ -72,6 +91,11 @@ const OrderSchema: Schema = new Schema({
         enum: ['NONE', 'REQUESTED', 'COMPLETED', 'FAILED'],
         default: 'NONE'
     },
+    refundAmount: { type: Number },
+    refundReason: { type: String },
+    refundedAt: { type: Date },
+    refundedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    razorpayRefundId: { type: String },
     refund: {
         amount: { type: Number },
         reason: { type: String },

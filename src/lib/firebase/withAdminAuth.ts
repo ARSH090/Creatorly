@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
-import { initAdmin } from './admin';
+import initAdmin from './admin';
 import AdminLog from '@/lib/models/AdminLog';
 import { connectToDatabase } from '@/lib/db/mongodb';
 

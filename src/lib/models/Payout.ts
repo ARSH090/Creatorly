@@ -3,7 +3,8 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IPayout extends Document {
     creatorId: mongoose.Types.ObjectId;
     amount: number;
-    status: 'pending' | 'processed' | 'failed' | 'rejected';
+    status: 'pending' | 'approved' | 'processed' | 'paid' | 'failed' | 'rejected';
+    notes?: string;
     razorpayPayoutId?: string;
     transactionId?: string;
     processedAt?: Date;
@@ -17,9 +18,10 @@ const PayoutSchema: Schema = new Schema({
     amount: { type: Number, required: true },
     status: {
         type: String,
-        enum: ['pending', 'processed', 'failed', 'rejected'],
+        enum: ['pending', 'approved', 'processed', 'paid', 'failed', 'rejected'],
         default: 'pending'
     },
+    notes: { type: String },
     razorpayPayoutId: { type: String },
     transactionId: { type: String },
     processedAt: { type: Date },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { Payout } from '@/lib/models/Payout';
+import Payout from '@/lib/models/Payout';
 import { withAdminAuth } from '@/lib/firebase/withAdminAuth';
 
 /**

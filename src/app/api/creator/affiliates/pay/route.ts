@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Affiliate } from '@/lib/models/Affiliate';
-import { Payout } from '@/lib/models/Payout';
+import Payout from '@/lib/models/Payout';
 import { withCreatorAuth } from '@/lib/firebase/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 
