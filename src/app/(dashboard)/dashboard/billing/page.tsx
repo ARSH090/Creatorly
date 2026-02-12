@@ -19,7 +19,7 @@ export default function BillingPage() {
                 // Fetch live plans
                 const plansRes = await fetch('/api/plans');
                 const plansData = await plansRes.json();
-                setPlans(plansData);
+                setPlans(plansData.plans || []);
 
                 // Mock subscription for now as we don't have a real sub fetch yet,
                 // but we standardize the placeholder to be realistic based on user data
