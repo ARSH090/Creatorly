@@ -1,31 +1,80 @@
-import { connectToDatabase } from '@/lib/db/mongodb';
 import { NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/db/mongodb';
+import { redis } from '@/lib/redis';
 
+/**
+ * GET /api/health
+ * Comprehensive health check endpoint for monitoring
+ */
 export async function GET() {
+    const checks: any = {
+        timestamp: new Date().toISOString(),
+        status: 'healthy',
+        checks: {
+            api: { status: 'ok' },
+            database: { status: 'unknown' },
+            redis: { status: 'unknown' },
+            env: { status: 'unknown' }
+        }
+    };
+
+    // Check MongoDB
     try {
-        const startTime = Date.now();
         await connectToDatabase();
-        const dbLatency = Date.now() - startTime;
-
-        const health = {
-            status: 'healthy',
-            timestamp: new Date().toISOString(),
-            uptime: process.uptime(),
-            latency: {
-                database: `${dbLatency}ms`,
-            },
-            environment: process.env.NODE_ENV,
-            version: '1.0.0',
+        checks.checks.database = {
+            status: 'ok',
+            connected: true
         };
-
-        return NextResponse.json(health);
     } catch (error: any) {
-        // Enhanced error logging
-        console.error('Health API error:', error);
-        return NextResponse.json({
-            status: 'unhealthy',
-            timestamp: new Date().toISOString(),
-            error: error?.message || error
-        }, { status: 503 });
+        checks.checks.database = {
+            status: 'error',
+            message: error.message
+        };
+        checks.status = 'degraded';
     }
+
+    // Check Redis
+    try {
+        await redis.ping();
+        checks.checks.redis = {
+            status: 'ok',
+            connected: true
+        };
+    } catch (error: any) {
+        checks.checks.redis = {
+            status: 'error',
+            message: error.message
+        };
+        checks.status = 'degraded';
+    }
+
+    // Check critical environment variables
+    const requiredEnvVars = [
+        'MONGODB_URI',
+        'NEXTAUTH_SECRET',
+        'RAZORPAY_KEY_ID',
+        'RAZORPAY_KEY_SECRET',
+        'AWS_ACCESS_KEY_ID',
+        'AWS_SECRET_ACCESS_KEY',
+        'FIREBASE_PROJECT_ID'
+    ];
+
+    const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+    if (missingEnvVars.length > 0) {
+        checks.checks.env = {
+            status: 'error',
+            missing: missingEnvVars
+        };
+        checks.status = 'unhealthy';
+    } else {
+        checks.checks.env = {
+            status: 'ok',
+            configured: requiredEnvVars.length
+        };
+    }
+
+    const httpStatus = checks.status === 'unhealthy' ? 503 : 200;
+
+    return NextResponse.json(checks, { status: httpStatus });
 }
