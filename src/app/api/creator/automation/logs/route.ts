@@ -26,8 +26,8 @@ async function handler(req: NextRequest, user: any) {
 
     const stats = {
         total: logs.length,
-        successful: logs.filter(l => l.success).length,
-        failed: logs.filter(l => !l.success).length
+        successful: logs.filter((l: any) => l.success).length,
+        failed: logs.filter((l: any) => !l.success).length
     };
 
     return {

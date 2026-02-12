@@ -1,214 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server';
-export const dynamic = 'force-dynamic';
-import { z } from 'zod';
-import Order from '@/lib/models/Order';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { razorpay } from '@/lib/payments/razorpay';
-import { getAdminSession, logAdminAction, getClientIp, getClientUserAgent, ADMIN_PERMISSIONS, hasPermission } from '../../../../lib/admin/authMiddleware';
+import { Order } from '@/lib/models/Order';
+import { withAdminAuth } from '@/lib/firebase/withAdminAuth';
 
-const getOrdersSchema = z.object({
-  search: z.string().optional(),
-  status: z.enum(['pending', 'completed', 'failed', 'refunded']).optional(),
-  paymentMethod: z.string().optional(),
-  minAmount: z.coerce.number().optional(),
-  maxAmount: z.coerce.number().optional(),
-  dateFrom: z.string().optional(),
-  dateTo: z.string().optional(),
-  page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(20),
-  sortBy: z.enum(['createdAt', 'amount', 'status']).default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-});
+/**
+ * GET /api/admin/orders
+ * List all orders with filters
+ */
+async function handler(req: NextRequest, user: any) {
+  await connectToDatabase();
 
-const refundOrderSchema = z.object({
-  orderId: z.string(),
-  refundAmount: z.number().optional(),
-  reason: z.string(),
-});
+  const { searchParams } = new URL(req.url);
+  const page = parseInt(searchParams.get('page') || '1');
+  const limit = parseInt(searchParams.get('limit') || '50');
+  const status = searchParams.get('status');
+  const creatorId = searchParams.get('creatorId');
+  const search = searchParams.get('search');
 
-export async function GET(req: NextRequest) {
-  try {
-    const session = await getAdminSession();
-    if (!session || !hasPermission(session, ADMIN_PERMISSIONS.VIEW_ORDERS)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+  // Build query
+  const query: any = {};
 
-    await connectToDatabase();
+  if (status) query.paymentStatus = status;
+  if (creatorId) query.creatorId = creatorId;
 
-    const searchParams = Object.fromEntries(req.nextUrl.searchParams);
-    const validation = getOrdersSchema.safeParse(searchParams);
+  if (search) {
+    query.$or = [
+      { customerEmail: { $regex: search, $options: 'i' } },
+      { customerName: { $regex: search, $options: 'i' } },
+      { razorpayOrderId: { $regex: search, $options: 'i' } }
+    ];
+  }
 
-    if (!validation.success) {
-      return NextResponse.json({ error: 'Invalid query parameters', details: validation.error.issues }, { status: 400 });
-    }
+  const skip = (page - 1) * limit;
 
-    const { search, status, paymentMethod, minAmount, maxAmount, dateFrom, dateTo, page, limit, sortBy, sortOrder } =
-      validation.data;
-
-    // Build query
-    const query: any = {};
-
-    if (search) {
-      query.$or = [
-        { orderId: { $regex: search, $options: 'i' } },
-        { 'paymentDetails.email': { $regex: search, $options: 'i' } },
-        { razorpayOrderId: { $regex: search, $options: 'i' } },
-      ];
-    }
-
-    if (status) {
-      query.status = status;
-    }
-
-    if (paymentMethod) {
-      query.paymentMethod = paymentMethod;
-    }
-
-    if (minAmount || maxAmount) {
-      query.amount = {};
-      if (minAmount) query.amount.$gte = minAmount;
-      if (maxAmount) query.amount.$lte = maxAmount;
-    }
-
-    if (dateFrom || dateTo) {
-      query.createdAt = {};
-      if (dateFrom) query.createdAt.$gte = new Date(dateFrom);
-      if (dateTo) {
-        const dateToParsed = new Date(dateTo);
-        dateToParsed.setHours(23, 59, 59, 999);
-        query.createdAt.$lte = dateToParsed;
-      }
-    }
-
-    // Execute query
-    const skip = (page - 1) * limit;
-    const orders = await Order.find(query)
+  const [orders, total] = await Promise.all([
+    Order.find(query)
       .populate('creatorId', 'displayName email')
-      .populate('items.productId', 'name price')
-      .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
+      .populate('productId', 'name')
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .lean();
+      .lean(),
+    Order.countDocuments(query)
+  ]);
 
-    const total = await Order.countDocuments(query);
-
-    const enrichedOrders = orders.map((order: any) => ({
-      ...order,
-      creatorName: order.creatorId?.displayName || 'Unknown',
-      productName: order.items?.[0]?.productId?.name || 'Unknown',
-    }));
-
-    return NextResponse.json({
-      data: enrichedOrders,
+  return NextResponse.json({
+    success: true,
+    data: {
+      orders,
       pagination: {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit),
-      },
-      stats: {
-        totalAmount: await Order.aggregate([
-          { $match: query },
-          { $group: { _id: null, total: { $sum: '$amount' } } },
-        ]),
-      },
-    });
-  } catch (error) {
-    console.error('Get orders error:', error);
-    return NextResponse.json({ error: 'Failed to fetch orders', details: (error as Error).message }, { status: 500 });
-  }
-}
-
-export async function POST(req: NextRequest) {
-  try {
-    const session = await getAdminSession();
-    if (!session || !hasPermission(session, ADMIN_PERMISSIONS.REFUND_ORDERS)) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const body = await req.json();
-    const { action } = body;
-
-    if (action === 'refund') {
-      const validation = refundOrderSchema.safeParse(body);
-      if (!validation.success) {
-        return NextResponse.json({ error: 'Invalid refund data' }, { status: 400 });
-      }
-
-      const { orderId, refundAmount, reason } = validation.data;
-
-      await connectToDatabase();
-
-      const order = await Order.findById(orderId);
-      if (!order) {
-        return NextResponse.json({ error: 'Order not found' }, { status: 404 });
-      }
-
-      const refundAmt = refundAmount || order.amount;
-
-      if (refundAmt > order.amount) {
-        return NextResponse.json({ error: 'Refund amount exceeds order amount' }, { status: 400 });
-      }
-
-      // Process refund via Razorpay
-      try {
-        if (!order.razorpayPaymentId) {
-          return NextResponse.json({ error: 'Razorpay Payment ID not found for this order' }, { status: 400 });
-        }
-
-        const refundResponse = await razorpay.payments.refund(order.razorpayPaymentId, {
-          amount: Math.round(refundAmt * 100), // Convert to paise
-          notes: {
-            reason,
-            adminEmail: session.email,
-            orderId: order._id.toString(),
-          },
-        });
-
-        order.status = 'refunded';
-        order.razorpaySignature = refundResponse.id; // Store refund ID or use a specific field if available
-        order.refund = {
-          amount: refundAmt,
-          reason,
-          processedAt: new Date(),
-          status: 'completed',
-        };
-
-        await order.save();
-
-        const clientIp = getClientIp(req);
-        const userAgent = getClientUserAgent(req);
-
-        await logAdminAction(
-          session.id,
-          session.email,
-          'REFUND',
-          'ORDER',
-          orderId,
-          order.razorpayOrderId,
-          `Refund of ₹${refundAmt} for order ${order.razorpayOrderId}`,
-          { reason, refundAmount: refundAmt },
-          clientIp,
-          userAgent
-        );
-
-        return NextResponse.json({
-          message: 'Refund processed successfully',
-          data: {
-            orderId: order._id,
-            refundAmount: refundAmt,
-            status: 'completed',
-          },
-        });
-      } catch (refundError) {
-        console.error('Razorpay refund failed:', refundError);
-        return NextResponse.json({ error: 'Failed to process refund', details: (refundError as Error).message }, { status: 500 });
+        pages: Math.ceil(total / limit)
       }
     }
-
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
-  } catch (error) {
-    console.error('Order action error:', error);
-    return NextResponse.json({ error: 'Failed to process order action' }, { status: 500 });
-  }
+  });
 }
+
+export const GET = withAdminAuth(handler);

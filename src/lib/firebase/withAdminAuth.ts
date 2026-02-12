@@ -4,6 +4,9 @@ import { initAdmin } from './admin';
 import AdminLog from '@/lib/models/AdminLog';
 import { connectToDatabase } from '@/lib/db/mongodb';
 
+// Initialize Firebase Admin on load
+initAdmin();
+
 /**
  * Middleware to protect admin routes
  * Verifies Firebase token and checks for admin custom claim
