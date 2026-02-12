@@ -18,8 +18,12 @@ export interface ILesson {
 }
 
 export interface IModule {
-    id: string;
+    _id?: mongoose.Types.ObjectId;
     title: string;
+    description?: string;
+    videoUrl?: string;
+    content?: string;
+    order: number;
     lessons: ILesson[];
 }
 

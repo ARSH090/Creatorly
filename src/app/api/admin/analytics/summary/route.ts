@@ -17,7 +17,7 @@ async function handler(req: NextRequest, user: any) {
     const days = parseInt(searchParams.get('days') || '30');
 
     const startDate = new Date();
-    startDate.setDate(startDate.setDate(startDate.getDate() - days);
+    startDate.setDate(startDate.getDate() - days);
 
     // Total users
     const totalUsers = await User.countDocuments();

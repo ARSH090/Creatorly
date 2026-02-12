@@ -10,7 +10,7 @@ import crypto from 'crypto';
 /**
  * POST /api/creator/affiliates/invite
  * Send affiliate invitation
- * Body: { email, commissionRate, productIds? }
+ * Body: { email, commissionRate }
  */
 async function handler(req: NextRequest, user: any) {
     await connectToDatabase();
@@ -20,7 +20,7 @@ async function handler(req: NextRequest, user: any) {
     }
 
     const body = await req.json();
-    const { email, commissionRate = 20, productIds } = body;
+    const { email, commissionRate = 20 } = body;
 
     if (!email) {
         throw new Error('Email is required');
@@ -35,41 +35,46 @@ async function handler(req: NextRequest, user: any) {
             email: email.toLowerCase(),
             displayName: email.split('@')[0],
             role: 'affiliate',
-            firebaseUid: `temp_${crypto.randomBytes(8).toString('hex')}`, // Temporary
+            firebaseUid: `temp_${crypto.randomBytes(8).toString('hex')}`,
             username: `affiliate_${Date.now()}`,
             emailVerified: false
         });
     }
 
-    // Check if affiliate relationship already exists
+    // Generate unique affiliate code
+    const affiliateCode = `${user.username || 'creator'}-${crypto.randomBytes(4).toString('hex')}`.toUpperCase();
+
+    // Check if affiliate relationship already exists (by creator + affiliateCode)
     const existing = await Affiliate.findOne({
         creatorId: user._id,
-        affiliateId: affiliateUser._id
+        affiliateCode
     });
 
     if (existing) {
-        throw new Error('Affiliate relationship already exists');
+        throw new Error('Affiliate code already exists');
     }
-
-    // Generate unique link code
-    const uniqueLinkCode = crypto.randomBytes(8).toString('hex');
 
     const affiliate = await Affiliate.create({
         creatorId: user._id,
-        affiliateId: affiliateUser._id,
-        productIds: productIds || [],
+        affiliateCode,
         commissionRate,
-        uniqueLinkCode,
-        status: 'pending'
+        totalEarnings: 0,
+        totalCommission: 0,
+        paidCommission: 0,
+        referrals: 0,
+        clicks: 0,
+        conversions: 0,
+        status: 'active',
+        isActive: true
     });
 
     // TODO: Send invitation email with affiliate link
-    console.log(`Affiliate invited: ${email} with code: ${uniqueLinkCode}`);
+    console.log(`Affiliate created: ${email} with code: ${affiliateCode}`);
 
     return {
         success: true,
         affiliate,
-        affiliateLink: `${process.env.NEXT_PUBLIC_APP_URL}?ref=${uniqueLinkCode}`
+        affiliateLink: `${process.env.NEXT_PUBLIC_APP_URL}?ref=${affiliateCode}`
     };
 }
 

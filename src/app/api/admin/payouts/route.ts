@@ -32,23 +32,11 @@ async function handler(req: NextRequest, user: any) {
   ]);
 
   // Calculate summary
-  const summary = await Payout.aggregate([
-    {
-      $group: {
-        _id: '$status',
-        totalAmount: { $sum: '$amount' },
-        count: { $sum: 1 }
-      }
-    }
-  ]);
-
-  const summaryMap = summary.reduce((acc, s) => {
-    acc[s._id] = {
-      amount: Math.round(s.totalAmount * 100) / 100,
-      count: s.count
-    };
+  const summary = payouts.reduce((acc: any, p: any) => {
+    acc[p.status] = (acc[p.status] || 0) + 1;
+    acc.totalAmount += p.amount;
     return acc;
-  }, {} as Record<string, any>);
+  }, { pending: 0, approved: 0, processed: 0, paid: 0, failed: 0, rejected: 0, totalAmount: 0 });
 
   return NextResponse.json({
     success: true,
@@ -60,7 +48,7 @@ async function handler(req: NextRequest, user: any) {
         total,
         pages: Math.ceil(total / limit)
       },
-      summary: summaryMap
+      summary
     }
   });
 }

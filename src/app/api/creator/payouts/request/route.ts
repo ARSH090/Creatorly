@@ -27,11 +27,11 @@ async function handler(req: NextRequest, user: any) {
 
     const existingPayouts = await Payout.find({
         creatorId: user._id,
-        status: { $in: ['paid', 'processing'] }
+        status: { $in: ['pending', 'approved', 'processed'] }
     });
 
-    const paidOut = existingPayouts.reduce((sum, p) => sum + p.amount, 0);
-    const availableBalance = totalRevenue - paidOut;
+    const reserved = existingPayouts.reduce((sum: number, p: any) => sum + p.amount, 0);
+    const availableBalance = totalRevenue - reserved;
 
     if (availableBalance <= 0) {
         throw new Error('No funds available for payout');
