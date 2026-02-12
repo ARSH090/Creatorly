@@ -40,11 +40,19 @@ async function testEndpoint(name: string, endpoint: string, method = 'GET', expe
 
     const isOk = response.ok || (expectAuth && response.status === 401);
 
+    // Security Header Checks
+    const headers = response.headers;
+    const hasCSP = headers.has('content-security-policy');
+    const hasFrameOptions = headers.has('x-frame-options');
+    const msg = isOk
+      ? `${response.status} OK [SecHeaders: ${hasCSP && hasFrameOptions ? '✅' : '❌'}]`
+      : `${response.status} Error`;
+
     return {
       name,
       endpoint,
       status: isOk ? 'pass' : 'fail',
-      message: isOk ? `${response.status} OK` : `${response.status} Error`,
+      message: msg,
     };
   } catch (error) {
     return {

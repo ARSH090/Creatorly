@@ -85,7 +85,7 @@ export default function RootLayout({
 
         <Script src="https://checkout.razorpay.com/v1/checkout.js" />
       </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} data-suppress-hydration-warning="true">
         <ErrorBoundary>
           <AuthProvider>
             <ClientLayout>

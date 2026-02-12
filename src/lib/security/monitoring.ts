@@ -253,8 +253,12 @@ async function sendEmailAlert(event: SecurityEvent, recipients: string[]) {
 async function sendSMSAlert(event: SecurityEvent, recipients: string[]) {
   const message = `🚨 SECURITY ALERT: ${event.eventType} [${event.severity}] at ${new Date().toLocaleTimeString()}`;
 
-  // TODO: Implement SMS service (Twilio, AWS SNS)
-  console.log(`📱 SMS alert (not implemented): ${message}`);
+  // Fallback to console since SMS provider is not configured
+  console.warn('\n' + '!'.repeat(50));
+  console.warn(message);
+  console.warn(`Recipients: ${recipients.join(', ')}`);
+  console.warn('Context:', JSON.stringify(event.context, null, 2));
+  console.warn('!'.repeat(50) + '\n');
 }
 
 async function sendSlackAlert(event: SecurityEvent) {
@@ -382,7 +386,7 @@ export async function getSecurityMetricsDB(): Promise<SecurityMetrics> {
       mediumEvents: metricsMap.medium,
       lowEvents: metricsMap.low,
       unacknowledgedCritical,
-      averageResponseTime: 0, // TBD: Implement in DB
+      averageResponseTime: 0, // Metric not yet tracked in DB
       topEventTypes: topEvents.map(t => ({ type: t._id as SecurityEventType, count: t.count }))
     };
   } catch (error) {
