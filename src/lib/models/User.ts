@@ -15,9 +15,14 @@ export interface IUser extends Document {
     emailVerified: boolean;
     emailVerifiedAt?: Date;
     // Admin fields
-    role?: 'user' | 'creator' | 'admin' | 'super-admin';
+    role?: 'user' | 'creator' | 'admin' | 'super-admin' | 'affiliate';
     status?: 'active' | 'suspended' | 'banned';
     permissions?: string[];
+
+    // Stan Store: Subscription & Billing
+    plan?: 'free' | 'creator' | 'creator_pro';
+    planExpiresAt?: Date;
+    stripeCustomerId?: string;
     adminApprovedAt?: Date;
     adminApprovedBy?: string;
     isSuspended?: boolean;
@@ -27,6 +32,11 @@ export interface IUser extends Document {
     // Governance & Payouts
     payoutStatus?: 'enabled' | 'held' | 'disabled';
     payoutHoldReason?: string;
+    payoutMethod?: {
+        type: 'stripe' | 'paypal' | 'bank';
+        accountId?: string;
+        email?: string;
+    };
     suspensionHistory?: Array<{
         status: string;
         reason: string;
@@ -106,10 +116,18 @@ const UserSchema: Schema = new Schema({
     // Admin fields
     role: {
         type: String,
-        enum: ['user', 'creator', 'admin', 'super-admin'],
+        enum: ['user', 'creator', 'admin', 'super-admin', 'affiliate'],
         default: 'user',
         index: true,
     },
+    plan: {
+        type: String,
+        enum: ['free', 'creator', 'creator_pro'],
+        default: 'free',
+        index: true,
+    },
+    planExpiresAt: Date,
+    stripeCustomerId: String,
     status: {
         type: String,
         enum: ['active', 'suspended', 'banned'],
@@ -135,6 +153,11 @@ const UserSchema: Schema = new Schema({
         index: true
     },
     payoutHoldReason: String,
+    payoutMethod: {
+        type: String,
+        accountId: String,
+        email: String
+    },
     suspensionHistory: [{
         status: String,
         reason: String,

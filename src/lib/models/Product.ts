@@ -70,6 +70,23 @@ export interface IProduct extends Document {
     isFeatured: boolean;
     inventoryCount?: number; // For physical goods
 
+    // Stan Store: Marketing & Upsells
+    hasUpsell?: boolean;
+    upsellProductId?: mongoose.Types.ObjectId;
+    discountCodes?: Array<{
+        code: string;
+        percentage: number;
+        fixedAmount?: number;
+        validUntil?: Date;
+        maxUses?: number;
+        uses: number;
+    }>;
+
+    // Stan Store: Stock & Downloads
+    stock?: number; // null = unlimited
+    maxDownloads?: number;
+    downloadExpiryDays?: number;
+
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date;
@@ -149,6 +166,24 @@ const ProductSchema: Schema = new Schema({
     isActive: { type: Boolean, default: true },
     isFeatured: { type: Boolean, default: false },
     inventoryCount: { type: Number, default: 0 },
+
+    // Stan Store: Marketing & Upsells
+    hasUpsell: { type: Boolean, default: false },
+    upsellProductId: { type: Schema.Types.ObjectId, ref: 'Product' },
+    discountCodes: [{
+        code: { type: String, required: true, uppercase: true },
+        percentage: { type: Number, min: 0, max: 100 },
+        fixedAmount: { type: Number, min: 0 },
+        validUntil: Date,
+        maxUses: Number,
+        uses: { type: Number, default: 0 }
+    }],
+
+    // Stan Store: Stock & Downloads
+    stock: { type: Number, default: null }, // null = unlimited
+    maxDownloads: { type: Number, default: 3 },
+    downloadExpiryDays: { type: Number, default: 30 },
+
     deletedAt: { type: Date, index: true }
 }, { timestamps: true });
 

@@ -225,7 +225,7 @@ export default function DashboardOverview() {
                     <div className="bg-indigo-500/5 rounded-3xl p-8 border border-indigo-500/20">
                         <h3 className="text-lg font-bold text-white mb-6">Quick Actions</h3>
                         <div className="grid grid-cols-2 gap-4">
-                            <Link href="/dashboard/projects" className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all text-center">
+                            <Link href="/dashboard/projects/new" className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all text-center">
                                 <Plus className="w-5 h-5 text-white mx-auto mb-2" />
                                 <span className="text-[10px] font-bold text-white uppercase tracking-widest">New Project</span>
                             </Link>

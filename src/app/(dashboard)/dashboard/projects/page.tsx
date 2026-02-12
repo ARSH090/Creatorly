@@ -7,16 +7,24 @@ import {
     BarChart2, Package, Globe, Clock
 } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/hooks/useAuth';
 
 export default function ProjectsPage() {
     const [loading, setLoading] = useState(true);
     const [projects, setProjects] = useState<any[]>([]);
 
+    const { user } = useAuth(); // Destructure user from hook
+
     useEffect(() => {
         async function fetchProducts() {
+            if (!user) return;
             try {
-                // In a real app, we'd get the creatorId from the session
-                const response = await fetch('/api/products');
+                const tokenIds = await user.getIdToken();
+                const response = await fetch('/api/creator/products', {
+                    headers: {
+                        'Authorization': `Bearer ${tokenIds}`
+                    }
+                });
                 const data = await response.json();
                 setProjects(data);
             } catch (error) {
@@ -26,7 +34,7 @@ export default function ProjectsPage() {
             }
         }
         fetchProducts();
-    }, []);
+    }, [user]);
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">

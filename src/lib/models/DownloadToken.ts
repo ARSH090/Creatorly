@@ -5,11 +5,11 @@ export interface IDownloadToken extends Document {
     orderId: mongoose.Types.ObjectId;
     productId: mongoose.Types.ObjectId;
     userId?: mongoose.Types.ObjectId;
-    usageCount: number;
-    maxUsage: number;
+    downloadCount: number; // renamed from usageCount
+    maxDownloads: number; // renamed from maxUsage
     expiresAt: Date;
-    revoked: boolean;
-    lastUsedAt?: Date;
+    isActive: boolean; // renamed from revoked (inverted)
+    lastDownloadedAt?: Date; // renamed from lastUsedAt
     lastUsedIp?: string;
     createdAt: Date;
 }
@@ -36,24 +36,24 @@ const DownloadTokenSchema: Schema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'User'
     },
-    usageCount: {
+    downloadCount: {
         type: Number,
         default: 0
     },
-    maxUsage: {
+    maxDownloads: {
         type: Number,
-        default: 5
+        default: 3
     },
     expiresAt: {
         type: Date,
         required: true
     },
-    revoked: {
+    isActive: {
         type: Boolean,
-        default: false,
+        default: true,
         index: true
     },
-    lastUsedAt: Date,
+    lastDownloadedAt: Date,
     lastUsedIp: String
 }, { timestamps: true });
 

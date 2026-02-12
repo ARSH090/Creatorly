@@ -91,7 +91,15 @@ export async function GET(req: NextRequest) {
         const { searchParams } = new URL(req.url);
         const creatorId = searchParams.get('creatorId');
 
-        const query = creatorId ? { creatorId } : {};
+        if (!creatorId) {
+            return NextResponse.json([]);
+        }
+
+        const query = {
+            creatorId,
+            status: 'published',
+            isActive: true
+        };
         const products = await Product.find(query).sort({ createdAt: -1 });
 
         return NextResponse.json(products);

@@ -181,11 +181,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             Quick Actions
                         </h3>
                         <div className="space-y-3">
-                            <button className="w-full flex items-center justify-center gap-2 bg-white text-black font-bold text-xs uppercase tracking-wider py-3 rounded-xl hover:bg-zinc-200 transition-all shadow-lg shadow-white/5">
+                            <Link href="/dashboard/projects/new" className="w-full flex items-center justify-center gap-2 bg-white text-black font-bold text-xs uppercase tracking-wider py-3 rounded-xl hover:bg-zinc-200 transition-all shadow-lg shadow-white/5">
                                 <Plus className="w-4 h-4" />
                                 New Product
-                            </button>
-                            <button className="w-full flex items-center justify-center gap-2 bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase tracking-wider py-3 rounded-xl hover:bg-zinc-800 transition-all">
+                            </Link>
+                            <button
+                                onClick={() => {
+                                    if (user && (user as any).username) {
+                                        const url = `${window.location.origin}/u/${(user as any).username}`;
+                                        navigator.clipboard.writeText(url);
+                                        alert('Store URL copied to clipboard!');
+                                    }
+                                }}
+                                className="w-full flex items-center justify-center gap-2 bg-zinc-900 border border-white/10 text-white font-bold text-xs uppercase tracking-wider py-3 rounded-xl hover:bg-zinc-800 transition-all">
                                 <Share2 className="w-4 h-4" />
                                 Share Store
                             </button>

@@ -3,32 +3,31 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
 
 /**
- * POST /api/analytics/view
- * Public endpoint to track store and product views
- * Body: { creatorId, productId?, source?, campaign?, medium? }
+ * POST /api/analytics/click
+ * Public endpoint to track product clicks and add-to-cart events
+ * Body: { creatorId, productId, eventType: 'add_to_cart' | 'checkout_start', source?, campaign? }
  */
 export async function POST(req: NextRequest) {
     try {
         await connectToDatabase();
 
         const body = await req.json();
-        const { creatorId, productId, source, campaign, medium } = body;
+        const { creatorId, productId, eventType, source, campaign, medium } = body;
 
-        if (!creatorId) {
-            return NextResponse.json({ error: 'creatorId is required' }, { status: 400 });
+        if (!creatorId || !productId) {
+            return NextResponse.json({ error: 'creatorId and productId are required' }, { status: 400 });
         }
 
-        // Get IP and User Agent for tracking
+        if (!['add_to_cart', 'checkout_start', 'product_click'].includes(eventType)) {
+            return NextResponse.json({ error: 'Invalid eventType' }, { status: 400 });
+        }
+
         const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
         const userAgent = req.headers.get('user-agent') || '';
 
-        // Determine event type
-        const eventType = productId ? 'product_view' : 'store_view';
-
-        // Create analytics event
         const event = await AnalyticsEvent.create({
             creatorId,
-            productId: productId || null,
+            productId,
             eventType,
             source: source || 'direct',
             medium,
@@ -36,8 +35,8 @@ export async function POST(req: NextRequest) {
             ip,
             userAgent,
             timestamp: new Date(),
-            day: new Date().toISOString().split('T')[0], // YYYY-MM-DD
-            hour: new Date().toISOString().slice(0, 13) // YYYY-MM-DD-HH
+            day: new Date().toISOString().split('T')[0],
+            hour: new Date().toISOString().slice(0, 13)
         });
 
         return NextResponse.json({ success: true, eventId: event._id });
