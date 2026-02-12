@@ -1,104 +1,59 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import CreatorProfile from '@/lib/models/CreatorProfile';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { User } from '@/lib/models/User';
+import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { withErrorHandler } from '@/lib/utils/errorHandler';
 
-export const PATCH = withAuth(async (req, user) => {
-    try {
-        const data = await req.json();
-        await connectToDatabase();
+/**
+ * GET /api/creator/profile
+ * Get creator's public profile information
+ */
+async function getHandler(req: NextRequest, user: any) {
+    await connectToDatabase();
 
-        const userId = user._id;
+    const profile = await User.findById(user._id).select(
+        'displayName username email bio avatar storeSlug plan planExpiresAt'
+    );
 
-        // Security Check: Only allow if user has creator/admin role
-        if (user.role !== 'creator' && user.role !== 'admin' && user.role !== 'super-admin') {
-            return NextResponse.json({
-                error: 'Forbidden',
-                message: 'You must have a creator account to update this profile.'
-            }, { status: 403 });
-        }
+    return { profile };
+}
 
-        // Find or Create Profile
-        let profile = await CreatorProfile.findOne({ userId });
+/**
+ * PUT /api/creator/profile
+ * Update creator profile
+ * Body: { displayName?, bio?, avatar?, storeSlug? }
+ */
+async function putHandler(req: NextRequest, user: any) {
+    await connectToDatabase();
 
-        if (!profile) {
-            profile = new CreatorProfile({
-                userId,
-                username: user.username || user.name?.toLowerCase().replace(/ /g, ''),
-                displayName: user.name || '',
-            });
-        }
+    const body = await req.json();
+    const { displayName, bio, avatar, storeSlug } = body;
 
-        // Update Theme
-        if (data.theme) {
-            profile.theme = {
-                ...profile.theme,
-                ...data.theme,
-                // Ensure default structure if missing
-                fontFamily: data.theme.fontFamily || profile.theme?.fontFamily || 'Inter',
-                primaryColor: data.theme.primaryColor || profile.theme?.primaryColor || '#6366f1',
-                backgroundColor: data.theme.backgroundColor || profile.theme?.backgroundColor || '#030303',
-            };
-        }
-
-        // Update Custom Domain
-        if (data.customDomain) {
-            const domain = data.customDomain.toLowerCase().trim();
-            const existing = await CreatorProfile.findOne({
-                customDomain: domain,
-                userId: { $ne: userId }
-            });
-
-            if (existing) {
-                return NextResponse.json({
-                    error: 'DOMAIN_ALREADY_IN_USE',
-                    message: 'This custom domain is already claimed by another creator.'
-                }, { status: 409 });
-            }
-            profile.customDomain = domain;
-        }
-
-        // Update Layout / Reordering
-        if (data.layout && Array.isArray(data.layout)) {
-            profile.layout = data.layout;
-        }
-
-        // Update Description (Bio) with Sanitization
-        if (data.description !== undefined) {
-            const { sanitizeHTML } = await import('@/lib/security/sanitization');
-            profile.description = sanitizeHTML(data.description || '');
-        }
-
-
-
-        await profile.save();
-
-
-        return NextResponse.json({
-            success: true,
-            profile
+    const updates: any = {};
+    if (displayName) updates.displayName = displayName;
+    if (bio !== undefined) updates.bio = bio;
+    if (avatar) updates.avatar = avatar;
+    if (storeSlug) {
+        // Validate slug uniqueness
+        const existing = await User.findOne({
+            storeSlug,
+            _id: { $ne: user._id }
         });
 
-    } catch (error: any) {
-        console.error('Profile Update Error:', error);
-        return NextResponse.json({
-            error: 'Failed to update profile',
-            details: error.message
-        }, { status: 500 });
-    }
-});
-
-export const GET = withAuth(async (req, user) => {
-    try {
-        await connectToDatabase();
-        const profile = await CreatorProfile.findOne({ userId: user._id });
-
-        if (!profile) {
-            return NextResponse.json({ message: 'Profile not found' }, { status: 404 });
+        if (existing) {
+            throw new Error('Store slug already taken');
         }
-
-        return NextResponse.json(profile);
-    } catch (error: any) {
-        return NextResponse.json({ error: 'Failed to fetch profile' }, { status: 500 });
+        updates.storeSlug = storeSlug;
     }
-});
+
+    const updatedProfile = await User.findByIdAndUpdate(
+        user._id,
+        { $set: updates },
+        { new: true }
+    ).select('displayName username email bio avatar storeSlug');
+
+    return { profile: updatedProfile };
+}
+
+export const GET = withCreatorAuth(withErrorHandler(getHandler));
+export const PUT = withCreatorAuth(withErrorHandler(putHandler));
