@@ -147,6 +147,14 @@ Your `vercel.json` is already configured:
   "cleanUrls": true,
   "crons": [
     {
+      "path": "/api/workers/process-queue",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/cron/publish",
+      "schedule": "0 1 * * *"
+    },
+    {
       "path": "/api/cron/refresh-tokens?secret=YOUR_CRON_SECRET_PLACEHOLDER",
       "schedule": "0 3 * * *"
     }
