@@ -11,7 +11,7 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
  * Body: { amount?, description? }
  * If amount not provided, requests payout for all pending revenue
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const body = await req.json();
@@ -44,7 +44,7 @@ async function handler(req: NextRequest, user: any) {
     }
 
     // Create payout request
-    const payout = await Payout.create({
+    const payout = await (Payout as any).create({
         creatorId: user._id,
         amount: payoutAmount,
         currency: 'INR',

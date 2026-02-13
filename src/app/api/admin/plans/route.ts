@@ -4,7 +4,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Plan from '@/lib/models/Plan';
 import { withAdminAuth } from '@/lib/firebase/withAuth';
 
-export const GET = withAdminAuth(async (req, user) => {
+export const GET = withAdminAuth(async (req, user, context) => {
     try {
         await connectToDatabase();
         const { searchParams } = new URL(req.url);
@@ -22,7 +22,7 @@ export const GET = withAdminAuth(async (req, user) => {
     }
 });
 
-export const POST = withAdminAuth(async (req, user) => {
+export const POST = withAdminAuth(async (req, user, context) => {
     try {
         await connectToDatabase();
         const body = await req.json();

@@ -32,7 +32,7 @@ export interface APIResponse<T = any> {
 export function withErrorHandler<T = any>(
     handler: (...args: any[]) => Promise<T | Response>
 ) {
-    return async (...args: any[]) => {
+    return async (...args: any[]): Promise<Response> => {
         try {
             const result = await handler(...args);
 

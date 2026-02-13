@@ -7,7 +7,7 @@ import { withAdminAuth } from '@/lib/firebase/withAdminAuth';
  * GET /api/admin/products
  * List all products with creator info
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);

@@ -29,4 +29,5 @@ const AvailabilitySchema: Schema = new Schema({
 }, { timestamps: true });
 
 const Availability: Model<IAvailability> = mongoose.models.Availability || mongoose.model<IAvailability>('Availability', AvailabilitySchema);
+export { Availability };
 export default Availability;

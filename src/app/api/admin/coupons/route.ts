@@ -7,7 +7,7 @@ import { withAdminAuth, logAdminAction } from '@/lib/firebase/withAdminAuth';
  * GET /api/admin/coupons
  * List all coupons with filters
  */
-async function getHandler(req: NextRequest, user: any) {
+async function getHandler(req: NextRequest, user: any, context: any) {
   await connectToDatabase();
 
   const { searchParams } = new URL(req.url);
@@ -59,7 +59,7 @@ async function getHandler(req: NextRequest, user: any) {
  * POST /api/admin/coupons
  * Create new coupon
  */
-async function postHandler(req: NextRequest, user: any) {
+async function postHandler(req: NextRequest, user: any, context: any) {
   await connectToDatabase();
 
   const body = await req.json();

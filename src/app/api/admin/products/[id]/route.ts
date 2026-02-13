@@ -28,9 +28,10 @@ async function putHandler(req: NextRequest, user: any, context: any) {
     const allowedFields = ['name', 'description', 'price', 'status', 'type', 'category'];
 
     allowedFields.forEach(field => {
-        if (body[field] !== undefined && body[field] !== product[field]) {
-            changes[field] = { from: product[field], to: body[field] };
-            product[field] = body[field];
+        const val = (product as any)[field];
+        if (body[field] !== undefined && body[field] !== val) {
+            changes[field] = { from: val, to: body[field] };
+            (product as any)[field] = body[field];
         }
     });
 
@@ -72,8 +73,8 @@ async function deleteHandler(req: NextRequest, user: any, context: any) {
     }
 
     // Soft delete - set status to archived
-    product.status = 'archived';
-    await product.save();
+    (product as any).status = 'archived';
+    await (product as any).save();
 
     // Log action
     await logAdminAction(

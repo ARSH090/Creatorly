@@ -9,7 +9,7 @@ import { hasFeature } from '@/lib/utils/planLimits';
  * GET /api/creator/domains
  * List custom domains
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     // Check plan feature

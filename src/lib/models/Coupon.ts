@@ -113,10 +113,7 @@ couponSchema.index({ status: 1 });
 couponSchema.index({ validFrom: 1, validUntil: 1 });
 
 // Update `updatedAt` on every save
-couponSchema.pre('save', function (next) {
-    this.updatedAt = new Date();
-    next();
-});
+
 
 const Coupon: Model<ICoupon> = mongoose.models.Coupon || mongoose.model<ICoupon>('Coupon', couponSchema);
 export default Coupon;

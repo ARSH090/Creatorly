@@ -9,7 +9,7 @@ import { hasFeature } from '@/lib/utils/planLimits';
  * GET /api/creator/email/lists
  * Get all email lists for the creator
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     // Check plan feature
@@ -22,7 +22,7 @@ async function handler(req: NextRequest, user: any) {
         .lean();
 
     return {
-        lists: lists.map(list => ({
+        lists: lists.map((list: any) => ({
             _id: list._id,
             name: list.name,
             description: list.description,

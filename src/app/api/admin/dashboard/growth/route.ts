@@ -7,7 +7,7 @@ import { checkAdminPermission } from '@/lib/middleware/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
-export const GET = withAdminAuth(async (req, user) => {
+export const GET = withAdminAuth(async (req, user, context) => {
     try {
         if (!checkAdminPermission('view_dashboard', user.role)) {
             return NextResponse.json({ error: 'Permission denied' }, { status: 403 });

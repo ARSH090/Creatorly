@@ -253,12 +253,18 @@ async function sendEmailAlert(event: SecurityEvent, recipients: string[]) {
 async function sendSMSAlert(event: SecurityEvent, recipients: string[]) {
   const message = `🚨 SECURITY ALERT: ${event.eventType} [${event.severity}] at ${new Date().toLocaleTimeString()}`;
 
-  // Fallback to console since SMS provider is not configured
-  console.warn('\n' + '!'.repeat(50));
-  console.warn(message);
-  console.warn(`Recipients: ${recipients.join(', ')}`);
+  // Use the SMS service
+  const { sendSMS } = await import('../services/sms');
+
+  for (const to of recipients) {
+    if (to) {
+      await sendSMS({ to, body: message });
+    }
+  }
+
+  // Still log context for debugging
+  console.warn(`[SECURITY SMS SENT] ${message}`);
   console.warn('Context:', JSON.stringify(event.context, null, 2));
-  console.warn('!'.repeat(50) + '\n');
 }
 
 async function sendSlackAlert(event: SecurityEvent) {

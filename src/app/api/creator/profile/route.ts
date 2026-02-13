@@ -8,7 +8,7 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
  * GET /api/creator/profile
  * Get creator's public profile information
  */
-async function getHandler(req: NextRequest, user: any) {
+async function getHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const profile = await User.findById(user._id).select(
@@ -23,7 +23,7 @@ async function getHandler(req: NextRequest, user: any) {
  * Update creator profile
  * Body: { displayName?, bio?, avatar?, storeSlug? }
  */
-async function putHandler(req: NextRequest, user: any) {
+async function putHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const body = await req.json();
@@ -52,6 +52,9 @@ async function putHandler(req: NextRequest, user: any) {
         { new: true }
     ).select('displayName username email bio avatar storeSlug');
 
+    if (!updatedProfile) {
+        throw new Error('Failed to update profile');
+    }
     return { profile: updatedProfile };
 }
 

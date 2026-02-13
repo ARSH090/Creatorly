@@ -7,7 +7,7 @@ import { verifyFirebaseToken } from './verifyToken';
  * @returns Protected handler that requires valid Firebase token
  */
 export function withAuth(
-    handler: (req: NextRequest, user: any, context?: any) => Promise<Response>
+    handler: (...args: any[]) => Promise<Response>
 ) {
     return async (req: NextRequest, context?: any) => {
         const authHeader = req.headers.get('Authorization');
@@ -38,7 +38,7 @@ export function withAuth(
  * Admin-only route protection
  */
 export function withAdminAuth(
-    handler: (req: NextRequest, user: any, context?: any) => Promise<Response>
+    handler: (...args: any[]) => Promise<Response>
 ) {
     return withAuth(async (req, user, context) => {
         if (user.role !== 'admin' && user.role !== 'super-admin') {
@@ -55,7 +55,7 @@ export function withAdminAuth(
  * Creator-only route protection
  */
 export function withCreatorAuth(
-    handler: (req: NextRequest, user: any, context?: any) => Promise<Response>
+    handler: (...args: any[]) => Promise<Response>
 ) {
     return withAuth(async (req, user, context) => {
         if (user.role !== 'creator' && user.role !== 'admin' && user.role !== 'super-admin') {

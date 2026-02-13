@@ -6,10 +6,14 @@ import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
 import { getCurrentUser } from '@/lib/firebase/server-auth';
 
+import { Affiliate } from '@/lib/models/Affiliate';
+
 export async function POST(req: NextRequest) {
     try {
         await connectToDatabase();
         const { cart, customer } = await req.json();
+
+        // ... existing cart validation ...
 
         if (!cart || cart.length === 0) {
             return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
@@ -24,8 +28,10 @@ export async function POST(req: NextRequest) {
             const product = await Product.findById(cartItem.id);
             if (!product) continue;
 
+            // Only support single creator checkout for now
             if (!creatorId) creatorId = product.creatorId;
 
+            // ... existing product processing ...
             totalAmount += product.price * cartItem.quantity;
             items.push({
                 productId: product._id,
@@ -34,6 +40,22 @@ export async function POST(req: NextRequest) {
                 quantity: cartItem.quantity,
                 type: product.type
             });
+        }
+
+        // Affiliate Logic
+        const affiliateRef = req.cookies.get('affiliate_ref')?.value;
+        let affiliateId = null;
+
+        if (affiliateRef && creatorId) {
+            const affiliate = await Affiliate.findOne({
+                affiliateCode: affiliateRef,
+                creatorId: creatorId,
+                status: 'active'
+            });
+
+            if (affiliate) {
+                affiliateId = affiliate._id;
+            }
         }
 
         // Add 18% GST (Tax)
@@ -52,9 +74,10 @@ export async function POST(req: NextRequest) {
                 customerEmail: customer.email,
                 itemsCount: items.length,
                 userId: user?.id || 'guest',
-                productIds: items.map(i => i.productId.toString()).join(',')
+                productIds: items.map(i => i.productId.toString()).join(','),
+                affiliateId: affiliateId ? affiliateId.toString() : ''
             }
-        });
+        }) as any;
 
         // 3. Save Order in Database
         if (!creatorId) {
@@ -70,9 +93,11 @@ export async function POST(req: NextRequest) {
             currency: 'INR',
             razorpayOrderId: razorpayOrder.id,
             status: 'pending',
+            affiliateId: affiliateId ? affiliateId.toString() : undefined,
             metadata: {
                 customerName: customer.name,
-                customerPhone: customer.phone
+                customerPhone: customer.phone,
+                affiliateRef // Store the code for reference
             }
         });
 

@@ -1,14 +1,23 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IQueueJob extends Document {
-    type: 'dm_delivery';
+    type: 'dm_delivery' | 'email_sequence_step';
     payload: {
-        recipientId: string;
-        text: string;
-        accessToken: string;
+        // DM Payload
+        recipientId?: string;
+        text?: string;
+        accessToken?: string;
         creatorId: string;
-        ruleId?: string;
-        source: 'dm' | 'comment';
+        ruleId?: string; // DM rule
+        source?: 'dm' | 'comment';
+
+        // Email Payload
+        sequenceId?: string;
+        stepId?: string; // Index or ID
+        subscriberId?: string; // or subscriber email
+        email?: string;
+        subject?: string;
+        content?: string;
     };
     status: 'pending' | 'processing' | 'completed' | 'failed';
     attempt: number;
@@ -20,7 +29,7 @@ export interface IQueueJob extends Document {
 }
 
 const QueueJobSchema: Schema = new Schema({
-    type: { type: String, required: true, enum: ['dm_delivery'] },
+    type: { type: String, required: true, enum: ['dm_delivery', 'email_sequence_step'] },
     payload: { type: Schema.Types.Mixed, required: true },
     status: {
         type: String,

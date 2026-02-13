@@ -16,6 +16,11 @@ export async function verifyFirebaseToken(
     token: string
 ): Promise<AuthenticatedUser | null> {
     try {
+        if (!adminAuth) {
+            console.error('Firebase Admin not initialized');
+            return null;
+        }
+
         // Verify Firebase ID token
         const decodedToken = await adminAuth.verifyIdToken(token);
         const firebaseUid = decodedToken.uid;

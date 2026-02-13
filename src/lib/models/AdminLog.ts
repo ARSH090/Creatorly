@@ -44,4 +44,6 @@ adminLogSchema.index({ adminEmail: 1, timestamp: -1 });
 adminLogSchema.index({ targetType: 1, targetId: 1 });
 adminLogSchema.index({ timestamp: -1 });
 
-export default mongoose.models.AdminLog || mongoose.model<IAdminLog>('AdminLog', adminLogSchema);
+const AdminLog = mongoose.models.AdminLog || mongoose.model<IAdminLog>('AdminLog', adminLogSchema);
+export { AdminLog };
+export default AdminLog;

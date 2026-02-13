@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
         const eventType = productId ? 'product_view' : 'store_view';
 
         // Create analytics event
-        const event = await AnalyticsEvent.create({
+        const event = await (AnalyticsEvent as any).create({
             creatorId,
             productId: productId || null,
             eventType,

@@ -42,7 +42,7 @@ export async function adminAuthMiddleware(req: NextRequest) {
 
 async function logAdminAction(data: any) {
   try {
-    const { AdminLog } = await import('@/lib/models/AdminLog');
+    const { default: AdminLog } = await import('@/lib/models/AdminLog');
     await AdminLog.create(data);
   } catch (error) {
     console.error('Failed to log admin action:', error);

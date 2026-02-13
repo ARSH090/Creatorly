@@ -1,33 +1,52 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Affiliate } from '@/lib/models/Affiliate';
+import { Order } from '@/lib/models/Order';
 import { withCreatorAuth } from '@/lib/firebase/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
-import { hasFeature } from '@/lib/utils/planLimits';
 
 /**
  * GET /api/creator/affiliates
- * List all affiliates for the creator with performance stats
+ * List all affiliates for the creator
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any): Promise<any> {
     await connectToDatabase();
 
-    // Check if creator has affiliate feature
-    if (!hasFeature(user.plan || 'free', 'affiliates')) {
-        throw new Error('Affiliate program requires Creator Pro plan');
-    }
+    const affiliates = await Affiliate.find({ creatorId: user._id })
+        .sort({ createdAt: -1 })
+        .lean();
 
-    const { searchParams } = new URL(req.url);
-    const status = searchParams.get('status'); // active, pending, suspended
+    // Get aggregated stats
+    const stats = await Order.aggregate([
+        {
+            $match: {
+                creatorId: user._id,
+                paymentStatus: 'paid',
+                affiliateId: { $exists: true, $ne: null }
+            }
+        },
+        {
+            $group: {
+                _id: '$affiliateId',
+                totalSales: { $sum: 1 },
+                totalRevenue: { $sum: '$total' },
+                totalCommission: { $sum: '$commissionAmount' }
+            }
+        }
+    ]);
 
-    const query: any = { creatorId: user._id };
-    if (status) query.status = status;
+    // Map stats to affiliates
+    const result = affiliates.map((aff: any) => {
+        const stat = stats.find((s: any) => s._id?.toString() === aff._id?.toString());
+        return {
+            ...aff,
+            totalSales: stat?.totalSales || 0,
+            totalRevenue: stat?.totalRevenue || 0,
+            totalCommission: stat?.totalCommission || 0
+        };
+    });
 
-    const affiliates = await Affiliate.find(query)
-        .populate('affiliateId', 'displayName email avatar')
-        .sort({ createdAt: -1 });
-
-    return { affiliates };
+    return result as any;
 }
 
 export const GET = withCreatorAuth(withErrorHandler(handler));

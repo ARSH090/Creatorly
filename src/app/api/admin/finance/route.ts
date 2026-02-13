@@ -26,29 +26,29 @@ export async function GET(req: NextRequest) {
 
     // Platform Revenue
     const monthlyMetrics = await Order.aggregate([
-      { $match: { createdAt: { $gte: startOfMonth }, status: 'completed' } },
+      { $match: { createdAt: { $gte: startOfMonth }, paymentStatus: 'paid' } },
       {
         $group: {
           _id: null,
           orders: { $sum: 1 },
-          grossRevenue: { $sum: '$totalAmount' },
-          platformCommission: { $sum: { $multiply: ['$totalAmount', 0.05] } },
-          creatorEarnings: { $sum: '$creatorEarnings' },
-          refunded: { $sum: { $cond: ['$isRefunded', '$totalAmount', 0] } },
+          grossRevenue: { $sum: '$total' },
+          platformCommission: { $sum: { $multiply: ['$total', 0.05] } },
+          creatorEarnings: { $sum: { $multiply: ['$total', 0.95] } },
+          refunded: { $sum: { $cond: [{ $eq: ['$paymentStatus', 'refunded'] }, '$total', 0] } },
         },
       },
     ]);
 
     // Yearly metrics
     const yearlyMetrics = await Order.aggregate([
-      { $match: { createdAt: { $gte: startOfYear }, status: 'completed' } },
+      { $match: { createdAt: { $gte: startOfYear }, paymentStatus: 'paid' } },
       {
         $group: {
           _id: null,
           orders: { $sum: 1 },
-          grossRevenue: { $sum: '$totalAmount' },
-          platformCommission: { $sum: { $multiply: ['$totalAmount', 0.05] } },
-          creatorEarnings: { $sum: '$creatorEarnings' },
+          grossRevenue: { $sum: '$total' },
+          platformCommission: { $sum: { $multiply: ['$total', 0.05] } },
+          creatorEarnings: { $sum: { $multiply: ['$total', 0.95] } },
         },
       },
     ]);

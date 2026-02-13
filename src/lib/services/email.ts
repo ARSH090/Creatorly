@@ -305,3 +305,37 @@ export async function sendUsageWarningEmail(email: string, resource: string, per
   });
 }
 
+export async function sendAffiliateNotificationEmail(
+  email: string,
+  affiliateCode: string,
+  commissionAmount: number,
+  orderId: string
+) {
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 40px; background: #fff; border: 1px solid #eee; border-radius: 12px;">
+      <h2 style="color: #10b981;">Cha-ching! New Commission 💰</h2>
+      <p>Great news! You just earned a commission from a referral.</p>
+      
+      <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; font-size: 14px; color: #6b7280;">Affiliate Code</p>
+        <p style="margin: 5px 0 15px 0; font-weight: bold; font-size: 18px;">${affiliateCode}</p>
+        
+        <p style="margin: 0; font-size: 14px; color: #6b7280;">Commission Earned</p>
+        <p style="margin: 5px 0 0 0; font-weight: bold; font-size: 24px; color: #10b981;">₹${commissionAmount.toFixed(2)}</p>
+      </div>
+
+      <p style="font-size: 14px; color: #6b7280;">Order Reference: #${orderId.slice(-6)}</p>
+      
+      <div style="margin: 30px 0;">
+        <a href="${process.env.NEXTAUTH_URL}/dashboard/affiliates" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">View Dashboard</a>
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `You earned ₹${commissionAmount} commission!`,
+    html
+  });
+}
+

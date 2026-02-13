@@ -46,15 +46,15 @@ export default function CouponsManagementEnhanced() {
         appliesTo: 'all_plans',
         applicableTiers: [],
         applicablePlanIds: [],
-        maxUses: 100,
-        maxUsesPerUser: 1,
-        minimumPurchaseAmount: 0,
+        usageLimit: 100,
+        usagePerUser: 1,
+        minOrderAmount: 0,
         minimumPlanTier: null,
         validFrom: new Date().toISOString().split('T')[0],
         validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         cannotCombineWithOtherCoupons: true,
         excludeDiscountedItems: false,
-        isActive: true
+        status: 'active'
     };
 
     const [formData, setFormData] = useState(initialFormState);
@@ -136,19 +136,19 @@ export default function CouponsManagementEnhanced() {
             )
         },
         {
-            field: 'currentUses', headerName: 'Usage', width: 120, renderCell: (p: any) => (
-                <Chip label={`${p.row.currentUses} / ${p.row.maxUses}`} size="small" variant="outlined" />
+            field: 'usedCount', headerName: 'Usage', width: 120, renderCell: (p: any) => (
+                <Chip label={`${p.row.usedCount || 0} / ${p.row.usageLimit}`} size="small" variant="outlined" />
             )
         },
         { field: 'validUntil', headerName: 'Expires', width: 150, valueGetter: (params: any) => new Date(params.row.validUntil).toLocaleDateString() },
         {
-            field: 'isActive',
+            field: 'status',
             headerName: 'Status',
             width: 100,
             renderCell: (p: any) => (
                 <Chip
-                    label={p.value ? 'Active' : 'Inactive'}
-                    color={p.value ? 'success' : 'default'}
+                    label={p.value === 'active' ? 'Active' : p.value}
+                    color={p.value === 'active' ? 'success' : 'default'}
                     size="small"
                 />
             )
@@ -253,18 +253,18 @@ export default function CouponsManagementEnhanced() {
                         <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' } }}>
                             <TextField
                                 fullWidth type="number" label="Max Total Uses" required
-                                value={formData.maxUses}
-                                onChange={(e) => setFormData({ ...formData, maxUses: Number(e.target.value) })}
+                                value={formData.usageLimit}
+                                onChange={(e) => setFormData({ ...formData, usageLimit: Number(e.target.value) })}
                             />
                             <TextField
                                 fullWidth type="number" label="Uses Per User" required
-                                value={formData.maxUsesPerUser}
-                                onChange={(e) => setFormData({ ...formData, maxUsesPerUser: Number(e.target.value) })}
+                                value={formData.usagePerUser}
+                                onChange={(e) => setFormData({ ...formData, usagePerUser: Number(e.target.value) })}
                             />
                             <TextField
                                 fullWidth type="number" label="Min Purchase Amt (₹)"
-                                value={formData.minimumPurchaseAmount}
-                                onChange={(e) => setFormData({ ...formData, minimumPurchaseAmount: Number(e.target.value) })}
+                                value={formData.minOrderAmount}
+                                onChange={(e) => setFormData({ ...formData, minOrderAmount: Number(e.target.value) })}
                             />
                         </Box>
 
@@ -282,7 +282,7 @@ export default function CouponsManagementEnhanced() {
                                 onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
                             />
                             <FormControlLabel
-                                control={<Switch checked={formData.isActive} onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })} />}
+                                control={<Switch checked={formData.status === 'active'} onChange={(e) => setFormData({ ...formData, status: e.target.checked ? 'active' : 'inactive' })} />}
                                 label="Is Active"
                             />
                             <FormControlLabel

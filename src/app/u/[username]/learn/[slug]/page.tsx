@@ -93,14 +93,14 @@ export default function CoursePlayer({ params }: { params: { username: string, s
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-8">
-                            {product.curriculum?.map((module, mIdx) => (
-                                <div key={module.id} className="space-y-3">
+                            {product.curriculum?.map((courseModule, mIdx) => (
+                                <div key={courseModule.id} className="space-y-3">
                                     <h3 className="text-xs font-bold text-zinc-400 px-2 uppercase tracking-tight flex items-center gap-2">
                                         <span className="w-5 h-5 rounded-md bg-white/5 flex items-center justify-center text-[10px]">{mIdx + 1}</span>
-                                        {module.title}
+                                        {courseModule.title}
                                     </h3>
                                     <div className="space-y-1">
-                                        {module.lessons.map((lesson) => (
+                                        {courseModule.lessons.map((lesson) => (
                                             <button
                                                 key={lesson.id}
                                                 onClick={() => setActiveLesson(lesson)}

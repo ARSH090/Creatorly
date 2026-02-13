@@ -1,0 +1,191 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2, Plus, Edit } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+
+interface Lesson {
+    _id?: string;
+    title: string;
+    description?: string;
+    videoUrl?: string;
+    content?: string;
+    order?: number;
+    isPublished?: boolean;
+}
+
+interface CourseLessonModalProps {
+    courseId: string;
+    lesson?: Lesson; // If provided, mode is 'edit'
+    trigger?: React.ReactNode;
+    onSuccess?: () => void;
+}
+
+export function CourseLessonModal({ courseId, lesson, trigger, onSuccess }: CourseLessonModalProps) {
+    const [open, setOpen] = useState(false);
+    const [loading, setLoading] = useState(false);
+
+    // Form State
+    const [title, setTitle] = useState('');
+    const [description, setDescription] = useState('');
+    const [videoUrl, setVideoUrl] = useState('');
+    const [content, setContent] = useState('');
+    const [order, setOrder] = useState<number | ''>('');
+
+    // Initialize form when opening/editing
+    useEffect(() => {
+        if (lesson) {
+            setTitle(lesson.title || '');
+            setDescription(lesson.description || '');
+            setVideoUrl(lesson.videoUrl || '');
+            setContent(lesson.content || '');
+            setOrder(lesson.order !== undefined ? lesson.order : '');
+        } else {
+            // Reset for create
+            setTitle('');
+            setDescription('');
+            setVideoUrl('');
+            setContent('');
+            setOrder('');
+        }
+    }, [lesson, open]);
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+            const payload = {
+                courseId,
+                title,
+                description,
+                videoUrl,
+                content,
+                order: order === '' ? undefined : Number(order)
+            };
+
+            const url = lesson
+                ? `/api/creator/courses/lessons/${lesson._id}`
+                : `/api/creator/courses/${courseId}/lessons`;
+
+            const method = lesson ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || data.message || 'Failed to save lesson');
+            }
+
+            toast.success(lesson ? 'Lesson updated!' : 'Lesson added!');
+            setOpen(false);
+            if (onSuccess) onSuccess();
+        } catch (error: any) {
+            console.error(error);
+            toast.error(error.message || 'Something went wrong');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                {trigger || (
+                    <Button>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Lesson
+                    </Button>
+                )}
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px] bg-[#1a1a1a] border-gray-800 text-white">
+                <DialogHeader>
+                    <DialogTitle>{lesson ? 'Edit Lesson' : 'Add New Lesson'}</DialogTitle>
+                    <DialogDescription className="text-gray-400">
+                        {lesson ? 'Update lesson details and content.' : 'Create a new lesson for your course curriculum.'}
+                    </DialogDescription>
+                </DialogHeader>
+
+                <form onSubmit={handleSubmit} className="space-y-4 py-4">
+                    <div className="space-y-2">
+                        <Label htmlFor="title" className="text-gray-200">Title <span className="text-red-500">*</span></Label>
+                        <Input
+                            id="title"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            placeholder="e.g. Introduction to React"
+                            required
+                            className="bg-[#0a0a0a] border-gray-700"
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="videoUrl" className="text-gray-200">Video URL (Optional)</Label>
+                            <Input
+                                id="videoUrl"
+                                value={videoUrl}
+                                onChange={(e) => setVideoUrl(e.target.value)}
+                                placeholder="https://vimeo.com/..."
+                                className="bg-[#0a0a0a] border-gray-700"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="order" className="text-gray-200">Order (Optional)</Label>
+                            <Input
+                                id="order"
+                                type="number"
+                                value={order}
+                                onChange={(e) => setOrder(e.target.value === '' ? '' : parseInt(e.target.value))}
+                                placeholder="0"
+                                className="bg-[#0a0a0a] border-gray-700"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="description" className="text-gray-200">Description</Label>
+                        <Textarea
+                            id="description"
+                            value={description}
+                            onChange={(e) => setDescription(e.target.value)}
+                            placeholder="Brief summary of this lesson..."
+                            className="bg-[#0a0a0a] border-gray-700 min-h-[80px]"
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="content" className="text-gray-200">Content (Markdown supported)</Label>
+                        <Textarea
+                            id="content"
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            placeholder="# Lesson Content..."
+                            className="bg-[#0a0a0a] border-gray-700 min-h-[150px] font-mono text-sm"
+                        />
+                    </div>
+
+                    <div className="flex justify-end space-x-2 pt-4">
+                        <Button type="button" variant="outline" onClick={() => setOpen(false)} className="border-gray-700 text-gray-300 hover:bg-gray-800">
+                            Cancel
+                        </Button>
+                        <Button type="submit" disabled={loading} className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white">
+                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (lesson ? 'Save Changes' : 'Add Lesson')}
+                        </Button>
+                    </div>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}

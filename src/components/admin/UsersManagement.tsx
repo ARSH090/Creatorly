@@ -1,33 +1,42 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Edit, Trash2, Ban, UserCheck } from 'lucide-react';
+import {
+  Users, Search, Filter, Edit, Trash2,
+  ShieldAlert, ShieldCheck, Wallet,
+  MoreVertical, Loader2, AlertCircle,
+  Mail, Calendar, Crown, User as UserIcon,
+  ChevronLeft, ChevronRight, Ban
+} from 'lucide-react';
+
+interface UserStats {
+  products: number;
+  revenue: number;
+  orders: number;
+}
 
 interface User {
   _id: string;
   email: string;
   displayName: string;
-  role: 'user' | 'creator' | 'admin' | 'super_admin';
-  status: 'active' | 'suspended' | 'banned';
+  username: string;
+  role: 'user' | 'creator' | 'admin' | 'super-admin';
+  plan: string;
+  isSuspended: boolean;
+  payoutStatus: string;
   createdAt: string;
-  orderCount?: number;
-  totalRevenue?: number;
+  stats: UserStats;
 }
 
 export function UsersManagement() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [roleFilter, setRoleFilter] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [search, roleFilter, statusFilter, page]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const fetchUsers = async () => {
     try {
@@ -36,319 +45,223 @@ export function UsersManagement() {
         page: page.toString(),
         limit: '20',
         ...(search && { search }),
-        ...(roleFilter && { role: roleFilter }),
-        ...(statusFilter && { status: statusFilter }),
+        ...(roleFilter !== 'all' && { role: roleFilter }),
+        ...(statusFilter !== 'all' && { status: statusFilter }),
       });
 
       const res = await fetch(`/api/admin/users?${params}`);
-      const data = await res.json();
-      setUsers(data.users);
-      setTotal(data.pagination.total);
-    } catch (error) {
-      console.error('Failed to fetch users:', error);
+      const json = await res.json();
+      if (json.success) {
+        setUsers(json.data.users);
+        setTotalPages(json.data.pagination.pages);
+      }
+    } catch (err) {
+      console.error('Failed to fetch users:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleUpdateUser = async (user: User, updates: any) => {
+  useEffect(() => {
+    const timer = setTimeout(fetchUsers, 500);
+    return () => clearTimeout(timer);
+  }, [search, roleFilter, statusFilter, page]);
+
+  const handleUpdateStatus = async (userId: string, action: 'freeze' | 'unfreeze' | 'block_payouts' | 'enable_payouts') => {
+    // Implementation for status updates if needed via /api/admin/users/[id]/actions or similar
+    // For now, let's assume standard PUT to /api/admin/users/[id]
     try {
-      const res = await fetch(`/api/admin/users/${user._id}`, {
+      setActionLoading(userId);
+      const updates: any = {};
+      if (action === 'freeze') updates.isSuspended = true;
+      if (action === 'unfreeze') updates.isSuspended = false;
+
+      const res = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updates),
+        body: JSON.stringify(updates)
       });
 
-      if (res.ok) {
-        setShowEditModal(false);
-        setEditingUser(null);
-        fetchUsers();
-      }
+      if (res.ok) fetchUsers();
     } catch (error) {
-      console.error('Failed to update user:', error);
+      console.error('Update failed:', error);
+    } finally {
+      setActionLoading(null);
     }
   };
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
-
-    try {
-      const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
-      if (res.ok) {
-        fetchUsers();
-      }
-    } catch (error) {
-      console.error('Failed to delete user:', error);
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'admin':
+      case 'super-admin': return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+      case 'creator': return 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20';
+      default: return 'bg-zinc-800 text-zinc-400 border-white/5';
     }
   };
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-white">Users Management</h2>
-
-      {/* Filters */}
-      <div className="bg-gray-800 p-4 rounded-lg space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header Area */}
+      <div className="bg-zinc-900 rounded-3xl lg:rounded-[2.5rem] border border-white/10 shadow-2xl overflow-hidden">
+        <div className="p-4 lg:p-8 border-b border-white/5 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div>
-            <label className="text-sm text-gray-400">Search</label>
-            <div className="flex items-center bg-gray-700 rounded px-3 py-2">
-              <Search size={18} className="text-gray-400" />
+            <h2 className="text-xl font-black text-white flex items-center gap-3 uppercase tracking-tighter italic">
+              <div className="w-2 h-6 bg-indigo-500 rounded-full" />
+              Entity Oversight
+            </h2>
+            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Platform Population Registry</p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="relative group w-full lg:w-auto">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-indigo-500 transition-colors" />
               <input
                 type="text"
-                placeholder="Email, name..."
+                placeholder="Search entities..."
                 value={search}
-                onChange={(e) => {
-                  setSearch(e.target.value);
-                  setPage(1);
-                }}
-                className="bg-transparent flex-1 ml-2 text-white outline-none"
+                onChange={(e) => setSearch(e.target.value)}
+                className="bg-black/40 border border-white/5 rounded-2xl pl-12 pr-6 py-3 text-sm text-white focus:outline-none focus:border-indigo-500/50 transition-all w-full lg:w-64 placeholder:text-zinc-700 font-medium"
               />
             </div>
-          </div>
 
-          <div>
-            <label className="text-sm text-gray-400">Role</label>
             <select
               value={roleFilter}
-              onChange={(e) => {
-                setRoleFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full bg-gray-700 text-white rounded px-3 py-2"
+              onChange={(e) => setRoleFilter(e.target.value)}
+              className="bg-black/40 border border-white/5 rounded-2xl px-6 py-2 text-[10px] font-black uppercase text-white tracking-widest outline-none focus:border-indigo-500/50"
             >
-              <option value="">All Roles</option>
-              <option value="user">User</option>
-              <option value="creator">Creator</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="text-sm text-gray-400">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => {
-                setStatusFilter(e.target.value);
-                setPage(1);
-              }}
-              className="w-full bg-gray-700 text-white rounded px-3 py-2"
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="suspended">Suspended</option>
-              <option value="banned">Banned</option>
+              <option value="all">All Roles</option>
+              <option value="creator">Creators</option>
+              <option value="user">Users</option>
+              <option value="admin">Admins</option>
             </select>
           </div>
         </div>
-      </div>
 
-      {/* Users Table */}
-      <div className="bg-gray-800 rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-700">
-            <tr>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Email</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Name</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Role</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Status</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Orders</th>
-              <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Revenue</th>
-              <th className="px-6 py-3 text-right text-sm font-semibold text-gray-300">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-700">
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-gray-400">
-                  Loading...
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full text-left whitespace-nowrap">
+            <thead>
+              <tr className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em] border-b border-white/5 bg-white/[0.01]">
+                <th className="px-8 py-5">Entity profile</th>
+                <th className="px-8 py-5">Role & status</th>
+                <th className="px-8 py-5">Performance metrics</th>
+                <th className="px-8 py-5 text-right">Goverance</th>
               </tr>
-            ) : users.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-6 py-4 text-center text-gray-400">
-                  No users found
-                </td>
-              </tr>
-            ) : (
-              users.map((user) => (
-                <tr key={user._id} className="hover:bg-gray-700 transition">
-                  <td className="px-6 py-4 text-sm text-white">{user.email}</td>
-                  <td className="px-6 py-4 text-sm text-white">{user.displayName}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <span className="px-2 py-1 bg-blue-600 text-white rounded text-xs">
-                      {user.role}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm">
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        user.status === 'active'
-                          ? 'bg-green-600 text-white'
-                          : user.status === 'suspended'
-                          ? 'bg-yellow-600 text-white'
-                          : 'bg-red-600 text-white'
-                      }`}
-                    >
-                      {user.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-white">{user.orderCount || 0}</td>
-                  <td className="px-6 py-4 text-sm text-white">
-                    ₹{(user.totalRevenue || 0).toLocaleString()}
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <button
-                      onClick={() => {
-                        setEditingUser(user);
-                        setShowEditModal(true);
-                      }}
-                      className="p-2 hover:bg-gray-600 rounded transition"
-                      title="Edit"
-                    >
-                      <Edit size={18} className="text-blue-400" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(user._id)}
-                      className="p-2 hover:bg-gray-600 rounded transition"
-                      title="Delete"
-                    >
-                      <Trash2 size={18} className="text-red-400" />
-                    </button>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {loading ? (
+                <tr>
+                  <td colSpan={4} className="py-20 text-center">
+                    <Loader2 className="w-8 h-8 text-indigo-500 animate-spin mx-auto mb-4" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Querying platform database...</p>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Pagination */}
-      <div className="flex justify-between items-center">
-        <p className="text-sm text-gray-400">
-          Showing {(page - 1) * 20 + 1} to {Math.min(page * 20, total)} of {total} users
-        </p>
-        <div className="space-x-2">
-          <button
-            onClick={() => setPage(Math.max(1, page - 1))}
-            disabled={page === 1}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 rounded text-white"
-          >
-            Previous
-          </button>
-          <button
-            onClick={() => setPage(page + 1)}
-            disabled={page * 20 >= total}
-            className="px-4 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 rounded text-white"
-          >
-            Next
-          </button>
+              ) : users.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="py-20 text-center">
+                    <AlertCircle className="w-8 h-8 text-zinc-700 mx-auto mb-4" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-500">No entities detected</p>
+                  </td>
+                </tr>
+              ) : users.map((user) => (
+                <tr key={user._id} className="hover:bg-white/[0.02] transition-colors group">
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center font-black text-indigo-500 border border-indigo-500/20 group-hover:scale-110 transition-transform">
+                        {user.displayName?.charAt(0) || 'U'}
+                      </div>
+                      <div>
+                        <p className="font-black text-white text-sm tracking-tight group-hover:text-indigo-300 transition-colors uppercase italic">{user.displayName}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <Mail size={10} className="text-zinc-600" />
+                          <p className="text-[10px] font-medium text-zinc-500 lowercase">{user.email}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${getRoleBadge(user.role)}`}>
+                        {user.role}
+                      </span>
+                      {user.isSuspended ? (
+                        <span className="flex items-center gap-1.5 text-rose-500 text-[10px] font-black uppercase tracking-widest">
+                          <ShieldAlert size={12} />
+                          Frozen
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-emerald-500 text-[10px] font-black uppercase tracking-widest">
+                          <ShieldCheck size={12} />
+                          Verified
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-8 py-6">
+                    <div className="flex items-center gap-6">
+                      <div>
+                        <p className="text-[10px] font-black text-white italic tracking-tighter">₹{(user.stats?.revenue || 0).toLocaleString()}</p>
+                        <p className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">Revenue</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-white italic tracking-tighter">{user.stats?.orders || 0}</p>
+                        <p className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">Orders</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-6 text-right">
+                    <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      {user.isSuspended ? (
+                        <button
+                          onClick={() => handleUpdateStatus(user._id, 'unfreeze')}
+                          disabled={actionLoading === user._id}
+                          className="px-4 py-2 bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-white transition-all disabled:opacity-50"
+                        >
+                          Unfreeze
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleUpdateStatus(user._id, 'freeze')}
+                          disabled={actionLoading === user._id}
+                          className="px-4 py-2 bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-500 hover:text-white transition-all disabled:opacity-50"
+                        >
+                          Freeze
+                        </button>
+                      )}
+                      <button className="p-2 bg-white/5 border border-white/10 rounded-xl text-zinc-500 hover:text-white transition-all">
+                        <Edit size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-      </div>
 
-      {/* Edit Modal */}
-      {showEditModal && editingUser && (
-        <EditUserModal
-          user={editingUser}
-          onSave={(updates) => handleUpdateUser(editingUser, updates)}
-          onClose={() => {
-            setShowEditModal(false);
-            setEditingUser(null);
-          }}
-        />
-      )}
-    </div>
-  );
-}
-
-function EditUserModal({
-  user,
-  onSave,
-  onClose,
-}: {
-  user: User;
-  onSave: (updates: any) => void;
-  onClose: () => void;
-}) {
-  const [formData, setFormData] = useState({
-    displayName: user.displayName,
-    role: user.role,
-    status: user.status,
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave(formData);
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 p-6 rounded-lg shadow-lg max-w-md w-full">
-        <h3 className="text-xl font-bold text-white mb-4">Edit User</h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Display Name
-            </label>
-            <input
-              type="text"
-              value={formData.displayName}
-              onChange={(e) =>
-                setFormData({ ...formData, displayName: e.target.value })
-              }
-              className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
-            />
+        <div className="p-8 bg-black/20 border-t border-white/5 flex items-center justify-between">
+          <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">
+            Network Status: STABLE • End-to-End Encryption Enabled
+          </p>
+          <div className="flex items-center gap-4">
+            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">Page {page} of {totalPages}</span>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="p-2 bg-white/5 border border-white/10 rounded-xl text-zinc-500 hover:text-white transition-all disabled:opacity-20"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="p-2 bg-white/5 border border-white/10 rounded-xl text-zinc-500 hover:text-white transition-all disabled:opacity-20"
+              >
+                <ChevronRight size={16} />
+              </button>
+            </div>
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Role
-            </label>
-            <select
-              value={formData.role}
-              onChange={(e) =>
-                setFormData({ ...formData, role: e.target.value as any })
-              }
-              className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
-            >
-              <option value="user">User</option>
-              <option value="creator">Creator</option>
-              <option value="admin">Admin</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Status
-            </label>
-            <select
-              value={formData.status}
-              onChange={(e) =>
-                setFormData({ ...formData, status: e.target.value as any })
-              }
-              className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
-            >
-              <option value="active">Active</option>
-              <option value="suspended">Suspended</option>
-              <option value="banned">Banned</option>
-            </select>
-          </div>
-
-          <div className="flex space-x-3 pt-4">
-            <button
-              type="submit"
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded transition"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-2 rounded transition"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );

@@ -9,18 +9,19 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
  * GET /api/creator/affiliates/commissions
  * Get commission summary: pending vs paid
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any): Promise<any> {
     await connectToDatabase();
 
     const affiliates = await Affiliate.find({ creatorId: user._id })
-        .populate('affiliateId', 'displayName email');
+        .populate('affiliateId', 'displayName email')
+        .lean();
 
     // Calculate total pending and paid commissions
     let totalPending = 0;
     let totalPaid = 0;
 
     const commissionBreakdown = await Promise.all(
-        affiliates.map(async (affiliate) => {
+        (affiliates as any).map(async (affiliate: any) => {
             const pending = affiliate.totalCommission - affiliate.paidCommission;
             totalPending += pending;
             totalPaid += affiliate.paidCommission;
@@ -32,7 +33,7 @@ async function handler(req: NextRequest, user: any) {
                 totalEarned: affiliate.totalCommission,
                 paid: affiliate.paidCommission,
                 pending,
-                sales: affiliate.totalSales
+                sales: affiliate.conversions || 0
             };
         })
     );
@@ -44,7 +45,7 @@ async function handler(req: NextRequest, user: any) {
             totalCommissions: Math.round((totalPending + totalPaid) * 100) / 100
         },
         affiliates: commissionBreakdown
-    };
+    } as any;
 }
 
 export const GET = withCreatorAuth(withErrorHandler(handler));

@@ -7,7 +7,7 @@ import { withAdminAuth } from '@/lib/firebase/withAdminAuth';
  * GET /api/admin/payouts
  * List all payouts with filters
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
   await connectToDatabase();
 
   const { searchParams } = new URL(req.url);

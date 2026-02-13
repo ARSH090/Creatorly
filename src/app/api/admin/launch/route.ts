@@ -6,7 +6,7 @@ import { withAdminAuth } from '@/lib/firebase/withAuth';
  * FINAL LAUNCH COMMAND API: /api/admin/launch
  * The symbolic "Big Red Button" to formally transition to Revenue Mode
  */
-async function handler(req: NextRequest) {
+async function handler(req: NextRequest, user: any, context: any) {
     try {
         const body = await req.json();
 

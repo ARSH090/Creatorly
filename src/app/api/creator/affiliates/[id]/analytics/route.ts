@@ -9,7 +9,7 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
  * GET /api/creator/affiliates/:id/analytics
  * Get detailed performance analytics for a specific affiliate
  */
-async function handler(req: NextRequest, user: any, context: any) {
+async function handler(req: NextRequest, user: any, context: any): Promise<any> {
     await connectToDatabase();
 
     const params = await context.params;
@@ -27,7 +27,7 @@ async function handler(req: NextRequest, user: any, context: any) {
     // Get affiliate's orders
     const orders = await Order.find({
         creatorId: user._id,
-        affiliateId: affiliate.affiliateId,
+        affiliateId: affiliate._id.toString(), // Use the Affiliate document _id
         paymentStatus: 'paid'
     }).sort({ paidAt: -1 }).limit(50);
 
@@ -59,7 +59,7 @@ async function handler(req: NextRequest, user: any, context: any) {
             affiliateUser: affiliate.affiliateId,
             commissionRate: affiliate.commissionRate,
             status: affiliate.status,
-            totalSales: affiliate.totalSales,
+            totalSales: (affiliate as any).conversions || 0,
             totalCommission: affiliate.totalCommission,
             paidCommission: affiliate.paidCommission,
             pendingCommission: affiliate.totalCommission - affiliate.paidCommission
@@ -71,7 +71,7 @@ async function handler(req: NextRequest, user: any, context: any) {
             revenueByProduct: Object.values(revenueByProduct)
         },
         recentOrders: orders.slice(0, 10)
-    };
+    } as any;
 }
 
 export const GET = withCreatorAuth(withErrorHandler(handler));

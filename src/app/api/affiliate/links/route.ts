@@ -9,7 +9,7 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
  * Get affiliate's unique tracking links for all active programs
  * Affiliate-facing endpoint
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const affiliatePrograms = await Affiliate.find({
@@ -18,11 +18,11 @@ async function handler(req: NextRequest, user: any) {
     }).populate('creatorId', 'displayName username storeSlug')
         .populate('productIds', 'name slug');
 
-    const links = affiliatePrograms.map(program => ({
+    const links = affiliatePrograms.map((program: any) => ({
         programId: program._id,
         creator: program.creatorId,
         commissionRate: program.commissionRate,
-        affiliateLink: `${process.env.NEXT_PUBLIC_APP_URL}?ref=${program.uniqueLinkCode}`,
+        affiliateLink: `${process.env.NEXT_PUBLIC_APP_URL}?ref=${program.affiliateCode}`,
         products: program.productIds,
         status: program.status,
         totalEarned: program.totalCommission,

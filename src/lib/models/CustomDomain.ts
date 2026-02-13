@@ -12,6 +12,7 @@ export interface ICustomDomain extends Document {
     }[];
     sslStatus: 'pending' | 'active' | 'failed';
     verifiedAt?: Date;
+    verificationToken?: string;
     lastChecked?: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -37,10 +38,12 @@ const CustomDomainSchema: Schema = new Schema({
         default: 'pending'
     },
     verifiedAt: { type: Date },
+    verificationToken: { type: String },
     lastChecked: { type: Date }
 }, { timestamps: true });
 
 CustomDomainSchema.index({ domain: 1 });
 
 const CustomDomain: Model<ICustomDomain> = mongoose.models.CustomDomain || mongoose.model<ICustomDomain>('CustomDomain', CustomDomainSchema);
+export { CustomDomain };
 export default CustomDomain;

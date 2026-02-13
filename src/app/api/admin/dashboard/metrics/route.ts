@@ -8,7 +8,7 @@ import Subscription from '@/lib/models/Subscription';
 import { withAdminAuth } from '@/lib/firebase/withAuth';
 import { checkAdminPermission } from '@/lib/middleware/adminAuth';
 
-export const GET = withAdminAuth(async (req, user) => {
+export const GET = withAdminAuth(async (req, user, context) => {
   try {
     if (!checkAdminPermission('view_dashboard', user.role)) {
       return NextResponse.json(

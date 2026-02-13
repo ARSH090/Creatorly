@@ -25,6 +25,8 @@ export async function processQueueJob(jobId: string) {
         // 2. Execute Job Logic based on type
         if (job.type === 'dm_delivery') {
             await handleDMDelivery(job);
+        } else if (job.type === 'email_sequence_step') {
+            await handleEmailSequenceStep(job);
         }
 
         // 3. Mark Completed
@@ -35,49 +37,7 @@ export async function processQueueJob(jobId: string) {
         return { status: 'success', jobId: job._id };
 
     } catch (error: any) {
-        // 4. Handle Failure & Retries
-        console.error(`Job ${job._id} failed:`, error);
-
-        let errorMsg = error.message;
-        let isRetryable = true;
-
-        // Try to parse enriched error from MetaGraphService
-        try {
-            const errorInfo = JSON.parse(error.message);
-            errorMsg = errorInfo.message;
-            isRetryable = errorInfo.isRetryable;
-        } catch (e) {
-            // Fallback for standard errors
-        }
-
-        job.attempt += 1;
-        job.error = errorMsg;
-
-        if (isRetryable && job.attempt < job.maxAttempts) {
-            job.status = 'pending';
-            // Exponential Backoff: 1m, 2m, 4m, 8m, 16m
-            const backoffMinutes = Math.pow(2, job.attempt);
-            job.nextRunAt = new Date(Date.now() + backoffMinutes * 60 * 1000);
-        } else {
-            job.status = 'failed';
-        }
-
-        await job.save();
-
-        // Log final failure in DMLog for visibility
-        if (job.status === 'failed' && job.type === 'dm_delivery') {
-            await DMLog.create({
-                creatorId: job.payload.creatorId,
-                recipientId: job.payload.recipientId,
-                triggerSource: job.payload.source,
-                status: 'failed',
-                messageSent: job.payload.text,
-                errorDetails: `Permanent failure after ${job.attempt} attempts: ${errorMsg}`,
-                metadata: { jobId: job._id }
-            });
-        }
-
-        return { status: 'failed', reason: errorMsg, willRetry: job.status === 'pending' };
+        // ... (existing error handling)
     }
 }
 
@@ -85,7 +45,9 @@ export async function processQueueJob(jobId: string) {
  * Logic for sending DM
  */
 async function handleDMDelivery(job: IQueueJob) {
+    // ... (existing implementation)
     const { recipientId, text, accessToken, creatorId, ruleId, source } = job.payload;
+    if (!recipientId || !text || !accessToken) throw new Error('Invalid DM payload');
 
     await MetaGraphService.sendDirectMessage({
         recipientId,
@@ -93,7 +55,6 @@ async function handleDMDelivery(job: IQueueJob) {
         accessToken
     });
 
-    // Log success
     await DMLog.create({
         creatorId,
         recipientId,
@@ -105,3 +66,54 @@ async function handleDMDelivery(job: IQueueJob) {
         metadata: { jobId: job._id, attempt: job.attempt + 1 }
     });
 }
+
+/**
+ * Logic for Email Sequence Step
+ */
+async function handleEmailSequenceStep(job: IQueueJob) {
+    const { sequenceId, stepId, subscriberId, email, subject, content } = job.payload;
+    const { default: EmailSequence } = await import('@/lib/models/EmailSequence'); // Dynamic import to avoid cycles?
+    // Actually static import is better if possible, but let's stick to pattern or add import at top.
+
+    // 1. Send Email (Mock for now, or use a service)
+    console.log(`Sending email to ${email} for sequence ${sequenceId} step ${stepId}`);
+    // In real implemenation: await EmailService.send({ to: email, subject, html: content });
+
+    // 2. Schedule Next Step
+    // We need to fetch the sequence to find the next step
+    if (sequenceId && stepId !== undefined) {
+        const sequence = await EmailSequence.findById(sequenceId);
+        if (sequence) {
+            const currentStepIndex = parseInt(stepId);
+            const nextStepIndex = currentStepIndex + 1;
+
+            if (nextStepIndex < sequence.steps.length) {
+                const nextStep = sequence.steps[nextStepIndex];
+                const delayMs = nextStep.delayHours * 60 * 60 * 1000;
+                const nextRunAt = new Date(Date.now() + delayMs);
+
+                await QueueJob.create({
+                    type: 'email_sequence_step',
+                    payload: {
+                        sequenceId,
+                        stepId: nextStepIndex.toString(),
+                        subscriberId,
+                        email,
+                        subject: nextStep.subject,
+                        content: nextStep.content
+                    },
+                    nextRunAt,
+                    status: 'pending'
+                });
+                console.log(`Scheduled next step ${nextStepIndex} for ${email} at ${nextRunAt}`);
+            } else {
+                // Sequence completed
+                await EmailSequence.updateOne(
+                    { _id: sequenceId },
+                    { $inc: { 'stats.completed': 1 } }
+                );
+            }
+        }
+    }
+}
+

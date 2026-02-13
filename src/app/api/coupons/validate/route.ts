@@ -30,8 +30,8 @@ export async function POST(request: NextRequest) {
 
         // Find coupon
         const coupon = await Coupon.findOne({
-            code,
-            isActive: true,
+            code: code.toUpperCase(),
+            status: 'active',
         });
 
         if (!coupon) {
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         const now = new Date();
 
         // Check validity period
-        if (now < coupon.validFrom || now > coupon.validUntil) {
+        if (now < coupon.validFrom || (coupon.validUntil && now > coupon.validUntil)) {
             return NextResponse.json(
                 { error: 'Coupon has expired or is not yet valid' },
                 { status: 400 }
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check usage limits
-        if (coupon.maxUses && coupon.currentUses >= coupon.maxUses) {
+        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
             return NextResponse.json(
                 { error: 'Coupon usage limit reached' },
                 { status: 400 }
@@ -61,17 +61,17 @@ export async function POST(request: NextRequest) {
         }
 
         // Check minimum purchase amount
-        if (coupon.minimumPurchaseAmount && cartTotal < coupon.minimumPurchaseAmount) {
+        if (coupon.minOrderAmount && cartTotal < coupon.minOrderAmount) {
             return NextResponse.json(
                 {
-                    error: `Minimum purchase amount is ₹${(coupon.minimumPurchaseAmount / 100).toFixed(2)}`,
+                    error: `Minimum purchase amount is ₹${(coupon.minOrderAmount).toFixed(2)}`,
                 },
                 { status: 400 }
             );
         }
 
         // Check creator-specific coupon
-        if (coupon.creatorId && creatorId && coupon.creatorId.toString() !== creatorId) {
+        if (coupon.applicableCreators?.length > 0 && creatorId && !coupon.applicableCreators.some(id => id.toString() === creatorId)) {
             return NextResponse.json(
                 { error: 'This coupon is not applicable' },
                 { status: 400 }
@@ -127,22 +127,25 @@ export async function GET(request: NextRequest) {
 
         // Query coupons (site-wide or creator-specific)
         const query: Record<string, any> = {
-            isActive: true,
+            status: 'active',
             validFrom: { $lte: now },
-            validUntil: { $gte: now },
+            $or: [
+                { validUntil: { $exists: false } },
+                { validUntil: { $gte: now } }
+            ]
         };
 
         if (creatorId) {
-            query.$or = [
-                { creatorId: null }, // Site-wide coupons
-                { creatorId }, // Creator-specific coupons
-            ];
+            query.$or.push(
+                { applicableCreators: { $size: 0 } },
+                { applicableCreators: creatorId }
+            );
         } else {
-            query.creatorId = null; // Only site-wide coupons
+            query.applicableCreators = { $size: 0 }; // Only site-wide coupons
         }
 
         const coupons = await Coupon.find(query)
-            .select('code description discountType discountValue minimumPurchaseAmount')
+            .select('code description discountType discountValue minOrderAmount')
             .limit(50);
 
         return NextResponse.json({
@@ -151,7 +154,7 @@ export async function GET(request: NextRequest) {
                 description: c.description,
                 discountType: c.discountType,
                 discountValue: c.discountValue,
-                minimumPurchaseAmount: c.minimumPurchaseAmount,
+                minOrderAmount: c.minOrderAmount,
             })),
         });
     } catch (error) {

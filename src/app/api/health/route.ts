@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { redis } from '@/lib/db/redis';
+import redis from '@/lib/db/redis';
 
 /**
  * GET /api/health
@@ -35,6 +35,9 @@ export async function GET() {
 
     // Check Redis
     try {
+        if (!redis) {
+            throw new Error('Redis client not initialized');
+        }
         await redis.ping();
         checks.checks.redis = {
             status: 'ok',

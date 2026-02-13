@@ -10,7 +10,7 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
  * Mark affiliate commissions as paid
  * Body: { affiliateId, amount }
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any): Promise<any> {
     await connectToDatabase();
 
     const body = await req.json();
@@ -40,7 +40,7 @@ async function handler(req: NextRequest, user: any) {
     await affiliate.save();
 
     // Create payout record
-    const payout = await Payout.create({
+    const payout = await (Payout as any).create({
         creatorId: user._id,
         affiliateId: affiliate.affiliateId,
         amount,
@@ -61,7 +61,7 @@ async function handler(req: NextRequest, user: any) {
             pendingCommission: affiliate.totalCommission - affiliate.paidCommission
         },
         message: `Paid ₹${amount} to affiliate`
-    };
+    } as any;
 }
 
 export const POST = withCreatorAuth(withErrorHandler(handler));

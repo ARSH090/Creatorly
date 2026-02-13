@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { EmailCampaign } from '@/lib/models/EmailCampaign';
+import EmailCampaign from '@/lib/models/EmailCampaign';
 import { withCreatorAuth } from '@/lib/firebase/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 import { hasFeature } from '@/lib/utils/planLimits';
@@ -10,7 +10,7 @@ import { hasFeature } from '@/lib/utils/planLimits';
  * Create email campaign
  * Body: { name, subject, content, listId?, scheduledAt? }
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     // Check plan feature

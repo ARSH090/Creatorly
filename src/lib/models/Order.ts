@@ -18,10 +18,11 @@ export interface IOrder extends Document {
     razorpayOrderId: string;
     razorpayPaymentId?: string;
     razorpaySignature?: string;
-    status: 'pending' | 'success' | 'failed' | 'refunded';
-    paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
+    status: 'pending' | 'success' | 'failed' | 'refunded' | 'partially_refunded';
+    paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded';
     paidAt?: Date;
     commissionAmount?: number;
+    affiliateId?: string;
 
     // Delivery & Tracking
     downloadCount: number;
@@ -70,16 +71,17 @@ const OrderSchema: Schema = new Schema({
     razorpaySignature: { type: String },
     status: {
         type: String,
-        enum: ['pending', 'success', 'failed', 'refunded'],
+        enum: ['pending', 'success', 'failed', 'refunded', 'partially_refunded'],
         default: 'pending'
     },
     paymentStatus: {
         type: String,
-        enum: ['pending', 'paid', 'failed', 'refunded'],
+        enum: ['pending', 'paid', 'failed', 'refunded', 'partially_refunded'],
         default: 'pending'
     },
     paidAt: { type: Date },
     commissionAmount: { type: Number, default: 0 },
+    affiliateId: { type: String },
 
     downloadCount: { type: Number, default: 0 },
     downloadLimit: { type: Number, default: 3 },

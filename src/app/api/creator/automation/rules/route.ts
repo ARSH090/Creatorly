@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { AutomationRule } from '@/lib/models/AutomationRule';
+import AutomationRule from '@/lib/models/AutomationRule';
 import { withCreatorAuth } from '@/lib/firebase/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 
@@ -26,20 +26,27 @@ async function postHandler(req: NextRequest, user: any) {
     await connectToDatabase();
 
     const body = await req.json();
-    const { name, trigger, actions, isActive = true, conditions } = body;
+    const { platform, trigger, keywords, action, response, productId, isActive = true } = body;
 
-    if (!name || !trigger || !actions) {
-        throw new Error('name, trigger, and actions are required');
+    // Basic validation
+    if (!platform || !trigger || !action || !response) {
+        throw new Error('Missing required fields: platform, trigger, action, response');
+    }
+
+    if (trigger === 'keyword' && (!keywords || keywords.length === 0)) {
+        throw new Error('Keywords are required for keyword trigger');
     }
 
     const rule = await AutomationRule.create({
         creatorId: user._id,
-        name,
+        platform,
         trigger,
-        actions,
-        conditions,
+        keywords: keywords || [],
+        action,
+        response,
+        productId,
         isActive,
-        executionCount: 0
+        triggerCount: 0
     });
 
     return {

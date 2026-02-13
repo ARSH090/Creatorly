@@ -10,7 +10,7 @@ import { hasFeature } from '@/lib/utils/planLimits';
  * Add discount code to a product
  * Body: { productId, code, percentage?, fixedAmount?, validUntil?, maxUses? }
  */
-async function postHandler(req: NextRequest, user: any) {
+async function postHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     // Check plan feature
@@ -36,7 +36,7 @@ async function postHandler(req: NextRequest, user: any) {
     }
 
     // Check if code already exists
-    const existingCode = product.discountCodes?.find(
+    const existingCode = (product as any).discountCodes?.find(
         (dc: any) => dc.code.toUpperCase() === code.toUpperCase()
     );
 
@@ -54,9 +54,9 @@ async function postHandler(req: NextRequest, user: any) {
         uses: 0
     };
 
-    product.discountCodes = product.discountCodes || [];
-    product.discountCodes.push(discountCode);
-    await product.save();
+    (product as any).discountCodes = (product as any).discountCodes || [];
+    (product as any).discountCodes.push(discountCode);
+    await (product as any).save();
 
     return {
         success: true,
@@ -69,7 +69,7 @@ async function postHandler(req: NextRequest, user: any) {
  * GET /api/creator/products/discount
  * List all discount codes across all products
  */
-async function getHandler(req: NextRequest, user: any) {
+async function getHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const products = await Product.find({

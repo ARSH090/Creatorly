@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IAffiliate extends Document {
     creatorId: mongoose.Types.ObjectId;
+    affiliateId: mongoose.Types.ObjectId;
     affiliateCode: string;
     commissionRate: number;
     totalEarnings: number;
@@ -22,7 +23,12 @@ const AffiliateSchema: Schema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'User',
         required: true,
-        unique: true,
+        index: true,
+    },
+    affiliateId: {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
         index: true,
     },
     affiliateCode: {

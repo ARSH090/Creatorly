@@ -10,7 +10,7 @@ import { withAdminAuth } from '@/lib/firebase/withAdminAuth';
  * GET /api/admin/analytics/summary
  * Platform-wide summary metrics
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
@@ -64,8 +64,8 @@ async function handler(req: NextRequest, user: any) {
     const recent = recentRevenue[0] || { revenue: 0, orders: 0 };
 
     // Total page views
-    const totalViews = await AnalyticsEvent.countDocuments({
-        eventType: 'store_view'
+    const totalViews = await (AnalyticsEvent as any).countDocuments({
+        eventType: 'page_view'
     });
 
     return NextResponse.json({

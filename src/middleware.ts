@@ -15,7 +15,33 @@ export async function middleware(request: NextRequest) {
     if (!isMainDomain && !pathname.startsWith('/api') && !pathname.startsWith('/_next') && !pathname.includes('.')) {
         // Rewrite to /u/ (username logic would need a lookup or a convention)
         // For this audit, we implement the rewrite pattern
-        return NextResponse.rewrite(new URL(`/custom-domain/${hostname}${pathname}`, request.url));
+        const response = NextResponse.rewrite(new URL(`/custom-domain/${hostname}${pathname}`, request.url));
+
+        // Handle affiliate tracking even on custom domains
+        const refCode = request.nextUrl.searchParams.get('ref');
+        if (refCode) {
+            response.cookies.set('affiliate_ref', refCode, {
+                maxAge: 60 * 60 * 24 * 30, // 30 days
+                path: '/',
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax'
+            });
+        }
+        return response;
+    }
+
+    // 0.5 Affiliate Booking (Ref Code)
+    const refCode = request.nextUrl.searchParams.get('ref');
+    // Initialize response
+    let response = NextResponse.next();
+
+    if (refCode) {
+        response.cookies.set('affiliate_ref', refCode, {
+            maxAge: 60 * 60 * 24 * 30, // 30 days
+            path: '/',
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'lax'
+        });
     }
 
     // 1. Auth & Protected Routes (from proxy.ts)
@@ -35,7 +61,7 @@ export async function middleware(request: NextRequest) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
-    const response = NextResponse.next();
+    response = NextResponse.next();
 
     // 2. Security Headers
     response.headers.set('X-Frame-Options', 'DENY');
@@ -63,35 +89,62 @@ export async function middleware(request: NextRequest) {
 
     response.headers.set('Content-Security-Policy', csp);
 
-    // 3. Rate Limiting for Auth Routes
-    if (pathname.startsWith('/api/auth')) {
-        const ip = request.headers.get('x-forwarded-for') || 'unknown';
-        const limit = 20; // 20 requests
-        const windowMs = 60 * 1000; // per 1 minute
+    // 3. Rate Limiting (Upstash Redis with Fallback)
+    if (pathname.startsWith('/api/auth') || pathname.startsWith('/api/user')) {
+        const ip = request.headers.get('x-forwarded-for') ?? '127.0.0.1';
 
-        const now = Date.now();
-        const windowStart = now - windowMs;
+        try {
+            // Try to use Upstash Redis if available
+            if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+                const { Redis } = await import('@upstash/redis');
+                const redis = Redis.fromEnv();
 
-        const requestLog = rateLimit.get(ip) || [];
-        const requestsInWindow = requestLog.filter((timestamp: number) => timestamp > windowStart);
+                const limit = 20;
+                const window = 60; // seconds
 
-        if (requestsInWindow.length >= limit) {
-            return new NextResponse(
-                JSON.stringify({ error: 'Too many requests, please try again later.' }),
-                { status: 429, headers: { 'Content-Type': 'application/json' } }
-            );
-        }
+                const key = `rate_limit:${ip}`;
+                const requests = await redis.incr(key);
 
-        requestsInWindow.push(now);
-        rateLimit.set(ip, requestsInWindow);
+                if (requests === 1) {
+                    await redis.expire(key, window);
+                }
 
-        // Clean up old entries occasionally
-        if (rateLimit.size > 1000) {
-            for (const [key, logs] of rateLimit.entries()) {
-                if (logs.every((t: number) => t < windowStart)) {
-                    rateLimit.delete(key);
+                if (requests > limit) {
+                    return new NextResponse(
+                        JSON.stringify({ error: 'Too many requests, please try again later.' }),
+                        { status: 429, headers: { 'Content-Type': 'application/json' } }
+                    );
+                }
+            } else {
+                // Fallback to In-Memory (Per-Lambda)
+                const limit = 20;
+                const windowMs = 60 * 1000;
+                const now = Date.now();
+                const windowStart = now - windowMs;
+
+                const requestLog = rateLimit.get(ip) || [];
+                const requestsInWindow = requestLog.filter((timestamp: number) => timestamp > windowStart);
+
+                if (requestsInWindow.length >= limit) {
+                    return new NextResponse(
+                        JSON.stringify({ error: 'Too many requests, please try again later.' }),
+                        { status: 429, headers: { 'Content-Type': 'application/json' } }
+                    );
+                }
+
+                requestsInWindow.push(now);
+                rateLimit.set(ip, requestsInWindow);
+
+                // Cleanup
+                if (rateLimit.size > 1000) {
+                    for (const [key, logs] of rateLimit.entries()) {
+                        if (logs.every((t: number) => t < windowStart)) rateLimit.delete(key);
+                    }
                 }
             }
+        } catch (error) {
+            console.error('Rate limit error:', error);
+            // Fail open if rate limit fails
         }
     }
 

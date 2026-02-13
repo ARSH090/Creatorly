@@ -8,12 +8,16 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
  * GET /api/creator/subscription
  * Get current subscription details
  */
-async function getHandler(req: NextRequest, user: any) {
+async function getHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const creator = await User.findById(user._id).select(
         'plan planExpiresAt stripeCustomerId'
     );
+
+    if (!creator) {
+        throw new Error('Creator not found');
+    }
 
     const { getPlanLimits, isPlanExpired } = await import('@/lib/utils/planLimits');
     const limits = getPlanLimits(creator.plan || 'free');

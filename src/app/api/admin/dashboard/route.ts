@@ -25,7 +25,7 @@ export async function checkAdminAccess() {
  * GET /api/admin/dashboard
  * Get overall dashboard statistics
  */
-export const GET = withAdminAuth(async (request, user) => {
+export const GET = withAdminAuth(async (request, user, context) => {
   try {
     // Admin check is already handled by withAdminAuth
     // user object is available directly

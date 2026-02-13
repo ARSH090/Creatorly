@@ -59,9 +59,10 @@ async function putHandler(req: NextRequest, user: any, context: any) {
     ];
 
     updateFields.forEach(field => {
-        if (body[field] !== undefined && body[field] !== coupon[field]) {
-            changes[field] = { from: coupon[field], to: body[field] };
-            coupon[field] = body[field];
+        const val = (coupon as any)[field];
+        if (body[field] !== undefined && body[field] !== val) {
+            changes[field] = { from: val, to: body[field] };
+            (coupon as any)[field] = body[field];
         }
     });
 

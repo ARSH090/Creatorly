@@ -9,7 +9,7 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
  * List all bookings
  * Query params: status (upcoming, completed, cancelled)
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const { searchParams } = new URL(req.url);
@@ -18,17 +18,17 @@ async function handler(req: NextRequest, user: any) {
     const query: any = { creatorId: user._id };
 
     if (status === 'upcoming') {
-        query.scheduledAt = { $gte: new Date() };
+        query.startTime = { $gte: new Date() };
         query.status = { $in: ['confirmed', 'pending'] };
     } else if (status === 'completed') {
         query.status = 'completed';
     } else if (status === 'cancelled') {
-        query.status = 'cancelled';
+        query.status = 'canceled';
     }
 
-    const bookings = await Booking.find(query)
-        .populate('productId', 'name durationMinutes')
-        .sort({ scheduledAt: -1 })
+    const bookings = await (Booking as any).find(query)
+        .populate('productId', 'name duration')
+        .sort({ startTime: -1 })
         .lean();
 
     return {

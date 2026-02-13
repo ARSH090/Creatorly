@@ -5,7 +5,7 @@ import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
 import { Product } from '@/lib/models/Product';
 import { withCreatorAuth } from '@/lib/firebase/withAuth';
 
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
     try {
         const { analyticsRateLimit } = await import('@/lib/security/analyticsLimiter');
         const limitResult = await analyticsRateLimit(req);

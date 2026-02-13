@@ -9,7 +9,7 @@ import { withAdminAuth, logAdminAction } from '@/lib/firebase/withAdminAuth';
  * GET /api/admin/users
  * List all users with filters and pagination
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
   await connectToDatabase();
 
   const { searchParams } = new URL(req.url);

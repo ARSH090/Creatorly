@@ -43,4 +43,5 @@ const AutomationRuleSchema: Schema = new Schema({
 AutomationRuleSchema.index({ creatorId: 1, isActive: 1 });
 
 const AutomationRule: Model<IAutomationRule> = mongoose.models.AutomationRule || mongoose.model<IAutomationRule>('AutomationRule', AutomationRuleSchema);
+export { AutomationRule };
 export default AutomationRule;

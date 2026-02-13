@@ -1,81 +1,52 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Affiliate } from '@/lib/models/Affiliate';
-import { User } from '@/lib/models/User';
 import { withCreatorAuth } from '@/lib/firebase/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
-import { hasFeature } from '@/lib/utils/planLimits';
-import crypto from 'crypto';
+
+import { User } from '@/lib/models/User';
 
 /**
  * POST /api/creator/affiliates/invite
- * Send affiliate invitation
- * Body: { email, commissionRate }
+ * Invite a new affiliate
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
-    if (!hasFeature(user.plan || 'free', 'affiliates')) {
-        throw new Error('Affiliate program requires Creator Pro plan');
+    const { email, commissionRate } = await req.json();
+
+    if (!email) throw new Error('Email is required');
+
+    // Find the user to be invited
+    const invitee = await User.findOne({ email: email.toLowerCase() });
+    if (!invitee) {
+        throw new Error('User not found. Affiliates must have an active Creatorly account first.');
     }
 
-    const body = await req.json();
-    const { email, commissionRate = 20 } = body;
-
-    if (!email) {
-        throw new Error('Email is required');
-    }
-
-    // Find or create affiliate user
-    let affiliateUser = await User.findOne({ email: email.toLowerCase() });
-
-    if (!affiliateUser) {
-        // Create placeholder user with affiliate role
-        affiliateUser = await User.create({
-            email: email.toLowerCase(),
-            displayName: email.split('@')[0],
-            role: 'affiliate',
-            firebaseUid: `temp_${crypto.randomBytes(8).toString('hex')}`,
-            username: `affiliate_${Date.now()}`,
-            emailVerified: false
-        });
-    }
-
-    // Generate unique affiliate code
-    const affiliateCode = `${user.username || 'creator'}-${crypto.randomBytes(4).toString('hex')}`.toUpperCase();
-
-    // Check if affiliate relationship already exists (by creator + affiliateCode)
+    // Check if already an affiliate
     const existing = await Affiliate.findOne({
         creatorId: user._id,
-        affiliateCode
+        affiliateId: invitee._id
     });
 
-    if (existing) {
-        throw new Error('Affiliate code already exists');
-    }
+    if (existing) throw new Error('This user is already an affiliate for you');
 
-    const affiliate = await Affiliate.create({
+    // Generate unique affiliate code
+    const affiliateCode = `AFF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+    const affiliate = await (Affiliate as any).create({
         creatorId: user._id,
+        affiliateId: invitee._id,
         affiliateCode,
-        commissionRate,
-        totalEarnings: 0,
-        totalCommission: 0,
-        paidCommission: 0,
-        referrals: 0,
-        clicks: 0,
-        conversions: 0,
-        status: 'active',
+        commissionRate: commissionRate || 10,
+        status: 'pending',
         isActive: true
     });
 
-    // TODO: Send invitation email with affiliate link
-    console.log(`Affiliate created: ${email} with code: ${affiliateCode}`);
+    // TODO: Send invite email
+    console.log(`[Email] Sending affiliate invite to ${email}`);
 
-    return {
-        success: true,
-        affiliate,
-        affiliateLink: `${process.env.NEXT_PUBLIC_APP_URL}?ref=${affiliateCode}`
-    };
+    return affiliate;
 }
 
 export const POST = withCreatorAuth(withErrorHandler(handler));

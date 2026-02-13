@@ -35,16 +35,26 @@ async function handler(req: NextRequest, user: any) {
     ]);
 
     const totalRevenue = pendingOrders[0]?.totalRevenue || 0;
-    const paidOut = payouts
-        .filter(p => p.status === 'paid')
-        .reduce((sum, p) => sum + p.amount, 0);
+
+    // Calculate reserved amount (payouts in progress or paid)
+    // Cast strict types for reduce
+    const reservedAmount = (payouts as any[])
+        .filter((p: any) => !['failed', 'rejected'].includes(p.status))
+        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+
+    const paidOut = (payouts as any[])
+        .filter((p: any) => p.status === 'paid')
+        .reduce((sum: number, p: any) => sum + (p.amount || 0), 0);
+
+    const availableForPayout = Math.max(0, totalRevenue - reservedAmount);
 
     return {
         payouts,
         summary: {
             totalRevenue: Math.round(totalRevenue * 100) / 100,
             paidOut: Math.round(paidOut * 100) / 100,
-            pending: Math.round((totalRevenue - paidOut) * 100) / 100
+            pending: Math.round((totalRevenue - paidOut) * 100) / 100, // Balance not yet PAID
+            available: Math.round(availableForPayout * 100) / 100 // Balance available to REQUEST
         }
     };
 }

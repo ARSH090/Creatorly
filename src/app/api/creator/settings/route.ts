@@ -8,12 +8,16 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
  * GET /api/creator/settings
  * Get store settings
  */
-async function getHandler(req: NextRequest, user: any) {
+async function getHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const creator = await User.findById(user._id).select(
         'displayName username email bio avatar storeSlug plan payoutMethod payoutStatus'
     );
+
+    if (!creator) {
+        throw new Error('Creator not found');
+    }
 
     return {
         settings: {
@@ -38,7 +42,7 @@ async function getHandler(req: NextRequest, user: any) {
  * PUT /api/creator/settings
  * Update store settings
  */
-async function putHandler(req: NextRequest, user: any) {
+async function putHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const body = await req.json();
@@ -53,6 +57,10 @@ async function putHandler(req: NextRequest, user: any) {
         { $set: updates },
         { new: true }
     ).select('displayName username payoutMethod');
+
+    if (!updatedUser) {
+        throw new Error('Failed to update settings');
+    }
 
     return {
         success: true,

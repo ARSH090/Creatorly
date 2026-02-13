@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
         const userAgent = req.headers.get('user-agent') || '';
 
-        const event = await AnalyticsEvent.create({
+        const event = await (AnalyticsEvent as any).create({
             creatorId,
             productId,
             eventType,

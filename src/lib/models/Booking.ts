@@ -13,6 +13,7 @@ export interface IBooking extends Document {
     customerEmail: string;
     customerName: string;
     notes?: string;
+    completedAt?: Date;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -26,7 +27,7 @@ const BookingSchema: Schema = new Schema({
     endTime: { type: Date, required: true },
     status: {
         type: String,
-        enum: ['pending', 'confirmed', 'canceled', 'completed'],
+        enum: ['pending', 'confirmed', 'canceled', 'completed', 'no_show'],
         default: 'pending',
         index: true
     },
@@ -34,8 +35,9 @@ const BookingSchema: Schema = new Schema({
     googleEventId: String,
     customerEmail: { type: String, required: true },
     customerName: { type: String, required: true },
-    notes: String
-}, { timestamps: true });
+    notes: String,
+    completedAt: Date
+}, { timestamps: true, minimize: false } as any);
 
 // Ensure no double bookings for the same creator at the same time
 BookingSchema.index({ creatorId: 1, startTime: 1, endTime: 1 }, { unique: true, partialFilterExpression: { status: 'confirmed' } });

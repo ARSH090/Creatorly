@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
         // 3. Mark as processed immediately
         await ProcessedWebhook.create({
             webhookId,
-            eventType,
+            event: eventType,
             payload: event,
             processedAt: new Date()
         });
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
             if (order.affiliateId) {
                 const affiliate = await Affiliate.findOne({
                     creatorId: order.creatorId,
-                    affiliateId: order.affiliateId,
+                    _id: order.affiliateId,
                     status: 'active'
                 });
 
@@ -117,19 +117,18 @@ export async function POST(req: NextRequest) {
                         }
                     );
 
-                    // TODO: Send affiliate notification email
-                    console.log(`Affiliate commission: ₹${commission} for affiliate ${affiliate.affiliateId}`);
+                    console.log(`Affiliate commission: ₹${commission} for affiliate ${affiliate.affiliateCode}`);
                 }
             }
 
             // 7. Track purchase analytics event
             for (const item of order.items) {
-                await AnalyticsEvent.create({
+                await (AnalyticsEvent as any).create({
                     creatorId: order.creatorId,
                     productId: item.productId,
                     eventType: 'purchase',
-                    source: order.metadata?.source || 'direct',
-                    campaign: order.metadata?.campaign,
+                    source: (order as any).metadata?.source || 'direct',
+                    campaign: (order as any).metadata?.campaign,
                     metadata: {
                         orderId: order._id,
                         amount: item.price * (item.quantity || 1)
@@ -141,7 +140,52 @@ export async function POST(req: NextRequest) {
             }
 
             // 8. Send order confirmation email
-            // TODO: Implement email service
+            try {
+                const { sendPaymentConfirmationEmail, sendDownloadInstructionsEmail, sendAffiliateNotificationEmail } = await import('@/lib/services/email');
+
+                await sendPaymentConfirmationEmail(
+                    order.customerEmail,
+                    order._id.toString(),
+                    order.total,
+                    order.items
+                );
+
+                // Send download instructions if applicable
+                const digitalItems = order.items.filter(i => ['digital', 'course'].includes(i.type));
+                if (digitalItems.length > 0) {
+                    await sendDownloadInstructionsEmail(
+                        order.customerEmail,
+                        order._id.toString(),
+                        digitalItems.map(i => ({ name: i.name, productId: i.productId.toString() }))
+                    );
+                }
+
+                // Send affiliate notification if applicable
+                if (order.affiliateId && order.commissionAmount && order.commissionAmount > 0) {
+                    // Need to fetch user email for affiliate
+                    const { User } = await import('@/lib/models/User');
+                    // We need the affiliate document again to get the affiliateId (User ID)
+                    const { Affiliate } = await import('@/lib/models/Affiliate');
+                    const affiliateDoc = await Affiliate.findOne({ _id: order.affiliateId });
+
+                    if (affiliateDoc) {
+                        const affiliateUser = await User.findById(affiliateDoc.affiliateId);
+                        if (affiliateUser && affiliateUser.email) {
+                            await sendAffiliateNotificationEmail(
+                                affiliateUser.email,
+                                affiliateDoc.affiliateCode,
+                                order.commissionAmount,
+                                order._id.toString()
+                            );
+                        }
+                    }
+                }
+
+            } catch (emailError) {
+                console.error('Failed to send emails for order:', order._id, emailError);
+                // Don't fail the webhook processing just because email failed
+            }
+
             console.log(`Order ${order._id} completed successfully`);
 
             return NextResponse.json({ status: 'success', orderId: order._id });
@@ -164,7 +208,7 @@ export async function POST(req: NextRequest) {
                 await deactivateDownloadToken(order._id.toString());
 
                 // Track refund event
-                await AnalyticsEvent.create({
+                await (AnalyticsEvent as any).create({
                     creatorId: order.creatorId,
                     eventType: 'refund',
                     metadata: { orderId: order._id, amount: refundAmount },

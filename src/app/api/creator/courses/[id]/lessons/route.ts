@@ -40,15 +40,16 @@ async function handler(req: NextRequest, user: any, context: any) {
     // Determine lesson order
     const lessonOrder = order !== undefined ? order : course.curriculum.length;
 
-    // Add lesson
+    // Add lesson/module
     const lesson = {
+        id: Math.random().toString(36).substring(7),
         title,
         description,
         videoUrl,
         content,
         order: lessonOrder,
-        duration: 0,
-        isPublished: false
+        duration: '0',
+        lessons: []
     };
 
     course.curriculum.push(lesson);

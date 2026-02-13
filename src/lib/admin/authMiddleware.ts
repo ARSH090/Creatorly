@@ -65,7 +65,7 @@ export async function logAdminAction(
     userAgent?: string
 ) {
     try {
-        const { AdminLog } = await import('@/lib/models/AdminLog');
+        const { default: AdminLog } = await import('@/lib/models/AdminLog');
         await AdminLog.create({
             adminId,
             adminEmail,

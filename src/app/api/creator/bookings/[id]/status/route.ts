@@ -18,7 +18,7 @@ async function handler(req: NextRequest, user: any, context: any) {
     const body = await req.json();
     const { status, notes } = body;
 
-    const validStatuses = ['confirmed', 'completed', 'cancelled', 'no_show'];
+    const validStatuses = ['confirmed', 'completed', 'canceled', 'no_show'];
     if (!status || !validStatuses.includes(status)) {
         throw new Error(`Invalid status. Must be one of: ${validStatuses.join(', ')}`);
     }
@@ -37,10 +37,10 @@ async function handler(req: NextRequest, user: any, context: any) {
     booking.updatedAt = new Date();
 
     if (status === 'completed') {
-        booking.completedAt = new Date();
+        (booking as any).completedAt = new Date();
     }
 
-    await booking.save();
+    await (booking as any).save();
 
     // TODO: Send status update email to customer
 

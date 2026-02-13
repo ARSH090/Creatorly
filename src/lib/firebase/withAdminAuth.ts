@@ -11,10 +11,10 @@ initAdmin();
  * Middleware to protect admin routes
  * Verifies Firebase token and checks for admin custom claim
  */
-export async function withAdminAuth(
-    handler: (req: NextRequest, user: any) => Promise<Response>
+export function withAdminAuth(
+    handler: (req: NextRequest, user: any, context: any) => Promise<Response>
 ) {
-    return async (req: NextRequest) => {
+    return async (req: NextRequest, context: any) => {
         try {
             // Get authorization header
             const authHeader = req.headers.get('authorization');
@@ -54,7 +54,7 @@ export async function withAdminAuth(
             };
 
             // Call the actual handler
-            const response = await handler(req, user);
+            const response = await handler(req, user, context);
 
             return response;
         } catch (error: any) {
@@ -98,7 +98,7 @@ export async function logAdminAction(
             adminEmail,
             action,
             targetType,
-            targetId,
+            targetId: targetId as any,
             changes,
             ipAddress,
             userAgent,

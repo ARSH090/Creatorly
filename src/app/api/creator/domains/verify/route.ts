@@ -10,7 +10,7 @@ import { hasFeature } from '@/lib/utils/planLimits';
  * Verify custom domain DNS configuration
  * Body: { domain }
  */
-async function handler(req: NextRequest, user: any) {
+async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     // Check plan feature
@@ -43,7 +43,7 @@ async function handler(req: NextRequest, user: any) {
 
     // TODO: Implement actual DNS verification
     // For now, simulate verification
-    const isVerified = await verifyDNS(domain, customDomain.verificationToken);
+    const isVerified = await verifyDNS(domain, customDomain.verificationToken || '');
 
     if (isVerified) {
         customDomain.status = 'verified';

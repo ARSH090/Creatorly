@@ -17,6 +17,7 @@ export interface IEmailCampaign extends Document {
         bounced: number;
         unsubscribed: number;
     };
+    listId?: mongoose.Types.ObjectId;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -41,10 +42,12 @@ const EmailCampaignSchema: Schema = new Schema({
         clicked: { type: Number, default: 0 },
         bounced: { type: Number, default: 0 },
         unsubscribed: { type: Number, default: 0 }
-    }
+    },
+    listId: { type: Schema.Types.ObjectId, ref: 'EmailList' }
 }, { timestamps: true });
 
 EmailCampaignSchema.index({ creatorId: 1, status: 1 });
 
 const EmailCampaign: Model<IEmailCampaign> = mongoose.models.EmailCampaign || mongoose.model<IEmailCampaign>('EmailCampaign', EmailCampaignSchema);
+export { EmailCampaign };
 export default EmailCampaign;

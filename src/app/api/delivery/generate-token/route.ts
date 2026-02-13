@@ -26,12 +26,12 @@ export async function POST(req: NextRequest) {
         });
 
         // 3. Persist Token for usage tracking
-        await DownloadToken.create({
+        await (DownloadToken as any).create({
             token,
             orderId: order._id,
             productId: productId,
             expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
-            maxUsage: 5
+            maxDownloads: 5
         });
 
         return NextResponse.json({ token });

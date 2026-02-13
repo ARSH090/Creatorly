@@ -8,7 +8,7 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
  * GET /api/creator/availability
  * Get calendar availability settings
  */
-async function getHandler(req: NextRequest, user: any) {
+async function getHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const availability = await Availability.findOne({ creatorId: user._id });
@@ -32,7 +32,7 @@ async function getHandler(req: NextRequest, user: any) {
  * Set calendar availability
  * Body: { timezone?, schedule, bufferMinutes?, maxBookingsPerDay? }
  */
-async function postHandler(req: NextRequest, user: any) {
+async function postHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const body = await req.json();
