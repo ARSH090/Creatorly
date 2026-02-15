@@ -2,20 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import User from '@/lib/models/User';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { sanitizeHTML } from '@/utils/sanitizers';
+import { successResponse, errorResponse } from '@/types/api';
 
 import { ProductSchema } from '@/lib/validation/schemas';
 
-export const POST = withAuth(async (req, user) => {
+export const POST = withCreatorAuth(async (req, user) => {
     try {
         const body = await req.json();
         const validation = ProductSchema.safeParse(body);
 
         if (!validation.success) {
-            return NextResponse.json({
-                error: 'Validation failed',
-                details: validation.error.format()
-            }, { status: 400 });
+            return NextResponse.json(
+                errorResponse('Validation failed', validation.error.format()),
+                { status: 400 }
+            );
         }
 
         const data = validation.data;
@@ -29,15 +31,17 @@ export const POST = withAuth(async (req, user) => {
         });
 
         if (currentCount >= maxProducts) {
-            return NextResponse.json({
-                error: 'Plan limit reached',
-                current: currentCount,
-                limit: maxProducts,
-                upgradeUrl: '/dashboard/upgrade'
-            }, { status: 403 });
+            return NextResponse.json(
+                errorResponse('Plan limit reached', {
+                    current: currentCount,
+                    limit: maxProducts,
+                    upgradeUrl: '/dashboard/upgrade'
+                }),
+                { status: 403 }
+            );
         }
 
-        const { sanitizeHTML } = await import('@/lib/security/sanitization');
+
 
         // 2. Map Validated Data to Product Schema
         const productData = {
@@ -70,18 +74,17 @@ export const POST = withAuth(async (req, user) => {
         // 3. Create Product
         const product = await Product.create(productData);
 
-        return NextResponse.json({
-            success: true,
-            productId: product._id,
-            product
-        }, { status: 201 });
+        return NextResponse.json(
+            successResponse(product, 'Product created successfully'),
+            { status: 201 }
+        );
 
     } catch (error: any) {
         console.error('Product Creation Error:', error);
-        return NextResponse.json({
-            error: 'Failed to create product',
-            details: error.message
-        }, { status: 500 });
+        return NextResponse.json(
+            errorResponse('Failed to create product', error.message),
+            { status: 500 }
+        );
     }
 });
 
@@ -102,8 +105,8 @@ export async function GET(req: NextRequest) {
         };
         const products = await Product.find(query).sort({ createdAt: -1 });
 
-        return NextResponse.json(products);
+        return NextResponse.json(successResponse(products));
     } catch (error: any) {
-        return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
+        return NextResponse.json(errorResponse('Failed to fetch products'), { status: 500 });
     }
 }

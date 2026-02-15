@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Order } from '@/lib/models/Order';
-import { withAdminAuth, logAdminAction } from '@/lib/firebase/withAdminAuth';
+import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { logAdminAction } from '@/lib/admin/logger';
 
 /**
  * POST /api/admin/orders/:id/refund

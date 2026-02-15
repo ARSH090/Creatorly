@@ -61,7 +61,7 @@ function RegisterFormContent() {
         }
 
         try {
-            await signUp(formData.email, formData.password);
+            await signUp(formData.email, formData.password, formData.displayName);
             setSuccess('Account created successfully! Redirecting...');
             setTimeout(() => {
                 router.push('/dashboard');

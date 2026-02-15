@@ -1,11 +1,18 @@
 import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
-import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
-
-import { UserRegistrationSchema } from '@/lib/validations';
+import { verifyFirebaseToken } from '@/lib/firebase/verifyToken';
 import { RedisRateLimiter } from '@/lib/security/redis-rate-limiter';
 import { checkDeviceAbuse, registerDevice } from '@/lib/security/abuse-detection';
+import { successResponse, errorResponse } from '@/types/api';
+import { z } from 'zod';
+
+const registerSchema = z.object({
+    idToken: z.string().min(1),
+    displayName: z.string().min(2).max(100),
+    fingerprint: z.string().optional(),
+    username: z.string().optional(), // Optional, generated if missing
+});
 
 export async function POST(req: Request) {
     try {
@@ -14,81 +21,82 @@ export async function POST(req: Request) {
         const userAgent = req.headers.get('user-agent') || 'Unknown';
 
         // 1. Rate Limiting
-        const isAllowed = await RedisRateLimiter.check('register', 5, 60 * 60 * 1000, ip); // 5 attempts per hour
+        const isAllowed = await RedisRateLimiter.check('register', 10, 60 * 60 * 1000, ip);
 
         if (!isAllowed) {
             return NextResponse.json(
-                { error: 'Too many registration attempts. Please try again later.' },
+                errorResponse('Too many registration attempts. Please try again later.'),
                 { status: 429 }
             );
         }
 
         // 2. Parse and validate request body
         const body = await req.json();
-
-        // Auto-generate temporary username if not provided
-        if (!body.username) {
-            const tempId = Math.random().toString(36).substring(2, 7);
-            body.username = `user_${tempId}`;
-        }
-
-        const validation = UserRegistrationSchema.safeParse(body);
+        const validation = registerSchema.safeParse(body);
 
         if (!validation.success) {
-            const fieldErrors = validation.error.flatten().fieldErrors;
-            const errorMessage = Object.values(fieldErrors)[0]?.[0] || 'Validation failed';
-            return NextResponse.json({
-                error: errorMessage,
-                details: fieldErrors
-            }, { status: 400 });
+            return NextResponse.json(
+                errorResponse('Validation error', validation.error.flatten().fieldErrors),
+                { status: 400 }
+            );
         }
 
-        const { email, password, username, displayName, fingerprint } = validation.data;
+        const { idToken, displayName, fingerprint, username } = validation.data;
 
-        // 3. Security & Abuse Check (Fingerprinting)
-        // If fingerprint is provided, check for abuse. 
-        // Note: We prioritize blocking abuse over allowing signup if fingerprint is missing in a high-security context.
+        // 3. Address Abuse Check
         if (fingerprint) {
-            const abuseCheck = await checkDeviceAbuse(fingerprint, ip, userAgent, 'free'); // Defaulting to free plan for now
+            const abuseCheck = await checkDeviceAbuse(fingerprint, ip, userAgent, 'free');
             if (abuseCheck.blocked) {
                 return NextResponse.json(
-                    { error: abuseCheck.reason || 'Registration blocked due to suspicious activity.' },
+                    errorResponse(abuseCheck.reason || 'Registration blocked due to suspicious activity.'),
                     { status: 403 }
                 );
             }
         }
 
-        await connectToDatabase();
-
-        // 4. Check if user already exists
-        const existingUser = await User.findOne({
-            $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }]
-        });
-
-        if (existingUser) {
-            if (existingUser.email === email.toLowerCase()) {
-                return NextResponse.json(
-                    { error: 'This email is already registered. Please log in or use a different email.' },
-                    { status: 400 }
-                );
-            } else {
-                return NextResponse.json(
-                    { error: 'This username is already taken. Please choose a different one.' },
-                    { status: 400 }
-                );
-            }
+        // 4. Verify Firebase Token
+        const auth = await verifyFirebaseToken(idToken);
+        if (!auth) {
+            return NextResponse.json(
+                errorResponse('Invalid or expired token'),
+                { status: 401 }
+            );
         }
 
-        // 5. Hash password
-        const hashedPassword = await bcrypt.hash(password, 12);
+        const { uid: firebaseUid, email, picture: avatar } = auth.decodedToken;
 
-        // 6. Create user
-        const user = await User.create({
-            email: email.toLowerCase(),
-            password: hashedPassword,
-            username: username.toLowerCase(),
+        await connectToDatabase();
+
+        // 5. Check if user already exists
+        let user = await User.findOne({ firebaseUid });
+
+        if (user) {
+            return NextResponse.json(
+                errorResponse('User already exists'),
+                { status: 409 }
+            );
+        }
+
+        // 6. Generate Username if not provided
+        const finalUsername = username || `user_${Math.random().toString(36).substring(2, 7)}`;
+
+        // Check username uniqueness
+        const existingUsername = await User.findOne({ username: finalUsername });
+        if (existingUsername) {
+            return NextResponse.json(
+                errorResponse('Username already taken'),
+                { status: 409 }
+            );
+        }
+
+        // 7. Create User
+        user = await User.create({
+            firebaseUid,
+            email,
             displayName,
-            // Initialize with default plan limits (Free Tier)
+            username: finalUsername,
+            avatar: avatar || null,
+            role: 'customer', // Default role
             planLimits: {
                 maxProducts: 3,
                 maxStorageMb: 100,
@@ -98,42 +106,25 @@ export async function POST(req: Request) {
             }
         });
 
-        // 7. Register Device (if fingerprint provided)
+        // 8. Register Device
         if (fingerprint) {
             try {
                 await registerDevice(fingerprint, user._id.toString(), ip, userAgent, 'free');
             } catch (deviceError) {
                 console.error('Failed to register device:', deviceError);
-                // Non-blocking error, user is created
             }
         }
 
-        return NextResponse.json({
-            success: true,
-            message: 'User created successfully',
-            user: {
-                id: user._id,
-                email: user.email,
-                username: user.username,
-                displayName: user.displayName
-            }
-        }, { status: 201 });
+        return NextResponse.json(
+            successResponse(user, 'User registered successfully'),
+            { status: 201 }
+        );
 
     } catch (error: any) {
         console.error('Registration API error:', error);
-
-        // Handle MongoDB duplicate key errors
-        if (error.code === 11000) {
-            const field = Object.keys(error.keyPattern)[0];
-            return NextResponse.json(
-                { error: `This ${field} is already registered. Please try a different one.` },
-                { status: 400 }
-            );
-        }
-
-        return NextResponse.json({
-            error: 'Failed to create account. Please try again.',
-            details: error?.message || error
-        }, { status: 500 });
+        return NextResponse.json(
+            errorResponse('Internal server error', error.message),
+            { status: 500 }
+        );
     }
 }

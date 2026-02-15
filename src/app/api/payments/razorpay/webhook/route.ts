@@ -6,7 +6,128 @@ import { Product } from '@/lib/models/Product';
 import { ProcessedWebhook } from '@/lib/models/ProcessedWebhook';
 import { Affiliate } from '@/lib/models/Affiliate';
 import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
+import Subscription from '@/lib/models/Subscription';
 import { generateDownloadToken } from '@/lib/services/downloadToken';
+import mongoose from 'mongoose';
+
+/**
+ * Helper to process a successful order (One-time or Subscription Renewal)
+ */
+async function processSuccessfulOrder(order: any) {
+    if (order.status === 'processing_complete') return; // Idempotency check 
+
+    // 1. Generate download tokens for digital products
+    for (const item of order.items) {
+        const product = await Product.findById(item.productId);
+
+        if (product && ['digital', 'course'].includes(product.type)) {
+            await generateDownloadToken(
+                order._id.toString(),
+                item.productId.toString(),
+                product.maxDownloads || 3,
+                product.downloadExpiryDays || 30
+            );
+        }
+    }
+
+    // 2. Calculate affiliate commission
+    if (order.affiliateId) {
+        const affiliate = await Affiliate.findOne({
+            creatorId: order.creatorId,
+            _id: order.affiliateId,
+            status: 'active'
+        });
+
+        if (affiliate) {
+            const commission = (order.total * affiliate.commissionRate) / 100;
+
+            order.commissionAmount = commission;
+            await order.save();
+
+            // Update affiliate stats
+            await Affiliate.updateOne(
+                { _id: affiliate._id },
+                {
+                    $inc: {
+                        totalSales: 1,
+                        totalCommission: commission
+                    }
+                }
+            );
+
+            console.log(`Affiliate commission: ₹${commission} for affiliate ${affiliate.affiliateCode}`);
+        }
+    }
+
+    // 3. Track purchase analytics event
+    for (const item of order.items) {
+        await (AnalyticsEvent as any).create({
+            creatorId: order.creatorId,
+            productId: item.productId,
+            eventType: 'purchase',
+            source: (order as any).metadata?.source || 'direct',
+            campaign: (order as any).metadata?.campaign,
+            metadata: {
+                orderId: order._id,
+                amount: item.price * (item.quantity || 1),
+                isSubscription: !!order.subscriptionId
+            },
+            timestamp: new Date(),
+            day: new Date().toISOString().split('T')[0],
+            hour: new Date().toISOString().slice(0, 13)
+        });
+    }
+
+    // 4. Send emails
+    try {
+        const { sendPaymentConfirmationEmail, sendDownloadInstructionsEmail, sendAffiliateNotificationEmail } = await import('@/lib/services/email');
+
+        await sendPaymentConfirmationEmail(
+            order.customerEmail,
+            order._id.toString(),
+            order.total,
+            order.items
+        );
+
+        // Send download instructions if applicable
+        const digitalItems = order.items.filter((i: any) => ['digital', 'course'].includes(i.type));
+        if (digitalItems.length > 0) {
+            await sendDownloadInstructionsEmail(
+                order.customerEmail,
+                order._id.toString(),
+                digitalItems.map((i: any) => ({ name: i.name, productId: i.productId.toString() }))
+            );
+        }
+
+        // Send affiliate notification if applicable
+        if (order.affiliateId && order.commissionAmount && order.commissionAmount > 0) {
+            const { User } = await import('@/lib/models/User');
+            const { Affiliate } = await import('@/lib/models/Affiliate');
+            const affiliateDoc = await Affiliate.findOne({ _id: order.affiliateId });
+
+            if (affiliateDoc) {
+                const affiliateUser = await User.findById(affiliateDoc.affiliateId);
+                if (affiliateUser && affiliateUser.email) {
+                    await sendAffiliateNotificationEmail(
+                        affiliateUser.email,
+                        affiliateDoc.affiliateCode,
+                        order.commissionAmount,
+                        order._id.toString()
+                    );
+                }
+            }
+        }
+
+    } catch (emailError) {
+        console.error('Failed to send emails for order:', order._id, emailError);
+    }
+
+    // Mark as processed internally to avoid re-running if logic is called multiple times
+    // (Though idempotency is primarily handled at webhook level)
+}
+
+
+
 
 /**
  * POST /api/payments/razorpay/webhook
@@ -189,6 +310,71 @@ export async function POST(req: NextRequest) {
             console.log(`Order ${order._id} completed successfully`);
 
             return NextResponse.json({ status: 'success', orderId: order._id });
+        }
+
+        // 9. Subscription Authenticated (Active)
+        if (eventType === 'subscription.authenticated') {
+            const subId = payload.subscription.entity.id;
+            const sub = await Subscription.findOne({ razorpaySubscriptionId: subId });
+
+            if (sub) {
+                sub.status = 'active';
+                sub.startDate = new Date();
+                await sub.save();
+            }
+            return NextResponse.json({ status: 'subscription_activated' });
+        }
+
+        // 10. Subscription Charged (Renewal or First Payment)
+        if (eventType === 'subscription.charged') {
+            const subId = payload.subscription.entity.id;
+            const paymentId = payload.payment.entity.id;
+            const amount = payload.payment.entity.amount / 100;
+
+            const sub = await Subscription.findOne({ razorpaySubscriptionId: subId });
+
+            if (sub) {
+                sub.status = 'active';
+                sub.lastPaymentId = paymentId;
+                sub.renewalCount = (sub.renewalCount || 0) + 1;
+
+                const currentEnd = sub.endDate > new Date() ? sub.endDate : new Date();
+                const newEnd = new Date(currentEnd);
+                if (sub.billingPeriod === 'monthly') newEnd.setMonth(newEnd.getMonth() + 1);
+                else if (sub.billingPeriod === 'yearly') newEnd.setFullYear(newEnd.getFullYear() + 1);
+
+                sub.endDate = newEnd;
+                await sub.save();
+
+                const product = await Product.findById(sub.productId);
+                if (product) {
+                    await Order.create({
+                        creatorId: sub.userId,
+                        items: [{
+                            productId: product._id,
+                            name: product.name,
+                            price: amount,
+                            quantity: 1,
+                            type: 'subscription'
+                        }],
+                        userId: sub.userId,
+                        customerEmail: sub.razorpayCustomerId || 'subscription@user.com',
+                        amount: amount,
+                        total: amount,
+                        currency: 'INR',
+                        razorpayOrderId: payload.payment.entity.order_id || 'sub_renewal',
+                        razorpayPaymentId: paymentId,
+                        paymentStatus: 'paid',
+                        paidAt: new Date(),
+                        subscriptionId: sub._id,
+                        metadata: {
+                            subscriptionId: subId,
+                            renewalCount: sub.renewalCount
+                        }
+                    });
+                }
+            }
+            return NextResponse.json({ status: 'subscription_charged' });
         }
 
         // Handle refund

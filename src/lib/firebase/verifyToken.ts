@@ -4,7 +4,8 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 
 export interface AuthenticatedUser {
     firebaseUid: string;
-    mongoUser: any; // Will be IUser type
+    mongoUser: any;
+    decodedToken: any;
 }
 
 /**
@@ -46,7 +47,7 @@ export async function verifyFirebaseToken(
             } as any);
         }
 
-        return { firebaseUid, mongoUser };
+        return { firebaseUid, mongoUser, decodedToken };
     } catch (error) {
         console.error('Firebase token verification failed:', error);
         return null;

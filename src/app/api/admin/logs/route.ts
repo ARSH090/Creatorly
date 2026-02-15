@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import AdminLog from '@/lib/models/AdminLog';
-import { withAdminAuth } from '@/lib/firebase/withAdminAuth';
+import { withAdminAuth } from '@/lib/firebase/withAuth';
 
 /**
  * GET /api/admin/logs

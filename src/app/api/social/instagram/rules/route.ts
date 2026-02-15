@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withCreatorAuth } from '@/lib/firebase/withAuth';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { AutoReplyRule } from '@/lib/models/AutoReplyRule';
 import { z } from 'zod';
+import { sanitizeHTML } from '@/utils/sanitizers';
+import { successResponse, errorResponse } from '@/types/api';
 
 const ruleSchema = z.object({
     triggerType: z.enum(['comment', 'dm']),
@@ -16,26 +18,29 @@ const ruleSchema = z.object({
 /**
  * GET: Fetch all rules for the creator
  */
-export const GET = withAuth(async (req, user) => {
+export const GET = withCreatorAuth(async (req, user) => {
     try {
         await connectToDatabase();
         const rules = await AutoReplyRule.find({ creatorId: user._id }).sort({ createdAt: -1 });
-        return NextResponse.json({ rules });
-    } catch (error) {
-        return NextResponse.json({ error: 'Failed to fetch rules' }, { status: 500 });
+        return NextResponse.json(successResponse({ rules }));
+    } catch (error: any) {
+        return NextResponse.json(errorResponse('Failed to fetch rules', error.message), { status: 500 });
     }
 });
 
 /**
  * POST: Create a new automation rule
  */
-export const POST = withAuth(async (req, user) => {
+export const POST = withCreatorAuth(async (req, user) => {
     try {
         const body = await req.json();
         const result = ruleSchema.safeParse(body);
 
         if (!result.success) {
-            return NextResponse.json({ error: result.error.flatten().fieldErrors }, { status: 400 });
+            return NextResponse.json(
+                errorResponse('Validation failed', result.error.flatten().fieldErrors),
+                { status: 400 }
+            );
         }
 
         await connectToDatabase();
@@ -44,7 +49,7 @@ export const POST = withAuth(async (req, user) => {
         // const plan = await Plan.findById(user.planId);
         // if (plan.limits.automations <= currentRulesCount) return 402;
 
-        const { sanitizeHTML } = await import('@/lib/security/sanitization');
+
 
         const ruleData = {
             ...result.data,
@@ -55,8 +60,11 @@ export const POST = withAuth(async (req, user) => {
         const rule = await AutoReplyRule.create(ruleData);
 
 
-        return NextResponse.json({ rule }, { status: 201 });
-    } catch (error) {
-        return NextResponse.json({ error: 'Failed to create rule' }, { status: 500 });
+        return NextResponse.json(
+            successResponse({ rule }, 'Rule created successfully'),
+            { status: 201 }
+        );
+    } catch (error: any) {
+        return NextResponse.json(errorResponse('Failed to create rule', error.message), { status: 500 });
     }
 });

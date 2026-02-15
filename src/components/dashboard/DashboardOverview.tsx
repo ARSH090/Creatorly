@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Users, ShoppingBag, Wallet, Eye, ArrowRight, Plus, Zap } from "lucide-react";
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/lib/firebase/client';
 
 // NOTE: Recharts is needed for charts. If not installed, these will need to be installed.
 // Assuming recharts is available based on previous context or requirements, otherwise will use simple visual placeholders to avoid build breaks if package missing.
@@ -34,7 +35,9 @@ export default function DashboardOverview() {
         const fetchAnalytics = async () => {
             if (!user) return;
             try {
-                const tokenIds = await user.getIdToken();
+                const tokenIds = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+                if (!tokenIds) throw new Error("No authenticated user found");
+
                 const res = await fetch('/api/creator/analytics', {
                     headers: {
                         'Authorization': `Bearer ${tokenIds}`
@@ -248,23 +251,22 @@ export default function DashboardOverview() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {analytics?.recentOrders?.map((order: any) => (
-                        <div key={order.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/3 hover:bg-white/5 transition-colors border border-white/5">
+                        <div key={order._id || order.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/3 hover:bg-white/5 transition-colors border border-white/5">
                             <div className="flex items-center gap-4">
                                 <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center border border-white/10">
                                     <ShoppingBag className="w-4 h-4 text-indigo-400" />
                                 </div>
                                 <div>
-                                    <p className="font-bold text-sm text-white">{order.id}</p>
+                                    <p className="font-bold text-sm text-white">{order.id || order.razorpayOrderId}</p>
                                     <p className="text-[10px] text-zinc-500">{order.customerEmail}</p>
                                 </div>
                             </div>
                             <div className="text-right">
                                 <p className="font-bold text-white text-sm">₹{order.amount}</p>
-                                <p className="text-[10px] text-zinc-500">{order.time}</p>
+                                <p className="text-[10px] text-zinc-500">{order.paidAt ? new Date(order.paidAt).toLocaleDateString() : 'Pending'}</p>
                             </div>
                         </div>
-                    ))}
-                </div>
+                    ))}                </div>
             </div>
         </div>
     );

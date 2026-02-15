@@ -2,7 +2,9 @@ import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import { withCreatorAuth } from '@/lib/firebase/withAuth';
-import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { withErrorHandler, throwError } from '@/lib/utils/errorHandler';
+import { ProductSchema } from '@/lib/validation/schemas';
+import { sanitizeHTML } from '@/utils/sanitizers';
 
 /**
  * GET /api/creator/products/:id
@@ -44,8 +46,22 @@ async function putHandler(req: NextRequest, user: any, context: any) {
         throw new Error('Product not found');
     }
 
-    // Update fields (allow partial updates)
-    Object.assign(product as any, body);
+    // Validate partial update
+    const validation = ProductSchema.partial().safeParse(body);
+
+    if (!validation.success || !validation.data) {
+        throwError.badRequest('Validation failed', validation.error?.format());
+    }
+
+    const data = validation.data!;
+
+    // Sanitize description if present
+    if (data.description) {
+        data.description = sanitizeHTML(data.description);
+    }
+
+    // Update fields safely
+    Object.assign(product, data);
 
     // Ensure critical fields are protected if necessary
     // e.g., don't allow changing creatorId
@@ -53,7 +69,6 @@ async function putHandler(req: NextRequest, user: any, context: any) {
     await product.save();
 
     return {
-        success: true,
         product,
         message: 'Product updated successfully'
     };

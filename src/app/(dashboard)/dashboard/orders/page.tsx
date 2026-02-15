@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/lib/firebase/client';
 
 export default function OrdersPage() {
     const { user } = useAuth();
@@ -16,7 +17,8 @@ export default function OrdersPage() {
         async function fetchOrders() {
             if (!user) return;
             try {
-                const tokenIds = await user.getIdToken();
+                const tokenIds = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+                if (!tokenIds) return;
                 const response = await fetch('/api/orders', {
                     headers: {
                         'Authorization': `Bearer ${tokenIds}`

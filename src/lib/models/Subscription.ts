@@ -2,7 +2,8 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ISubscription extends Document {
     userId: mongoose.Types.ObjectId;
-    planId: mongoose.Types.ObjectId;
+    planId?: mongoose.Types.ObjectId; // For Platform Plans
+    productId?: mongoose.Types.ObjectId; // For Creator Products (Memberships)
     couponId?: mongoose.Types.ObjectId;
 
     // Pricing (Locked at time of purchase)
@@ -31,7 +32,8 @@ export interface ISubscription extends Document {
 
 const SubscriptionSchema: Schema = new Schema({
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
-    productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true, index: true }, // Replaced planId
+    planId: { type: Schema.Types.ObjectId, ref: 'Plan' },
+    productId: { type: Schema.Types.ObjectId, ref: 'Product' },
     couponId: { type: Schema.Types.ObjectId, ref: 'Coupon' },
 
     originalPrice: {

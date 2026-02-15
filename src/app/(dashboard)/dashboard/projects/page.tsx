@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
+import { auth } from '@/lib/firebase/client';
 
 export default function ProjectsPage() {
     const [loading, setLoading] = useState(true);
@@ -19,7 +20,8 @@ export default function ProjectsPage() {
         async function fetchProducts() {
             if (!user) return;
             try {
-                const tokenIds = await user.getIdToken();
+                const tokenIds = auth.currentUser ? await auth.currentUser.getIdToken() : null;
+                if (!tokenIds) return;
                 const response = await fetch('/api/creator/products', {
                     headers: {
                         'Authorization': `Bearer ${tokenIds}`

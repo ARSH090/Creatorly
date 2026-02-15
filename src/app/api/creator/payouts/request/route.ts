@@ -23,7 +23,15 @@ async function handler(req: NextRequest, user: any, context: any) {
         paymentStatus: 'paid'
     });
 
-    const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0);
+    const totalRevenue = orders.reduce((sum, o) => {
+        const orderTotal = o.total || 0;
+        const commission = o.commissionAmount || 0;
+        // Creator gets Total - Commission
+        // Note: Assuming tax is handled by creator or platform. 
+        // Ideally should be (Price - GST - Fees - Commission).
+        // For now, deducting affiliate commission is the critical fix.
+        return sum + (orderTotal - commission);
+    }, 0);
 
     const existingPayouts = await Payout.find({
         creatorId: user._id,

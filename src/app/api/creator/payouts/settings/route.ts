@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
 import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { successResponse, errorResponse } from '@/types/api';
 
 /**
  * GET: Fetch current payout settings
@@ -16,11 +17,11 @@ async function getHandler(req: NextRequest, { user }: { user: any }) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({
+    return NextResponse.json(successResponse({
         payoutMethod: dbUser.payoutMethod || {},
         payoutStatus: dbUser.payoutStatus,
         payoutHoldReason: dbUser.payoutHoldReason
-    });
+    }));
 }
 
 /**
@@ -34,15 +35,15 @@ async function postHandler(req: NextRequest, { user }: { user: any }) {
 
     // Basic validation
     if (!['bank', 'paypal', 'stripe'].includes(type)) {
-        return NextResponse.json({ error: 'Invalid payout type' }, { status: 400 });
+        return NextResponse.json(errorResponse('Invalid payout type'), { status: 400 });
     }
 
     if (type === 'paypal' && !email) {
-        return NextResponse.json({ error: 'Email is required for PayPal' }, { status: 400 });
+        return NextResponse.json(errorResponse('Email is required for PayPal'), { status: 400 });
     }
 
     if ((type === 'bank' || type === 'stripe') && !accountId) {
-        return NextResponse.json({ error: 'Account ID/Number is required' }, { status: 400 });
+        return NextResponse.json(errorResponse('Account ID/Number is required'), { status: 400 });
     }
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -59,10 +60,9 @@ async function postHandler(req: NextRequest, { user }: { user: any }) {
         { new: true }
     );
 
-    return NextResponse.json({
-        message: 'Payout settings updated successfully',
+    return NextResponse.json(successResponse({
         payoutMethod: updatedUser?.payoutMethod
-    });
+    }, 'Payout settings updated successfully'));
 }
 
 export const GET = withCreatorAuth(getHandler);

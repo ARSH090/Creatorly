@@ -17,14 +17,39 @@ interface Props {
     searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-async function getProductData(slug: string) {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const res = await fetch(`${baseUrl}/api/products/slug/${slug}`, {
-        next: { revalidate: 86400 } // Cache for 24h
-    });
+import { connectToDatabase } from '@/lib/db/mongodb';
+import Product from '@/lib/models/Product';
+import User from '@/lib/models/User';
 
-    if (!res.ok) return null;
-    return res.json();
+
+
+async function getProductData(slug: string) {
+    await connectToDatabase();
+    const product = await Product.findOne({ slug, status: 'published', isActive: true });
+
+    if (!product) return null;
+
+    const creator = await User.findById(product.creatorId);
+    if (!creator) return null;
+
+    const relatedProducts = await Product.find({
+        creatorId: product.creatorId,
+        _id: { $ne: product._id },
+        status: 'published',
+        isActive: true
+    })
+        .limit(3)
+        .sort({ createdAt: -1 });
+
+    return {
+        product,
+        creator: {
+            ...creator.toObject(),
+            _id: creator._id.toString(),
+            storeName: creator.displayName || creator.username, // Fallback
+        },
+        relatedProducts: JSON.parse(JSON.stringify(relatedProducts)) // Sanitize Mongo Objects
+    };
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -134,7 +159,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
                             productName={product.name}
                         />
 
-                        <AddToCartButton productId={product._id} productName={product.name} />
+                        <AddToCartButton productId={product._id.toString()} productName={product.name} />
 
                         <div className="space-y-6 pt-8 border-t border-white/5">
                             <div className="flex items-center gap-4 p-4 bg-white/[0.03] border border-white/10 rounded-3xl">

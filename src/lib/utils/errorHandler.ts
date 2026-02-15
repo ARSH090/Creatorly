@@ -132,22 +132,22 @@ export class APIErrorClass extends Error {
  * Helper to throw common errors
  */
 export const throwError = {
-    notFound: (resource: string) => {
+    notFound: (resource: string): never => {
         throw new APIErrorClass('NOT_FOUND', `${resource} not found`, undefined, 404);
     },
-    unauthorized: (message = 'Unauthorized') => {
+    unauthorized: (message = 'Unauthorized'): never => {
         throw new APIErrorClass('UNAUTHORIZED', message, undefined, 401);
     },
-    forbidden: (message = 'Forbidden') => {
+    forbidden: (message = 'Forbidden'): never => {
         throw new APIErrorClass('FORBIDDEN', message, undefined, 403);
     },
-    badRequest: (message: string, details?: any) => {
+    badRequest: (message: string, details?: any): never => {
         throw new APIErrorClass('BAD_REQUEST', message, details, 400);
     },
-    limitReached: (message: string, current: number, limit: number) => {
+    limitReached: (message: string, current: number, limit: number): never => {
         throw new APIErrorClass('LIMIT_REACHED', message, { current, limit }, 403);
     },
-    featureNotAvailable: (feature: string, requiredPlan: string) => {
+    featureNotAvailable: (feature: string, requiredPlan: string): never => {
         throw new APIErrorClass(
             'FEATURE_NOT_AVAILABLE',
             `This feature requires ${requiredPlan} plan`,

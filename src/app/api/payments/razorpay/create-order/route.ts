@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { razorpay } from '@/lib/razorpay';
+import { razorpay } from '@/lib/payments/razorpay';
 import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
 import { getCurrentUser } from '@/lib/firebase/server-auth';

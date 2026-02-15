@@ -5,7 +5,8 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import User from '@/lib/models/User';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { getClientIp, getClientUserAgent, logAdminAction } from '@/lib/admin/authMiddleware';
+import { getClientIp, getClientUserAgent } from '@/lib/utils';
+import { logAdminAction } from '@/lib/admin/logger';
 
 const loginSchema = z.object({
   email: z.string().email().toLowerCase(),
@@ -37,13 +38,11 @@ export async function POST(req: NextRequest) {
     // Check if account is suspended
     if (user.isSuspended) {
       await logAdminAction(
-        user._id.toString(),
         email,
-        'VIEW',
-        'USER',
+        'LOGIN_FAILED',
+        'ADMIN',
         user._id.toString(),
-        email,
-        'Attempted login to suspended admin account'
+        { reason: 'Suspended account' }
       );
 
       return NextResponse.json(
@@ -128,16 +127,11 @@ export async function POST(req: NextRequest) {
     await user.save();
 
     await logAdminAction(
-      user._id.toString(),
       email,
-      'VIEW',
-      'USER',
+      'LOGIN_SUCCESS',
+      'ADMIN',
       user._id.toString(),
-      email,
-      `Admin login from IP: ${clientIp}`,
-      undefined,
-      clientIp,
-      userAgent
+      { ip: clientIp }
     );
 
     // Return pseudo-signed token for admin session

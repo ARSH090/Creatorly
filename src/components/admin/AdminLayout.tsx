@@ -78,7 +78,7 @@ const navigationItems = [
 export function AdminLayout({ children, adminName: initialName, adminEmail: initialEmail, onLogout }: AdminLayoutProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
 
   const adminName = initialName || user?.displayName || 'Admin';
   const adminEmail = initialEmail || user?.email || '';
@@ -130,7 +130,7 @@ export function AdminLayout({ children, adminName: initialName, adminEmail: init
             </div>
           )}
           <button
-            onClick={() => onLogout ? onLogout() : logout()}
+            onClick={() => onLogout ? onLogout() : signOut()}
             className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700 rounded-lg transition-colors"
           >
             <LogOut size={18} />

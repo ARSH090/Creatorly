@@ -3,7 +3,8 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
 import Product from '@/lib/models/Product';
 import { Order } from '@/lib/models/Order';
-import { withAdminAuth, logAdminAction } from '@/lib/firebase/withAdminAuth';
+import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { logAdminAction } from '@/lib/admin/logger';
 
 /**
  * GET /api/admin/users

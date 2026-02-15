@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
-import { withAdminAuth, logAdminAction } from '@/lib/firebase/withAdminAuth';
+import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { logAdminAction } from '@/lib/admin/logger';
 
 /**
  * PUT /api/admin/products/:id

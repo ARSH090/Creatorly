@@ -23,6 +23,7 @@ export interface IOrder extends Document {
     paidAt?: Date;
     commissionAmount?: number;
     affiliateId?: string;
+    subscriptionId?: mongoose.Types.ObjectId | string;
 
     // Delivery & Tracking
     downloadCount: number;
@@ -108,13 +109,14 @@ const OrderSchema: Schema = new Schema({
     deviceFingerprint: { type: String, index: true },
 
     metadata: { type: Schema.Types.Mixed, default: {} },
+    subscriptionId: { type: Schema.Types.ObjectId, ref: 'Subscription' },
     deletedAt: { type: Date, index: true }
 }, { timestamps: true });
 
 
 // Indexes for performance
 OrderSchema.index({ creatorId: 1, createdAt: -1 });
-OrderSchema.index({ productId: 1 });
+OrderSchema.index({ "items.productId": 1 });
 OrderSchema.index({ customerEmail: 1 });
 OrderSchema.index({ status: 1 });
 
