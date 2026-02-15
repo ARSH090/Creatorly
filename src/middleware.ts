@@ -8,27 +8,9 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const hostname = request.headers.get('host') || '';
 
-    // 0. Custom Domain Handling (from proxy.ts)
-    const mainDomains = ['creatorly.app', 'localhost:3000', 'creatorly-beta.vercel.app'];
-    const isMainDomain = mainDomains.some(d => hostname.includes(d));
+    // 0. Custom Domain Handling - REMOVED
+    // previously handled custom domain rewrites here
 
-    if (!isMainDomain && !pathname.startsWith('/api') && !pathname.startsWith('/_next') && !pathname.includes('.')) {
-        // Rewrite to /u/ (username logic would need a lookup or a convention)
-        // For this audit, we implement the rewrite pattern
-        const response = NextResponse.rewrite(new URL(`/custom-domain/${hostname}${pathname}`, request.url));
-
-        // Handle affiliate tracking even on custom domains
-        const refCode = request.nextUrl.searchParams.get('ref');
-        if (refCode) {
-            response.cookies.set('affiliate_ref', refCode, {
-                maxAge: 60 * 60 * 24 * 30, // 30 days
-                path: '/',
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'lax'
-            });
-        }
-        return response;
-    }
 
     // 0.5 Affiliate Booking (Ref Code)
     const refCode = request.nextUrl.searchParams.get('ref');
