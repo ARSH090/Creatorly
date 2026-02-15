@@ -1,6 +1,14 @@
 import Redis from 'ioredis';
 
-const REDIS_URL = process.env.REDIS_URL || process.env.REDIS || '';
+const getCleanRedisUrl = () => {
+  const url = process.env.REDIS_URL || process.env.REDIS || '';
+  // Fix for invalid Vercel env vars containing CLI flags (e.g. "--tls -u redis://...")
+  const match = url.match(/(rediss?:\/\/[^\s]+)/);
+  return match ? match[1] : url;
+};
+
+const REDIS_URL = getCleanRedisUrl();
+
 
 let redis: Redis | null = null;
 
