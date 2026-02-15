@@ -2,9 +2,11 @@ import Redis from 'ioredis';
 
 const getCleanRedisUrl = () => {
   const url = process.env.REDIS_URL || process.env.REDIS || '';
-  // Fix for invalid Vercel env vars containing CLI flags (e.g. "--tls -u redis://...")
-  const match = url.match(/(rediss?:\/\/[^\s]+)/);
-  return match ? match[1] : url;
+  // Fix for invalid Vercel env vars containing CLI flags (e.g. "--tls -u redis://..." or trailing " --tls")
+  // Handles both plain spaces and URL-encoded spaces (%20)
+  const cleanUrl = url.replace(/%20/g, ' ').split(' ')[0];
+  const match = cleanUrl.match(/(rediss?:\/\/[^\s]+)/);
+  return match ? match[1] : cleanUrl;
 };
 
 const REDIS_URL = getCleanRedisUrl();

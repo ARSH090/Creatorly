@@ -108,7 +108,7 @@ const couponSchema = new Schema<ICoupon>({
 });
 
 // Indexes
-couponSchema.index({ code: 1 });
+
 couponSchema.index({ status: 1 });
 couponSchema.index({ validFrom: 1, validUntil: 1 });
 

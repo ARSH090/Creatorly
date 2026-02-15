@@ -42,7 +42,7 @@ const CustomDomainSchema: Schema = new Schema({
     lastChecked: { type: Date }
 }, { timestamps: true });
 
-CustomDomainSchema.index({ domain: 1 });
+
 
 const CustomDomain: Model<ICustomDomain> = mongoose.models.CustomDomain || mongoose.model<ICustomDomain>('CustomDomain', CustomDomainSchema);
 export { CustomDomain };
