@@ -20,6 +20,8 @@ export async function POST(req: Request) {
         const ip = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
         const userAgent = req.headers.get('user-agent') || 'Unknown';
 
+        console.log('[Register API] Request received from IP:', ip);
+
         // 1. Rate Limiting
         const isAllowed = await RedisRateLimiter.check('register', 10, 60 * 60 * 1000, ip);
 

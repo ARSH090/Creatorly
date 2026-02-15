@@ -23,6 +23,11 @@ if (apps.length === 0 && projectId && clientEmail && privateKey) {
     }
 } else if (apps.length === 0) {
     console.warn('Skipping Firebase Admin initialization: Missing environment variables');
+    const missing = [];
+    if (!projectId) missing.push('FIREBASE_PROJECT_ID');
+    if (!clientEmail) missing.push('FIREBASE_CLIENT_EMAIL');
+    if (!privateKey) missing.push('FIREBASE_PRIVATE_KEY');
+    console.warn('Missing keys:', missing.join(', '));
 }
 
 let auth;
