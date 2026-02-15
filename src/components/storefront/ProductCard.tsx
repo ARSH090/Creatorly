@@ -91,7 +91,6 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
             viewport={{ once: true }}
             whileHover={{ y: -8, borderColor: theme.primaryColor + '40' }}
         >
-            <script src="https://checkout.razorpay.com/v1/checkout.js" async />
 
             {/* Product Image & Overlay */}
             <div className="relative aspect-[4/3] overflow-hidden">

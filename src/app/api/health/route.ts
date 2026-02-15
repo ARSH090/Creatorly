@@ -1,83 +1,42 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import redis from '@/lib/db/redis';
+import mongoose from 'mongoose';
 
-/**
- * GET /api/health
- * Comprehensive health check endpoint for monitoring
- */
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
-    const checks: any = {
-        timestamp: new Date().toISOString(),
-        status: 'healthy',
-        checks: {
-            api: { status: 'ok' },
-            database: { status: 'unknown' },
-            redis: { status: 'unknown' },
-            env: { status: 'unknown' }
-        }
-    };
-
-    // Check MongoDB
     try {
+        // 1. Check MongoDB Connection
         await connectToDatabase();
-        checks.checks.database = {
-            status: 'ok',
-            connected: true
-        };
-    } catch (error: any) {
-        checks.checks.database = {
-            status: 'error',
-            message: error.message
-        };
-        checks.status = 'degraded';
-    }
+        const dbStatus = mongoose.connection.readyState;
 
-    // Check Redis
-    try {
-        if (!redis) {
-            throw new Error('Redis client not initialized');
+        // 0: disconnected, 1: connected, 2: connecting, 3: disconnecting
+        const isDbHealthy = dbStatus === 1;
+
+        const healthStatus = {
+            status: isDbHealthy ? 'healthy' : 'unhealthy',
+            timestamp: new Date().toISOString(),
+            services: {
+                mongodb: {
+                    status: isDbHealthy ? 'up' : 'down',
+                    readyState: dbStatus
+                }
+            },
+            version: process.env.NEXT_PUBLIC_APP_VERSION || '1.0.0'
+        };
+
+        if (!isDbHealthy) {
+            return NextResponse.json(healthStatus, { status: 503 });
         }
-        await redis.ping();
-        checks.checks.redis = {
-            status: 'ok',
-            connected: true
-        };
+
+        return NextResponse.json(healthStatus, { status: 200 });
+
     } catch (error: any) {
-        checks.checks.redis = {
-            status: 'error',
-            message: error.message
-        };
-        checks.status = 'degraded';
+        console.error('Health check failed:', error);
+        return NextResponse.json({
+            status: 'unhealthy',
+            timestamp: new Date().toISOString(),
+            error: error.message
+        }, { status: 500 });
     }
-
-    // Check critical environment variables
-    const requiredEnvVars = [
-        'MONGODB_URI',
-        'NEXTAUTH_SECRET',
-        'RAZORPAY_KEY_ID',
-        'RAZORPAY_KEY_SECRET',
-        'AWS_ACCESS_KEY_ID',
-        'AWS_SECRET_ACCESS_KEY',
-        'FIREBASE_PROJECT_ID'
-    ];
-
-    const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
-
-    if (missingEnvVars.length > 0) {
-        checks.checks.env = {
-            status: 'error',
-            missing: missingEnvVars
-        };
-        checks.status = 'unhealthy';
-    } else {
-        checks.checks.env = {
-            status: 'ok',
-            configured: requiredEnvVars.length
-        };
-    }
-
-    const httpStatus = checks.status === 'unhealthy' ? 503 : 200;
-
-    return NextResponse.json(checks, { status: httpStatus });
 }

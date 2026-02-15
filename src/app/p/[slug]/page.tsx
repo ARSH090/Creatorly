@@ -32,6 +32,9 @@ async function getProductData(slug: string) {
     const creator = await User.findById(product.creatorId);
     if (!creator) return null;
 
+    const { default: CreatorProfile } = await import('@/lib/models/CreatorProfile');
+    const profile = await CreatorProfile.findOne({ creatorId: product.creatorId });
+
     const relatedProducts = await Product.find({
         creatorId: product.creatorId,
         _id: { $ne: product._id },
@@ -41,14 +44,24 @@ async function getProductData(slug: string) {
         .limit(3)
         .sort({ createdAt: -1 });
 
+    const theme = profile?.theme || {
+        primaryColor: '#6366f1',
+        secondaryColor: '#a855f7',
+        accentColor: '#ec4899',
+        backgroundColor: '#030303',
+        textColor: '#ffffff',
+        fontFamily: 'Inter'
+    };
+
     return {
         product,
         creator: {
             ...creator.toObject(),
             _id: creator._id.toString(),
-            storeName: creator.displayName || creator.username, // Fallback
+            storeName: creator.displayName || creator.username,
         },
-        relatedProducts: JSON.parse(JSON.stringify(relatedProducts)) // Sanitize Mongo Objects
+        theme,
+        relatedProducts: JSON.parse(JSON.stringify(relatedProducts))
     };
 }
 
@@ -88,7 +101,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
 
     if (!data) notFound();
 
-    const { product, creator, relatedProducts } = data;
+    const { product, creator, relatedProducts, theme } = data;
 
     // JSON-LD structured data
     const jsonLd = {
@@ -104,13 +117,20 @@ export default async function ProductPage({ params, searchParams }: Props) {
         offers: {
             '@type': 'Offer',
             price: product.price,
-            priceCurrency: product.currency,
+            priceCurrency: (product as any).currency || 'INR',
             availability: product.isActive ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
         }
     };
 
     return (
-        <div className="min-h-screen bg-[#030303] text-zinc-100">
+        <div
+            className="min-h-screen transition-colors duration-500"
+            style={{
+                backgroundColor: theme.backgroundColor,
+                color: theme.textColor,
+                fontFamily: theme.fontFamily
+            }}
+        >
             {/* JSON-LD injection */}
             <script
                 type="application/ld+json"
@@ -157,9 +177,10 @@ export default async function ProductPage({ params, searchParams }: Props) {
                             compareAtPrice={product.compareAtPrice}
                             currency={product.currency}
                             productName={product.name}
+                            theme={theme}
                         />
 
-                        <AddToCartButton productId={product._id.toString()} productName={product.name} />
+                        <AddToCartButton productId={product._id.toString()} productName={product.name} theme={theme} />
 
                         <div className="space-y-6 pt-8 border-t border-white/5">
                             <div className="flex items-center gap-4 p-4 bg-white/[0.03] border border-white/10 rounded-3xl">

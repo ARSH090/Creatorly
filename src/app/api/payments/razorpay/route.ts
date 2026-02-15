@@ -5,6 +5,7 @@ import Subscription from '@/lib/models/Subscription';
 import Product from '@/lib/models/Product';
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/firebase/withAuth';
+import { log } from '@/utils/logger';
 
 export const POST = withAuth(async (req, user) => {
     try {
@@ -15,9 +16,11 @@ export const POST = withAuth(async (req, user) => {
         }
 
         await connectToDatabase();
-        const product = await Product.findById(productId);
+        const product = await Product.findOne({ _id: productId, creatorId, status: 'published' });
+
         if (!product) {
-            return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+            log.warn('Attempted dashboard checkout for unavailable product', { productId, creatorId, userId: user._id });
+            return NextResponse.json({ error: 'Product not found or not published' }, { status: 404 });
         }
 
         // Handle Subscriptions

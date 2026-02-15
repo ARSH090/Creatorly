@@ -50,10 +50,12 @@ export function withErrorHandler<T = any>(
                 }
             });
         } catch (error: any) {
-            console.error('API Error:', error);
+            const { log } = await import('@/utils/logger');
+            const Sentry = await import('@sentry/nextjs');
 
             // Handle known error types
             if (error.name === 'ValidationError') {
+                log.warn('API Validation Error', { error: error.message, details: error.errors });
                 return NextResponse.json<APIResponse>({
                     success: false,
                     error: {
@@ -65,6 +67,7 @@ export function withErrorHandler<T = any>(
             }
 
             if (error.name === 'UnauthorizedError' || error.code === 'UNAUTHORIZED') {
+                log.warn('API Unauthorized access attempt', { message: error.message });
                 return NextResponse.json<APIResponse>({
                     success: false,
                     error: {
@@ -75,6 +78,7 @@ export function withErrorHandler<T = any>(
             }
 
             if (error.code === 'LIMIT_REACHED' || error.code === 'FEATURE_NOT_AVAILABLE') {
+                log.info('API Limit/Feature restriction triggered', { code: error.code, message: error.message });
                 return NextResponse.json<APIResponse>({
                     success: false,
                     error: {
@@ -87,6 +91,7 @@ export function withErrorHandler<T = any>(
             }
 
             if (error.name === 'MongoError' && error.code === 11000) {
+                log.warn('API Duplicate entry attempt', { keyPattern: error.keyPattern });
                 return NextResponse.json<APIResponse>({
                     success: false,
                     error: {
@@ -97,7 +102,14 @@ export function withErrorHandler<T = any>(
                 }, { status: 409 });
             }
 
-            // Generic server error
+            // Generic server error - log as error and notify Sentry
+            log.error('API INTERNAL_ERROR:', {
+                message: error.message,
+                stack: error.stack,
+                path: args[0]?.nextUrl?.pathname
+            });
+            Sentry.captureException(error);
+
             return NextResponse.json<APIResponse>({
                 success: false,
                 error: {

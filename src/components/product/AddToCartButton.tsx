@@ -6,9 +6,11 @@ import { ShoppingCart, Check, Loader2 } from 'lucide-react';
 interface AddToCartButtonProps {
     productId: string;
     productName: string;
+    theme?: any;
 }
 
-export default function AddToCartButton({ productId, productName }: AddToCartButtonProps) {
+export default function AddToCartButton({ productId, productName, theme }: AddToCartButtonProps) {
+    const primaryColor = theme?.primaryColor || '#6366f1';
     const [status, setStatus] = useState<'idle' | 'loading' | 'success'>('idle');
 
     const handleAddToCart = async () => {
@@ -29,9 +31,13 @@ export default function AddToCartButton({ productId, productName }: AddToCartBut
             onClick={handleAddToCart}
             disabled={status !== 'idle'}
             className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 active:scale-95 ${status === 'success'
-                    ? 'bg-emerald-500 text-white'
-                    : 'bg-indigo-500 hover:bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
+                ? 'bg-emerald-500 text-white'
+                : 'text-white'
                 }`}
+            style={status !== 'success' ? {
+                backgroundColor: primaryColor,
+                boxShadow: `0 10px 15px -3px ${primaryColor}20`
+            } : {}}
         >
             {status === 'loading' ? (
                 <Loader2 className="w-5 h-5 animate-spin" />

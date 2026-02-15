@@ -25,13 +25,14 @@ export async function POST(req: NextRequest) {
         let creatorId = null;
 
         for (const cartItem of cart) {
-            const product = await Product.findById(cartItem.id);
-            if (!product) continue;
+            const product = await Product.findOne({ _id: cartItem.id, status: 'published' });
+            if (!product) {
+                return NextResponse.json({ error: `Product ${cartItem.id} is not available for purchase` }, { status: 400 });
+            }
 
             // Only support single creator checkout for now
             if (!creatorId) creatorId = product.creatorId;
 
-            // ... existing product processing ...
             totalAmount += product.price * cartItem.quantity;
             items.push({
                 productId: product._id,

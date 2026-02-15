@@ -21,37 +21,48 @@ export async function connectToDatabase() {
         throw new Error('Please define MONGODB_URI in your environment variables');
     }
 
-    if (cached.conn) {
-        return cached.conn;
-    }
+    const maxRetries = 3;
+    let retries = 0;
 
-    if (!cached.promise) {
-        const opts: any = {
-            ...mongoSecurityOptions,
-            bufferCommands: false,
-            maxPoolSize: 10,
-            serverSelectionTimeoutMS: 5000, // 5 seconds to fail fast if no connection
-            socketTimeoutMS: 45000, // 45 seconds to close idle sockets
-            family: 4, // Use IPv4, skip IPv6
+    while (retries < maxRetries) {
+        try {
+            if (cached.conn) {
+                return cached.conn;
+            }
 
-        };
+            if (!cached.promise) {
+                const opts: any = {
+                    ...mongoSecurityOptions,
+                    bufferCommands: false,
+                    maxPoolSize: 10,
+                    serverSelectionTimeoutMS: 5000,
+                    socketTimeoutMS: 45000,
+                    family: 4,
+                };
 
-        console.log('📡 Attempting MongoDB connection...');
-        cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-            console.log('✅ MongoDB connected successfully');
-            return mongoose;
-        }).catch(err => {
-            console.error('❌ MongoDB connection error:', err);
+                console.log(`📡 Attempting MongoDB connection (Attempt ${retries + 1}/${maxRetries})...`);
+                cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
+                    console.log('✅ MongoDB connected successfully');
+                    return mongoose;
+                });
+            }
+
+            cached.conn = await cached.promise;
+            return cached.conn;
+        } catch (e) {
+            retries++;
+            console.error(`❌ MongoDB connection attempt ${retries} failed:`, e);
             cached.promise = null;
-            throw err;
-        });
-    }
 
-    try {
-        cached.conn = await cached.promise;
-    } catch (e) {
-        cached.promise = null;
-        throw e;
+            if (retries >= maxRetries) {
+                throw e;
+            }
+
+            // Exponential backoff: 1s, 2s, 4s
+            const delay = Math.pow(2, retries) * 1000;
+            console.log(`Waiting ${delay}ms before next retry...`);
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
     }
 
     return cached.conn;

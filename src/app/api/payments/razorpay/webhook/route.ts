@@ -9,6 +9,7 @@ import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
 import Subscription from '@/lib/models/Subscription';
 import { generateDownloadToken } from '@/lib/services/downloadToken';
 import mongoose from 'mongoose';
+import { log } from '@/utils/logger';
 
 /**
  * Helper to process a successful order (One-time or Subscription Renewal)
@@ -55,7 +56,7 @@ async function processSuccessfulOrder(order: any) {
                 }
             );
 
-            console.log(`Affiliate commission: ₹${commission} for affiliate ${affiliate.affiliateCode}`);
+            log.info(`Affiliate commission: ₹${commission} for affiliate ${affiliate.affiliateCode}`, { orderId: order._id, affiliateId: affiliate._id });
         }
     }
 
@@ -118,16 +119,10 @@ async function processSuccessfulOrder(order: any) {
             }
         }
 
-    } catch (emailError) {
-        console.error('Failed to send emails for order:', order._id, emailError);
+    } catch (emailError: any) {
+        log.error('Failed to send emails for order:', { orderId: order._id, error: emailError.message });
     }
-
-    // Mark as processed internally to avoid re-running if logic is called multiple times
-    // (Though idempotency is primarily handled at webhook level)
 }
-
-
-
 
 /**
  * POST /api/payments/razorpay/webhook
@@ -155,7 +150,7 @@ export async function POST(req: NextRequest) {
             .digest('hex');
 
         if (signature !== expectedSignature) {
-            console.error('Invalid webhook signature');
+            log.error('Invalid webhook signature received', { signature, expectedSignature });
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
@@ -169,7 +164,7 @@ export async function POST(req: NextRequest) {
         const existing = await ProcessedWebhook.findOne({ webhookId });
 
         if (existing) {
-            console.log(`Webhook ${webhookId} already processed`);
+            log.info(`Webhook ${webhookId} already processed`, { eventType });
             return NextResponse.json({ status: 'already_processed' });
         }
 
@@ -189,7 +184,7 @@ export async function POST(req: NextRequest) {
             const order = await Order.findOne({ razorpayOrderId });
 
             if (!order) {
-                console.error(`Order not found for Razorpay order: ${razorpayOrderId}`);
+                log.error(`Order not found for Razorpay order: ${razorpayOrderId}`, { razorpayPaymentId });
                 return NextResponse.json({ error: 'Order not found' }, { status: 404 });
             }
 
@@ -199,79 +194,61 @@ export async function POST(req: NextRequest) {
             order.paidAt = new Date();
             await order.save();
 
-            // 5. Generate download tokens for digital products
-            for (const item of order.items) {
-                const product = await Product.findById(item.productId);
-
-                if (product && ['digital', 'course'].includes(product.type)) {
-                    await generateDownloadToken(
-                        order._id.toString(),
-                        item.productId.toString(),
-                        product.maxDownloads || 3,
-                        product.downloadExpiryDays || 30
-                    );
-                }
-            }
-
-            // 6. Calculate affiliate commission
-            if (order.affiliateId) {
-                const affiliate = await Affiliate.findOne({
-                    creatorId: order.creatorId,
-                    _id: order.affiliateId,
-                    status: 'active'
-                });
-
-                if (affiliate) {
-                    const commission = (order.total * affiliate.commissionRate) / 100;
-
-                    order.commissionAmount = commission;
-                    await order.save();
-
-                    // Update affiliate stats
-                    await Affiliate.updateOne(
-                        { _id: affiliate._id },
-                        {
-                            $inc: {
-                                totalSales: 1,
-                                totalCommission: commission
-                            }
-                        }
-                    );
-
-                    console.log(`Affiliate commission: ₹${commission} for affiliate ${affiliate.affiliateCode}`);
-                }
-            }
-
-            // 7. Track purchase analytics event
-            for (const item of order.items) {
-                await (AnalyticsEvent as any).create({
-                    creatorId: order.creatorId,
-                    productId: item.productId,
-                    eventType: 'purchase',
-                    source: (order as any).metadata?.source || 'direct',
-                    campaign: (order as any).metadata?.campaign,
-                    metadata: {
-                        orderId: order._id,
-                        amount: item.price * (item.quantity || 1)
-                    },
-                    timestamp: new Date(),
-                    day: new Date().toISOString().split('T')[0],
-                    hour: new Date().toISOString().slice(0, 13)
-                });
-            }
-
-            // 8. Send order confirmation email
+            // 5. Fulfillment logic
             try {
+                // Generate download tokens
+                for (const item of order.items) {
+                    const product = await Product.findById(item.productId);
+                    if (product && ['digital', 'course'].includes(product.type)) {
+                        await generateDownloadToken(
+                            order._id.toString(),
+                            item.productId.toString(),
+                            product.maxDownloads || 3,
+                            product.downloadExpiryDays || 30
+                        );
+                    }
+                }
+
+                // Affiliate commission
+                if (order.affiliateId) {
+                    const affiliate = await Affiliate.findOne({
+                        creatorId: order.creatorId,
+                        _id: order.affiliateId,
+                        status: 'active'
+                    });
+
+                    if (affiliate) {
+                        const commission = (order.total * affiliate.commissionRate) / 100;
+                        order.commissionAmount = commission;
+                        await order.save();
+
+                        await Affiliate.updateOne(
+                            { _id: affiliate._id },
+                            { $inc: { totalSales: 1, totalCommission: commission } }
+                        );
+                        log.info(`Commission ₹${commission} recorded for affiliate ${affiliate.affiliateCode}`);
+                    }
+                }
+
+                // Analytics
+                for (const item of order.items) {
+                    await (AnalyticsEvent as any).create({
+                        creatorId: order.creatorId,
+                        productId: item.productId,
+                        eventType: 'purchase',
+                        source: (order as any).metadata?.source || 'direct',
+                        campaign: (order as any).metadata?.campaign,
+                        metadata: { orderId: order._id, amount: item.price * (item.quantity || 1) },
+                        timestamp: new Date(),
+                        day: new Date().toISOString().split('T')[0],
+                        hour: new Date().toISOString().slice(0, 13)
+                    });
+                }
+
+                // Emails
                 const { sendPaymentConfirmationEmail, sendDownloadInstructionsEmail, sendAffiliateNotificationEmail } = await import('@/lib/services/email');
+                await sendPaymentConfirmationEmail(order.customerEmail, order._id.toString(), order.total, order.items);
 
-                await sendPaymentConfirmationEmail(
-                    order.customerEmail,
-                    order._id.toString(),
-                    order.total,
-                    order.items
-                );
-
-                // Send download instructions if applicable
                 const digitalItems = order.items.filter(i => ['digital', 'course'].includes(i.type));
                 if (digitalItems.length > 0) {
                     await sendDownloadInstructionsEmail(
@@ -281,35 +258,37 @@ export async function POST(req: NextRequest) {
                     );
                 }
 
-                // Send affiliate notification if applicable
                 if (order.affiliateId && order.commissionAmount && order.commissionAmount > 0) {
-                    // Need to fetch user email for affiliate
                     const { User } = await import('@/lib/models/User');
-                    // We need the affiliate document again to get the affiliateId (User ID)
-                    const { Affiliate } = await import('@/lib/models/Affiliate');
-                    const affiliateDoc = await Affiliate.findOne({ _id: order.affiliateId });
-
+                    const affiliateDoc = await Affiliate.findById(order.affiliateId);
                     if (affiliateDoc) {
                         const affiliateUser = await User.findById(affiliateDoc.affiliateId);
-                        if (affiliateUser && affiliateUser.email) {
-                            await sendAffiliateNotificationEmail(
-                                affiliateUser.email,
-                                affiliateDoc.affiliateCode,
-                                order.commissionAmount,
-                                order._id.toString()
-                            );
+                        if (affiliateUser?.email) {
+                            await sendAffiliateNotificationEmail(affiliateUser.email, affiliateDoc.affiliateCode, order.commissionAmount, order._id.toString());
                         }
                     }
                 }
-
-            } catch (emailError) {
-                console.error('Failed to send emails for order:', order._id, emailError);
-                // Don't fail the webhook processing just because email failed
+            } catch (err: any) {
+                log.error(`Order ${order._id} fulfillment encountered issues`, { error: err.message });
+                // Don't fail the whole webhook if fulfillment logic has partial failure
             }
 
-            console.log(`Order ${order._id} completed successfully`);
-
+            log.info(`Order ${order._id} completed successfully via webhook`, { razorpayOrderId, razorpayPaymentId });
             return NextResponse.json({ status: 'success', orderId: order._id });
+        }
+
+        // 8.5 Handle payment failure
+        if (eventType === 'payment.failed') {
+            const razorpayOrderId = payload.payment.entity.order_id;
+            const order = await Order.findOne({ razorpayOrderId });
+            if (order) {
+                order.paymentStatus = 'failed';
+                await order.save();
+                log.warn(`Order ${order._id} payment failed`, { razorpayOrderId });
+            } else {
+                log.error(`Order not found for failed payment: ${razorpayOrderId}`);
+            }
+            return NextResponse.json({ status: 'failure_logged' });
         }
 
         // 9. Subscription Authenticated (Active)
@@ -321,6 +300,9 @@ export async function POST(req: NextRequest) {
                 sub.status = 'active';
                 sub.startDate = new Date();
                 await sub.save();
+                log.info(`Subscription ${subId} authenticated`, { subId });
+            } else {
+                log.warn(`Subscription ${subId} not found for authentication`);
             }
             return NextResponse.json({ status: 'subscription_activated' });
         }
@@ -372,7 +354,12 @@ export async function POST(req: NextRequest) {
                             renewalCount: sub.renewalCount
                         }
                     });
+                    log.info(`Order created for subscription renewal: ${subId}`, { paymentId });
+                } else {
+                    log.error(`Product ${sub.productId} not found for subscription renewal ${subId}`);
                 }
+            } else {
+                log.error(`Subscription ${subId} not found for charge`);
             }
             return NextResponse.json({ status: 'subscription_charged' });
         }
@@ -385,13 +372,18 @@ export async function POST(req: NextRequest) {
             const order = await Order.findOne({ razorpayPaymentId });
 
             if (order) {
-                order.paymentStatus = refundAmount >= order.total ? 'refunded' : 'partially_refunded';
+                const totalAmount = order.total || order.amount;
+                order.paymentStatus = refundAmount >= totalAmount ? 'refunded' : 'partially_refunded';
                 order.refundAmount = (order.refundAmount || 0) + refundAmount;
                 await order.save();
 
                 // Deactivate download tokens
-                const { deactivateDownloadToken } = await import('@/lib/services/downloadToken');
-                await deactivateDownloadToken(order._id.toString());
+                try {
+                    const { deactivateDownloadToken } = await import('@/lib/services/downloadToken');
+                    await deactivateDownloadToken(order._id.toString());
+                } catch (tErr: any) {
+                    log.error(`Failed to deactivate token for refund: ${order._id}`);
+                }
 
                 // Track refund event
                 await (AnalyticsEvent as any).create({
@@ -402,12 +394,15 @@ export async function POST(req: NextRequest) {
                     day: new Date().toISOString().split('T')[0],
                     hour: new Date().toISOString().slice(0, 13)
                 });
+                log.info(`Refund processed for order ${order._id}`, { refundAmount });
+            } else {
+                log.warn(`Order not found for refund: ${razorpayPaymentId}`);
             }
         }
 
         return NextResponse.json({ status: 'processed' });
     } catch (error: any) {
-        console.error('Webhook processing error:', error);
+        log.error('Webhook processing failure', { error: error.message });
         return NextResponse.json({ error: 'Webhook processing failed', details: error.message }, { status: 500 });
     }
 }

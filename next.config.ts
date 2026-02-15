@@ -13,6 +13,14 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'res.cloudinary.com',
       },
+      {
+        protocol: 'https',
+        hostname: '**.s3.amazonaws.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.s3-ap-south-1.amazonaws.com',
+      },
     ],
   },
 
@@ -55,7 +63,7 @@ const nextConfig: NextConfig = {
           // Permissions-Policy (formerly Feature-Policy)
           {
             key: 'Permissions-Policy',
-            value: 'camera=(), microphone=(), geolocation=(), payment=()'
+            value: 'camera=(), microphone=(), geolocation=(), payment=*'
           }
         ]
       }

@@ -61,7 +61,7 @@ export async function middleware(request: NextRequest) {
     default-src 'self';
     script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googletagmanager.com https://*.vercel-analytics.com https://*.razorpay.com https://checkout.razorpay.com;
     style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-    img-src 'self' blob: data: https://*.googleusercontent.com https://*.cloudinary.com https://*.gravatar.com https://*.razorpay.com https://creatorly-assets.s3.ap-south-1.amazonaws.com;
+    img-src 'self' blob: data: https://*.googleusercontent.com https://*.cloudinary.com https://*.gravatar.com https://*.razorpay.com https://*.s3.amazonaws.com https://*.s3-ap-south-1.amazonaws.com;
     font-src 'self' https://fonts.gstatic.com;
     connect-src 'self' https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.vercel-analytics.com https://*.firebaseio.com https://*.razorpay.com https://lumberjack.razorpay.com;
     frame-src 'self' https://*.google.com https://*.razorpay.com https://api.razorpay.com;
@@ -71,62 +71,21 @@ export async function middleware(request: NextRequest) {
 
     response.headers.set('Content-Security-Policy', csp);
 
-    // 3. Rate Limiting (Upstash Redis with Fallback)
+    // 3. Rate Limiting (Standardized)
     if (pathname.startsWith('/api/auth') || pathname.startsWith('/api/user')) {
+        const { checkRateLimit } = await import('@/middleware/rateLimit');
         const ip = request.headers.get('x-forwarded-for') ?? '127.0.0.1';
 
-        try {
-            // Try to use Upstash Redis if available
-            if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
-                const { Redis } = await import('@upstash/redis');
-                const redis = Redis.fromEnv();
+        const rateLimitResult = await checkRateLimit(request, ip, {
+            limit: 20,
+            window: 60
+        });
 
-                const limit = 20;
-                const window = 60; // seconds
-
-                const key = `rate_limit:${ip}`;
-                const requests = await redis.incr(key);
-
-                if (requests === 1) {
-                    await redis.expire(key, window);
-                }
-
-                if (requests > limit) {
-                    return new NextResponse(
-                        JSON.stringify({ error: 'Too many requests, please try again later.' }),
-                        { status: 429, headers: { 'Content-Type': 'application/json' } }
-                    );
-                }
-            } else {
-                // Fallback to In-Memory (Per-Lambda)
-                const limit = 20;
-                const windowMs = 60 * 1000;
-                const now = Date.now();
-                const windowStart = now - windowMs;
-
-                const requestLog = rateLimit.get(ip) || [];
-                const requestsInWindow = requestLog.filter((timestamp: number) => timestamp > windowStart);
-
-                if (requestsInWindow.length >= limit) {
-                    return new NextResponse(
-                        JSON.stringify({ error: 'Too many requests, please try again later.' }),
-                        { status: 429, headers: { 'Content-Type': 'application/json' } }
-                    );
-                }
-
-                requestsInWindow.push(now);
-                rateLimit.set(ip, requestsInWindow);
-
-                // Cleanup
-                if (rateLimit.size > 1000) {
-                    for (const [key, logs] of rateLimit.entries()) {
-                        if (logs.every((t: number) => t < windowStart)) rateLimit.delete(key);
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Rate limit error:', error);
-            // Fail open if rate limit fails
+        if (!rateLimitResult.success) {
+            return new NextResponse(
+                JSON.stringify({ error: 'Too many requests, please try again later.' }),
+                { status: 429, headers: { 'Content-Type': 'application/json' } }
+            );
         }
     }
 

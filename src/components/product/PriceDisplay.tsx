@@ -7,9 +7,11 @@ interface PriceDisplayProps {
     compareAtPrice?: number;
     currency: string;
     productName: string;
+    theme?: any;
 }
 
-export default function PriceDisplay({ price, compareAtPrice, currency, productName }: PriceDisplayProps) {
+export default function PriceDisplay({ price, compareAtPrice, currency, productName, theme }: PriceDisplayProps) {
+    const primaryColor = theme?.primaryColor || '#6366f1';
     const [hasLoggedHover, setHasLoggedHover] = useState(false);
 
     const handleMouseEnter = () => {
@@ -24,7 +26,7 @@ export default function PriceDisplay({ price, compareAtPrice, currency, productN
     return (
         <div className="space-y-1" onMouseEnter={handleMouseEnter}>
             <div className="flex items-baseline gap-2">
-                <span className="text-4xl font-black tracking-tighter italic">
+                <span className="text-4xl font-black tracking-tighter italic" style={{ color: primaryColor }}>
                     {currency === 'INR' ? '₹' : '$'}
                     {price.toLocaleString()}
                 </span>
