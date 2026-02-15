@@ -32,6 +32,8 @@ export async function connectToDatabase() {
             maxPoolSize: 10,
             serverSelectionTimeoutMS: 5000, // 5 seconds to fail fast if no connection
             socketTimeoutMS: 45000, // 45 seconds to close idle sockets
+            family: 4, // Use IPv4, skip IPv6
+
         };
 
         console.log('📡 Attempting MongoDB connection...');
