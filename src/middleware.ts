@@ -64,12 +64,13 @@ export async function middleware(request: NextRequest) {
     img-src 'self' blob: data: https://*.googleusercontent.com https://*.cloudinary.com https://*.gravatar.com https://*.razorpay.com https://*.s3.amazonaws.com https://*.s3-ap-south-1.amazonaws.com;
     font-src 'self' https://fonts.gstatic.com;
     connect-src 'self' https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.vercel-analytics.com https://*.firebaseio.com https://*.razorpay.com https://lumberjack.razorpay.com;
-    frame-src 'self' https://*.google.com https://*.razorpay.com https://api.razorpay.com;
+    frame-src 'self' https://*.google.com https://*.razorpay.com https://api.razorpay.com https://*.firebaseapp.com;
     object-src 'none';
     base-uri 'self';
   `.replace(/\s{2,}/g, ' ').trim();
 
     response.headers.set('Content-Security-Policy', csp);
+    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
 
     // 3. Rate Limiting (Standardized)
     if (pathname.startsWith('/api/auth') || pathname.startsWith('/api/user')) {
