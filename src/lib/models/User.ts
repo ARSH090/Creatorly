@@ -24,6 +24,13 @@ export interface IUser extends Document {
     plan?: 'free' | 'creator' | 'creator_pro';
     planExpiresAt?: Date;
     stripeCustomerId?: string;
+
+    // NEW: Tier Management & Subscription
+    subscriptionTier: 'free' | 'creator' | 'pro';
+    subscriptionStatus: 'active' | 'expired' | 'cancelled' | 'banned';
+    subscriptionStartAt?: Date;
+    subscriptionEndAt?: Date;
+    razorpaySubscriptionId?: string;
     adminApprovedAt?: Date;
     adminApprovedBy?: string;
     isSuspended?: boolean;
@@ -62,6 +69,25 @@ export interface IUser extends Document {
     deletedAt?: Date; // Soft-delete support
     aiUsageCount: number;
     storageUsageMb?: number;
+
+    // NEW: Anti-Abuse & Phone Verification
+    phoneHash?: string; // SHA256 of phone number
+    phoneVerified: boolean;
+    phoneVerifiedAt?: Date;
+    phoneLastChangedAt?: Date;
+    deviceFingerprint?: string;
+    signupIp: string;
+    signupCountry?: string;
+
+    // NEW: Monotonic Counters (NEVER Decrement)
+    freeTierOrdersCount: number;
+    freeTierLeadsCount: number;
+
+    // NEW: Abuse Detection
+    isFlagged: boolean;
+    flagReason?: string;
+    flaggedAt?: Date;
+    kycStatus: 'none' | 'pending' | 'verified' | 'rejected';
     planLimits?: {
         maxProducts: number;
         maxStorageMb: number;
@@ -221,6 +247,79 @@ const UserSchema: Schema = new Schema({
     storageUsageMb: {
         type: Number,
         default: 0
+    },
+
+    // Tier Management & Subscription
+    subscriptionTier: {
+        type: String,
+        enum: ['free', 'creator', 'pro'],
+        default: 'free',
+        index: true
+    },
+    subscriptionStatus: {
+        type: String,
+        enum: ['active', 'expired', 'cancelled', 'banned'],
+        default: 'active',
+        index: true
+    },
+    subscriptionStartAt: Date,
+    subscriptionEndAt: Date,
+    razorpaySubscriptionId: {
+        type: String,
+        sparse: true,
+        unique: true
+    },
+
+    // Anti-Abuse & Phone Verification
+    phoneHash: {
+        type: String,
+        sparse: true,
+        unique: true,
+        index: true
+    },
+    phoneVerified: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    phoneVerifiedAt: Date,
+    phoneLastChangedAt: Date,
+    deviceFingerprint: {
+        type: String,
+        index: true
+    },
+    signupIp: {
+        type: String,
+        required: false, // Will be made required for new registrations
+        index: true
+    },
+    signupCountry: String,
+
+    // Monotonic Counters (NEVER decrement)
+    freeTierOrdersCount: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+    freeTierLeadsCount: {
+        type: Number,
+        default: 0,
+        min: 0
+    },
+
+    // Abuse Detection
+    isFlagged: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    flagReason: String,
+    flaggedAt: Date,
+    kycStatus: {
+        type: String,
+        enum: ['none', 'pending', 'verified', 'rejected'],
+        default: 'none',
+        index: true
     }
 }, { timestamps: true });
 
