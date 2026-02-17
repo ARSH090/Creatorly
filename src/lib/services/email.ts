@@ -107,6 +107,69 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   });
 }
 
+export async function sendWelcomeEmail(email: string, displayName: string = 'there') {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Inter', -apple-system, sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin:20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
+          .header { font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-style: italic; margin-bottom: 16px; text-align: center; }
+          .subheader { color: #888; font-size: 16px; text-align: center; margin-bottom: 40px; }
+          .card { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 16px; padding: 30px; margin-bottom: 24px; text-align: center; }
+          .button { display: block; background: #fff; color: #000; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 0.1em; margin-top: 30px; }
+          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.2em; }
+          .feature { background: #111; border-radius: 12px; padding: 16px; margin: 12px 0; text-align: left; }
+          .feature-title { font-weight: 700; color: #6366f1; margin-bottom: 4px; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="card">
+            <div style="font-size: 64px; margin-bottom: 16px;">🚀</div>
+            <div class="header" style="color: #fff;">WELCOME TO CREATORLY</div>
+            <p style="font-size: 16px; opacity: 0.9; margin: 0;">Your creator journey starts now, ${displayName}!</p>
+          </div>
+          
+          <p class="subheader">You've just joined the next-generation platform for creators.</p>
+          
+          <div class="feature">
+            <div class="feature-title">📦 Sell Digital Products</div>
+            <p style="color: #888; font-size: 14px; margin: 4px 0 0;">Launch courses, ebooks, templates, and more</p>
+          </div>
+          
+          <div class="feature">
+            <div class="feature-title">🎯 Build Your Community</div>
+            <p style="color: #888; font-size: 14px; margin: 4px 0 0;">Engage your biggest fans with exclusive content</p>
+          </div>
+          
+          <div class="feature">
+            <div class="feature-title">💰 Get Paid Instantly</div>
+            <p style="color: #888; font-size: 14px; margin: 4px 0 0;">Secure payments with low platform fees</p>
+          </div>
+
+          <a href="${process.env.NEXTAUTH_URL || 'https://creatorly.in'}/dashboard" class="button">SET UP MY STORE</a>
+
+          <p style="font-size: 12px; color: #666; text-align: center; margin-top: 30px;">
+            Need help getting started? Reply to this email anytime.
+          </p>
+
+          <div class="footer">
+            &copy; 2026 CREATORLY • BUILT BY CREATORS, FOR CREATORS
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: '🚀 Welcome to Creatorly – Let's Build Something Amazing!',
+    html,
+  });
+}
+
 export async function sendPaymentConfirmationEmail(
   email: string,
   orderId: string,

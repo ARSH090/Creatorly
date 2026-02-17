@@ -1,41 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
-import VerificationToken from '@/lib/models/VerificationToken';
-import { z } from 'zod';
-import bcryptjs from 'bcryptjs';
+import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 
-const resetPasswordSchema = z.object({
-  token: z.string().min(1, 'Token is required'),
-  password: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .regex(/[A-Z]/, 'Password must contain uppercase letter')
-    .regex(/[0-9]/, 'Password must contain number'),
-  confirmPassword: z.string(),
-}).refine((data) => data.password === data.confirmPassword, {
-  message: 'Passwords do not match',
-  path: ['confirmPassword'],
-});
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-export async function POST(request: NextRequest) {
+/**
+ * POST /api/auth/reset-password
+ * Resets password using valid token
+ */
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-    const validation = resetPasswordSchema.safeParse(body);
-
-    if (!validation.success) {
-      return NextResponse.json({ error: 'Validation failed', details: validation.error.flatten().fieldErrors }, { status: 400 });
-    }
-
     await connectToDatabase();
 
-    // Find valid reset token
-    const verificationToken = await VerificationToken.findOne({
-      token: validation.data.token,
-      type: 'password_reset',
-      expiresAt: { $gt: new Date() },
+    const { token, newPassword } = await req.json();
+
+    if (!token || !newPassword) {
+      return NextResponse.json(
+        { error: 'Token and new password are required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate password strength
+    if (newPassword.length < 8) {
+      return NextResponse.json(
+        { error: 'Password must be at least 8 characters' },
+        { status: 400 }
+      );
+    }
+
+    // Hash the provided token to compare with stored hash
+    const resetTokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Find user with matching token that hasn't expired
+    const user = await User.findOne({
+      passwordResetToken: resetTokenHash,
+      passwordResetExpiry: { $gt: new Date() }, // Token not expired
     });
 
-    if (!verificationToken) {
+    if (!user) {
       return NextResponse.json(
         { error: 'Invalid or expired reset token' },
         { status: 400 }
@@ -43,79 +49,30 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash new password
-    const hashedPassword = await bcryptjs.hash(validation.data.password, 12);
+    const passwordHash = await bcrypt.hash(newPassword, 12);
 
-    // Update user password
-    const user = await User.findOneAndUpdate(
-      { email: verificationToken.email },
-      { password: hashedPassword },
-      { new: true }
+    // Update password and clear reset token (single-use)
+    await User.findByIdAndUpdate(user._id, {
+      password: passwordHash,
+      passwordResetToken: null,
+      passwordResetExpiry: null,
+      $push: {
+        passwordChangeHistory: {
+          changedAt: new Date(),
+          resetViaEmail: true,
+        },
+      },
+    });
+
+    return NextResponse.json(
+      { success: true, message: 'Password reset successfully' },
+      { status: 200 }
     );
 
-    if (!user) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    // Delete used token
-    await VerificationToken.deleteOne({ _id: verificationToken._id });
-
-    // Delete all other reset tokens for this user
-    await VerificationToken.deleteMany({
-      email: user.email,
-      type: 'password_reset',
-    });
-
-    return NextResponse.json({
-      message: 'Password reset successfully. You can now log in with your new password.',
-    });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Reset password error:', error);
     return NextResponse.json(
       { error: 'Failed to reset password' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function GET(request: NextRequest) {
-  try {
-    const searchParams = request.nextUrl.searchParams;
-    const token = searchParams.get('token');
-
-    if (!token) {
-      return NextResponse.json(
-        { error: 'Token is required' },
-        { status: 400 }
-      );
-    }
-
-    await connectToDatabase();
-
-    // Validate token exists and is not expired
-    const verificationToken = await VerificationToken.findOne({
-      token,
-      type: 'password_reset',
-      expiresAt: { $gt: new Date() },
-    });
-
-    if (!verificationToken) {
-      return NextResponse.json(
-        { error: 'Invalid or expired token' },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({
-      valid: true,
-      email: verificationToken.email,
-    });
-  } catch (error) {
-    console.error('Token validation error:', error);
-    return NextResponse.json(
-      { error: 'Token validation failed' },
       { status: 500 }
     );
   }

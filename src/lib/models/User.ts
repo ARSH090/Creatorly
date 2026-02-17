@@ -70,6 +70,14 @@ export interface IUser extends Document {
     aiUsageCount: number;
     storageUsageMb?: number;
 
+    // Password Reset
+    passwordResetToken?: string; // SHA256 hash of reset token
+    passwordResetExpiry?: Date;
+    passwordChangeHistory?: Array<{
+        changedAt: Date;
+        resetViaEmail: boolean;
+    }>;
+
     // NEW: Anti-Abuse & Phone Verification
     phoneHash?: string; // SHA256 of phone number
     phoneVerified: boolean;
@@ -219,6 +227,28 @@ const UserSchema: Schema = new Schema({
         default: 0,
     },
     lastFailedLoginAt: Date,
+    password: String, // For internal admin auth / custom auth
+    deletedAt: {
+        type: Date,
+        index: true
+    },
+    storageUsageMb: {
+        type: Number,
+        default: 0
+    },
+    aiUsageCount: {
+        type: Number,
+        default: 0
+    },
+
+    // Password Reset
+    passwordResetToken: String, // SHA256 hash
+    passwordResetExpiry: Date,
+    passwordChangeHistory: [{
+        changedAt: Date,
+        resetViaEmail: Boolean,
+    }],
+
     // Security & Limits Enforced at User Level
     planLimits: {
         maxProducts: { type: Number, default: 3 },

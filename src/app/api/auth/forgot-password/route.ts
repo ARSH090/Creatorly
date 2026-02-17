@@ -1,76 +1,84 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
-import VerificationToken from '@/lib/models/VerificationToken';
-import { sendPasswordResetEmail } from '@/lib/services/email';
-import { z } from 'zod';
 import crypto from 'crypto';
-import { RedisRateLimiter } from '@/lib/security/redis-rate-limiter';
+import { sendPasswordResetEmail } from '@/lib/services/email';
+import { passwordResetLimiter, getClientIdentifier } from '@/lib/utils/rate-limit';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-const forgotPasswordSchema = z.object({
-  email: z.string().email('Invalid email address'),
-});
-
-export async function POST(request: NextRequest) {
+/**
+ * POST /api/auth/forgot-password
+ * Generates password reset token and sends email
+ * Rate limited: 3 requests per minute per IP
+ */
+export async function POST(req: NextRequest) {
+  // Rate limiting
+  const clientIp = getClientIdentifier(req);
   try {
-    const forwarded = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '';
-    const ip = forwarded ? forwarded.split(',')[0].trim() : '127.0.0.1';
+    await passwordResetLimiter.check(3, clientIp);
+  } catch {
+    return NextResponse.json(
+      { error: 'Too many password reset requests', code: 'RATE_LIMITED' },
+      { status: 429 }
+    );
+  }
 
-    // 1. Rate Limiting (3 attempts per hour to prevent email spam/enumeration)
-    const isAllowed = await RedisRateLimiter.check('forgot-password', 3, 60 * 60 * 1000, ip);
-    if (!isAllowed) {
-      return NextResponse.json({ error: 'Too many requests. Please try again later.' }, { status: 429 });
-    }
-
-    const body = await request.json();
-
-    const validation = forgotPasswordSchema.safeParse(body);
-
-    if (!validation.success) {
-      return NextResponse.json({ error: 'Validation failed', details: validation.error.flatten().fieldErrors }, { status: 400 });
-    }
-
+  try {
     await connectToDatabase();
 
-    // Find user by email
-    const user = await User.findOne({ email: validation.data.email.toLowerCase() });
+    const { email } = await req.json();
 
-    if (!user) {
-      // Don't reveal if email exists
-      return NextResponse.json({
-        message: 'If an account exists with this email, a password reset link has been sent.',
-      });
+    if (!email) {
+      return NextResponse.json(
+        { error: 'Email is required' },
+        { status: 400 }
+      );
     }
 
-    // Delete any existing reset tokens for this user
-    await VerificationToken.deleteMany({
-      email: user.email,
-      type: 'password_reset',
+    // Find user by email
+    const user = await User.findOne({ email: email.toLowerCase().trim() });
+
+    // Always return success to prevent email enumeration
+    // Even if user doesn't exist, return 200
+    if (!user) {
+      return NextResponse.json(
+        { success: true, message: 'If that email exists, a reset link has been sent.' },
+        { status: 200 }
+      );
+    }
+
+    // Generate secure random token
+    const resetToken = crypto.randomUUID();
+    const resetTokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+
+    // Set token expiry to 30 minutes
+    const resetTokenExpiry = new Date(Date.now() + 30 * 60 * 1000);
+
+    // Save hashed token to user document
+    await User.findByIdAndUpdate(user._id, {
+      passwordResetToken: resetTokenHash,
+      passwordResetExpiry: resetTokenExpiry,
     });
 
-    // Generate reset token
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+    // Send email with reset link
+    try {
+      await sendPasswordResetEmail(user.email, resetToken);
+    } catch (emailError: any) {
+      console.error('Failed to send password reset email:', emailError);
+      // Don't fail the request if email fails, token is still generated
+    }
 
-    // Save token
-    await VerificationToken.create({
-      email: user.email,
-      token,
-      type: 'password_reset',
-      expiresAt,
-    });
+    return NextResponse.json(
+      { success: true, message: 'If that email exists, a reset link has been sent.' },
+      { status: 200 }
+    );
 
-    // Send email
-    await sendPasswordResetEmail(user.email, token);
-
-    return NextResponse.json({
-      message: 'If an account exists with this email, a password reset link has been sent.',
-    });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Forgot password error:', error);
     return NextResponse.json(
-      { error: 'Failed to process password reset request' },
+      { error: 'Failed to process request' },
       { status: 500 }
     );
   }
