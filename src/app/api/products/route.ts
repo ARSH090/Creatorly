@@ -23,24 +23,26 @@ export const POST = withCreatorAuth(async (req, user) => {
         const data = validation.data;
         await connectToDatabase();
 
-        // 1. Enforce Plan Limits
-        const maxProducts = user.planLimits?.maxProducts ?? 3;
+        // 1. Enforce Tier-Based Plan Limits (NEW TIER SYSTEM)
+        const { checkFeatureAccess } = await import('@/lib/middleware/checkFeatureAccess');
         const currentCount = await Product.countDocuments({
             creatorId: user._id,
             status: { $in: ['published', 'active'] }
         });
 
-        if (currentCount >= maxProducts) {
+        const featureCheck = await checkFeatureAccess(user._id.toString(), 'products', currentCount);
+
+        if (!featureCheck.allowed) {
             return NextResponse.json(
-                errorResponse('Plan limit reached', {
-                    current: currentCount,
-                    limit: maxProducts,
-                    upgradeUrl: '/dashboard/upgrade'
+                errorResponse('Upgrade required to create more products', {
+                    code: featureCheck.errorCode,
+                    current: featureCheck.current,
+                    limit: featureCheck.limit,
+                    upgrade_url: featureCheck.upgradeUrl || '/pricing?feature=products'
                 }),
                 { status: 403 }
             );
         }
-
 
 
         // 2. Map Validated Data to Product Schema
