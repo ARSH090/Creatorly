@@ -70,7 +70,7 @@ export async function middleware(request: NextRequest) {
   `.replace(/\s{2,}/g, ' ').trim();
 
     response.headers.set('Content-Security-Policy', csp);
-    response.headers.set('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+    response.headers.set('Cross-Origin-Opener-Policy', 'unsafe-none');
     response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
 
     // 3. Rate Limiting (Standardized)

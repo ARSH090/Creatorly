@@ -68,7 +68,7 @@ const nextConfig: NextConfig = {
           // Cross-Origin-Opener-Policy
           {
             key: 'Cross-Origin-Opener-Policy',
-            value: 'same-origin-allow-popups'
+            value: 'unsafe-none'
           },
           // Cross-Origin-Embedder-Policy
           {

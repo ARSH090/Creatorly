@@ -89,7 +89,7 @@ export const securityHeaders = [
   },
   {
     key: 'Cross-Origin-Opener-Policy',
-    value: 'same-origin'
+    value: 'unsafe-none'
   },
   {
     key: 'Cross-Origin-Resource-Policy',
@@ -195,13 +195,13 @@ export const nextSecurityConfig = {
   async redirects() {
     return process.env.NODE_ENV === 'production'
       ? [
-          {
-            source: '/:path*',
-            destination: 'https://creatorly.in/:path*',
-            permanent: true,
-            basePath: false
-          }
-        ]
+        {
+          source: '/:path*',
+          destination: 'https://creatorly.in/:path*',
+          permanent: true,
+          basePath: false
+        }
+      ]
       : [];
   }
 };
