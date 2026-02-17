@@ -20,15 +20,15 @@ describe('POST /api/auth/register - Validation Tests', () => {
     test('duplicate email returns 409', async () => {
         const existingUser = {
             email: 'existing@example.com',
-            name: 'Existing User',
+            displayName: 'Existing User',
             password: 'password123',
         };
 
         // Create first user
         await User.create({
             email: existingUser.email,
-            name: existingUser.name,
-            passwordHash: 'hashedpassword',
+            displayName: existingUser.displayName,
+            clerkId: 'test_clerk_id',
         });
 
         // These tests assume Clerk integration - adjust based on your implementation
@@ -80,15 +80,17 @@ describe('POST /api/auth/register - Validation Tests', () => {
     test('user isolation — user A cannot GET /api/users/:id of user B', async () => {
         // Create two users
         const userA = await User.create({
+            username: 'usera',
             email: 'usera@example.com',
-            name: 'User A',
-            passwordHash: 'hash',
+            displayName: 'User A',
+            clerkId: 'clerk_user_a',
         });
 
         const userB = await User.create({
+            username: 'userb',
             email: 'userb@example.com',
-            name: 'User B',
-            passwordHash: 'hash',
+            displayName: 'User B',
+            clerkId: 'clerk_user_b',
         });
 
         // TODO: Test that userA's JWT cannot access userB's data

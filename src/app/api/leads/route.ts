@@ -4,7 +4,6 @@ import Lead from '@/lib/models/Lead';
 import LeadMagnet from '@/lib/models/LeadMagnet';
 import { isDisposableEmail, isValidEmail } from '@/lib/utils/emailValidation';
 import { log } from '@/utils/logger';
-import { getS3PresignedUrl } from '@/lib/utils/s3';
 import { sendEmail } from '@/lib/services/email';
 
 export const runtime = 'nodejs';
@@ -16,7 +15,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: NextRequest) {
     try {
-        await connectTo Database();
+        await connectToDatabase();
 
         const body = await req.json();
         const { email, lead_magnet_id, source } = body;
@@ -78,8 +77,8 @@ export async function POST(req: NextRequest) {
         // Send free download email (only for new leads)
         if (isNew && lead) {
             try {
-                // Generate presigned URL for download (valid for 24 hours)
-                const downloadUrl = await getS3PresignedUrl(leadMagnet.fileKey, 86400);
+                // Use the fileUrl from lead magnet (should be a presigned URL or public URL)
+                const downloadUrl = leadMagnet.fileUrl;
 
                 await sendEmail({
                     to: email,
