@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { withAdminAuth } from '@/lib/auth/withAdminAuth';
+import { withAdminAuth } from '@/lib/auth/withAuth';
 import { SuspiciousAccount } from '@/lib/models/SuspiciousAccount';
 import { User } from '@/lib/models/User';
 
