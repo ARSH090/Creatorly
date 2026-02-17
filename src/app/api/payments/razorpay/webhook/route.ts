@@ -7,6 +7,7 @@ import { ProcessedWebhook } from '@/lib/models/ProcessedWebhook';
 import { Affiliate } from '@/lib/models/Affiliate';
 import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
 import Subscription from '@/lib/models/Subscription';
+import User from '@/lib/models/User'; // For tier management
 import { generateDownloadToken } from '@/lib/services/downloadToken';
 import mongoose from 'mongoose';
 import { log } from '@/utils/logger';
@@ -194,6 +195,19 @@ export async function POST(req: NextRequest) {
             order.paidAt = new Date();
             await order.save();
 
+            // TIER: Increment monotonic counter if creator is on FREE tier
+            try {
+                const creator = await User.findById(order.creatorId).select('subscriptionTier');
+                if (creator && creator.subscriptionTier === 'free') {
+                    await User.findByIdAndUpdate(order.creatorId, {
+                        $inc: { freeTierOrdersCount: 1 }
+                    });
+                    log.info(`Incremented freeTierOrdersCount for creator ${order.creatorId}`);
+                }
+            } catch (counterErr) {
+                log.error('Failed to increment order counter', { error: counterErr });
+            }
+
             // 5. Fulfillment logic
             try {
                 // Generate download tokens
@@ -291,7 +305,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ status: 'failure_logged' });
         }
 
-        // 9. Subscription Authenticated (Active)
+        // 9. Subscription Authenticated (Active) - TIER UPGRADE
         if (eventType === 'subscription.authenticated') {
             const subId = payload.subscription.entity.id;
             const sub = await Subscription.findOne({ razorpaySubscriptionId: subId });
@@ -300,7 +314,17 @@ export async function POST(req: NextRequest) {
                 sub.status = 'active';
                 sub.startDate = new Date();
                 await sub.save();
-                log.info(`Subscription ${subId} authenticated`, { subId });
+
+                // TIER: Upgrade user based on subscription plan
+                const tier = sub.planId?.toString().toLowerCase().includes('pro') ? 'pro' : 'creator';
+                await User.findByIdAndUpdate(sub.userId, {
+                    subscriptionTier: tier,
+                    subscriptionStatus: 'active',
+                    subscriptionStartAt: new Date(),
+                    subscriptionEndAt: sub.endDate
+                });
+
+                log.info(`Subscription ${subId} authenticated - User upgraded to ${tier} tier`);
             } else {
                 log.warn(`Subscription ${subId} not found for authentication`);
             }
@@ -398,6 +422,62 @@ export async function POST(req: NextRequest) {
             } else {
                 log.warn(`Order not found for refund: ${razorpayPaymentId}`);
             }
+        }
+
+        // TIER: Handle subscription cancellation
+        if (eventType === 'subscription.cancelled') {
+            const subId = payload.subscription.entity.id;
+            const sub = await Subscription.findOne({ razorpaySubscriptionId: subId });
+
+            if (sub) {
+                sub.status = 'canceled';
+                sub.autoRenew = false;
+                await sub.save();
+
+                // Update user status to cancelled (tier downgrades at endDate)
+                await User.findByIdAndUpdate(sub.userId, {
+                    subscriptionStatus: 'cancelled'
+                    // Keep tier active until subscription_end_at
+                });
+
+                log.info(`Subscription ${subId} cancelled - access until ${sub.endDate}`);
+            }
+            return NextResponse.json({ status: 'subscription_cancelled' });
+        }
+
+        // TIER: Handle subscription expiry - auto-downgrade to FREE
+        if (eventType === 'subscription.expired' || eventType === 'subscription.completed') {
+            const subId = payload.subscription.entity.id;
+            const sub = await Subscription.findOne({ razorpaySubscriptionId: subId });
+
+            if (sub) {
+                sub.status = 'expired';
+                await sub.save();
+
+                // DOWNGRADE TO FREE
+                await User.findByIdAndUpdate(sub.userId, {
+                    subscriptionTier: 'free',
+                    subscriptionStatus: 'expired'
+                });
+
+                // Deactivate products over FREE tier limit (keep first 1)
+                const products = await Product.find({
+                    creatorId: sub.userId,
+                    status: 'published'
+                }).sort({ createdAt: 1 });
+
+                if (products.length > 1) {
+                    const toDeactivate = products.slice(1); // All except first
+                    await Product.updateMany(
+                        { _id: { $in: toDeactivate.map((p: any) => p._id) } },
+                        { $set: { isActive: false } }
+                    );
+                    log.info(`Deactivated ${toDeactivate.length} products for expired subscription ${subId}`);
+                }
+
+                log.info(`Subscription ${subId} expired - User downgraded to FREE`);
+            }
+            return NextResponse.json({ status: 'subscription_expired_downgraded' });
         }
 
         return NextResponse.json({ status: 'processed' });
