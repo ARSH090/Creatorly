@@ -1,54 +1,65 @@
-import { auth, currentUser } from '@clerk/nextjs/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { currentUser } from '@clerk/nextjs/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import User from '@/lib/models/User';
-import { successResponse, errorResponse } from '@/types/api';
+import { User } from '@/lib/models/User';
 
 export async function POST() {
     try {
-        const { userId } = await auth();
         const clerkUser = await currentUser();
-
-        if (!userId || !clerkUser) {
-            return NextResponse.json(errorResponse('Unauthorized'), { status: 401 });
+        if (!clerkUser) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
         await connectToDatabase();
 
+        const email = clerkUser.emailAddresses[0]?.emailAddress;
+        if (!email) {
+            return NextResponse.json({ error: 'No email found' }, { status: 400 });
+        }
+
         // Check if user exists
         let user = await User.findOne({
             $or: [
-                { clerkId: userId },
-                { email: clerkUser.emailAddresses[0].emailAddress }
+                { clerkId: clerkUser.id },
+                { email: email }
             ]
         });
 
         if (!user) {
-            // Create new user
+            // Generate base username
+            let baseUsername = (clerkUser.username || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '');
+            let username = baseUsername;
+
+            // Simple retry logic for unique username
+            let counter = 1;
+            while (await User.exists({ username })) {
+                username = `${baseUsername}${counter}`;
+                counter++;
+            }
+
             user = await User.create({
-                clerkId: userId,
-                email: clerkUser.emailAddresses[0].emailAddress,
-                displayName: clerkUser.fullName || clerkUser.username || 'User',
-                username: clerkUser.username || `user_${Math.random().toString(36).substring(2, 7)}`,
+                clerkId: clerkUser.id,
+                email: email,
+                username: username,
+                displayName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || baseUsername,
                 avatar: clerkUser.imageUrl,
-                role: 'customer', // Default
-                planLimits: {
-                    maxProducts: 3,
-                    maxStorageMb: 100,
-                    maxTeamMembers: 1,
-                    customDomain: false,
-                    canRemoveBranding: false
-                }
+                role: 'user',
+                emailVerified: true
             });
+
+            console.log(`✅ Created new MongoDB user: ${username} (${email})`);
         } else if (!user.clerkId) {
             // Link existing user
-            user.clerkId = userId;
+            user.clerkId = clerkUser.id;
             await user.save();
+            console.log(`🔗 Linked Clerk ID to existing MongoDB user: ${email}`);
         }
 
-        return NextResponse.json(successResponse(user));
+        return NextResponse.json({ success: true, user: { id: user._id, role: user.role } });
+
     } catch (error: any) {
-        console.error('Sync error:', error);
-        return NextResponse.json(errorResponse('Internal server error', error.message), { status: 500 });
+        // Handle duplicate username error specially if possible, or generic
+        console.error("Sync Error:", error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

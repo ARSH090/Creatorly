@@ -58,6 +58,7 @@ import ClientLayout from '@/components/layout/ClientLayout';
 import ErrorBoundary from './error-boundary';
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
+import SyncUser from "@/components/auth/SyncUser";
 
 export default function RootLayout({
   children,
@@ -66,6 +67,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
+      <SyncUser />
       <html lang="en" suppressHydrationWarning>
         <head>
           <link
