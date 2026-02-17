@@ -5,13 +5,14 @@ import { razorpay } from '@/lib/payments/razorpay';
 import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
 import { getCurrentUser } from '@/lib/auth/server-auth';
+import Coupon from '@/lib/models/Coupon';
 
 import { Affiliate } from '@/lib/models/Affiliate';
 
 export async function POST(req: NextRequest) {
     try {
         await connectToDatabase();
-        const { cart, customer } = await req.json();
+        const { cart, customer, couponCode } = await req.json();
 
         // ... existing cart validation ...
 
@@ -59,8 +60,59 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        // Get user for coupon tracking
+        const user = await getCurrentUser();
+
+        // Coupon Validation and Discount Application
+        let discountAmount = 0;
+        let couponId = null;
+        let appliedCouponCode = null;
+
+        if (couponCode) {
+            const coupon = await Coupon.findOne({
+                code: couponCode.toUpperCase(),
+                status: 'active'
+            });
+
+            if (coupon) {
+                // Check expiry
+                const now = new Date();
+                const isValid =
+                    (!coupon.validFrom || now >= new Date(coupon.validFrom)) &&
+                    (!coupon.validUntil || now <= new Date(coupon.validUntil));
+
+                // Check usage limits
+                const hasUsageLeft =
+                    !coupon.usageLimit || coupon.usedCount < coupon.usageLimit;
+
+                if (isValid && hasUsageLeft) {
+                    // Calculate discount
+                    if (coupon.discountType === 'percentage') {
+                        discountAmount = (totalAmount * coupon.discountValue) / 100;
+                        if (coupon.maxDiscountAmount) {
+                            discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
+                        }
+                    } else if (coupon.discountType === 'fixed') {
+                        discountAmount = coupon.discountValue;
+                    }
+
+                    // Ensure discount doesn't exceed total
+                    discountAmount = Math.min(discountAmount, totalAmount);
+                    couponId = coupon._id;
+                    appliedCouponCode = coupon.code;
+
+                    // Increment usage count
+                    coupon.usedCount = (coupon.usedCount || 0) + 1;
+                    await coupon.save();
+                }
+            }
+        }
+
+        // Apply discount before tax
+        const discountedAmount = totalAmount - discountAmount;
+
         // Add 18% GST (Tax)
-        const amountWithTax = totalAmount * 1.18;
+        const amountWithTax = discountedAmount * 1.18;
         const amountInPaise = Math.round(amountWithTax * 100);
 
         // 2. Create Razorpay Order
@@ -95,10 +147,15 @@ export async function POST(req: NextRequest) {
             razorpayOrderId: razorpayOrder.id,
             status: 'pending',
             affiliateId: affiliateId ? affiliateId.toString() : undefined,
+            couponId: couponId ? couponId.toString() : undefined,
+            discountAmount: discountAmount,
             metadata: {
                 customerName: customer.name,
                 customerPhone: customer.phone,
-                affiliateRef // Store the code for reference
+                affiliateRef, // Store the code for reference
+                couponCode: appliedCouponCode,
+                originalAmount: totalAmount,
+                discountApplied: discountAmount
             }
         });
 
