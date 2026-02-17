@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Content } from '@/lib/models/Content';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 import mongoose from 'mongoose';
 
 /**

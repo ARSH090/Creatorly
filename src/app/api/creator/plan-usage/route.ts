@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
 import Product from '@/lib/models/Product';
 import { Order } from '@/lib/models/Order';
-import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 
 /**

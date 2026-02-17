@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import User from '@/lib/models/User';
-import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { sanitizeHTML } from '@/utils/sanitizers';
 import { successResponse, errorResponse } from '@/types/api';
 

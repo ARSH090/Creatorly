@@ -5,7 +5,7 @@ import Order from '@/lib/models/Order';
 import User from '@/lib/models/User';
 import Product from '@/lib/models/Product';
 import Subscription from '@/lib/models/Subscription';
-import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { withAdminAuth } from '@/lib/auth/withAuth';
 import { checkAdminPermission } from '@/lib/middleware/adminAuth';
 
 export const GET = withAdminAuth(async (req, user, context) => {

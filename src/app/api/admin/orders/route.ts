@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Order } from '@/lib/models/Order';
-import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { withAdminAuth } from '@/lib/auth/withAuth';
 
 /**
  * GET /api/admin/orders

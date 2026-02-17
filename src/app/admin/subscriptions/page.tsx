@@ -1,4 +1,4 @@
-import { getCurrentUser } from '@/lib/firebase/server-auth';
+import { getCurrentUser } from '@/lib/auth/server-auth';
 import { redirect } from 'next/navigation';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import SubscriptionsPageContent from '@/components/admin/subscription/LazySubscriptions';

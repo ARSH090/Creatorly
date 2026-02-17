@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { ShoppingBag, Search, Menu, X, User } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@clerk/nextjs';
 import NextImage from 'next/image';
 
 interface StoreHeaderProps {
@@ -16,7 +16,7 @@ interface StoreHeaderProps {
 }
 
 export default function StoreHeader({ creator }: StoreHeaderProps) {
-    const { user } = useAuth();
+    const { user } = useUser();
     const [isScrolled, setIsScrolled] = useState(false);
     const { theme } = creator;
 
@@ -70,7 +70,7 @@ export default function StoreHeader({ creator }: StoreHeaderProps) {
                         </Link>
                     ) : (
                         <Link
-                            href="/auth/login"
+                            href="/sign-in"
                             className="px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest border border-white/10 hover:bg-white/5 transition-all"
                         >
                             Sign In

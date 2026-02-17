@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
 import { generateDeliveryToken } from '@/lib/delivery/tokens';
-import { getCurrentUser } from '@/lib/firebase/server-auth';
+import { getCurrentUser } from '@/lib/auth/server-auth';
 import DownloadToken from '@/lib/models/DownloadToken';
 
 export async function POST(req: NextRequest) {

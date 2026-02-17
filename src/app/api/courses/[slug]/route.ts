@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import Order from '@/lib/models/Order';
 import CourseProgress from '@/lib/models/CourseProgress';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 
 export const GET = withAuth(async (req, user, context: any) => {
     try {

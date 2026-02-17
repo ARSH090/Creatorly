@@ -10,7 +10,7 @@ import CreatorBio from '@/components/storefront/CreatorBio';
 import ProductGrid from '@/components/storefront/ProductGrid';
 import { ShieldAlert } from 'lucide-react';
 
-import { getCurrentUser } from '@/lib/firebase/server-auth';
+import { getCurrentUser } from '@/lib/auth/server-auth';
 import Order from '@/lib/models/Order';
 import NewsletterSignup from '@/components/storefront/NewsletterSignup';
 import { ProductGridSkeleton } from '@/components/storefront/ProductSkeleton';
@@ -80,7 +80,7 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
 
     if (currentUser) {
         const orders = await Order.find({
-            userId: currentUser.id,
+            userId: (currentUser as any)._id,
             creatorId: creator._id,
             status: 'success'
         });

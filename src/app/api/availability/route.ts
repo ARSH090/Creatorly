@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import CreatorProfile from '@/lib/models/CreatorProfile';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 
 export const dynamic = 'force-dynamic';
 

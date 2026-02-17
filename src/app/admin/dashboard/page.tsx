@@ -2,7 +2,7 @@ import AdminDashboardMetrics from '@/components/admin/DashboardMetrics';
 import GrowthTrendCard from '@/components/admin/GrowthTrendCard';
 import UserManagement from '@/components/admin/UserManagement';
 import { Shield, TrendingUp, AlertTriangle } from 'lucide-react';
-import { getCurrentUser } from '@/lib/firebase/server-auth';
+import { getCurrentUser } from '@/lib/auth/server-auth';
 import { redirect } from 'next/navigation';
 import { getSecurityEventsDB } from '@/lib/security/monitoring';
 

@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Affiliate } from '@/lib/models/Affiliate';
 import { Order } from '@/lib/models/Order';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 
 /**

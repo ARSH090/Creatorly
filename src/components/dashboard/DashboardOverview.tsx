@@ -3,12 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Users, ShoppingBag, Wallet, Eye, ArrowRight, Plus, Zap } from "lucide-react";
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
-import { auth } from '@/lib/firebase/client';
-
-// NOTE: Recharts is needed for charts. If not installed, these will need to be installed.
-// Assuming recharts is available based on previous context or requirements, otherwise will use simple visual placeholders to avoid build breaks if package missing.
-// Checking imports first - implementing with simple visual fallback for robust build, can enhance with Recharts if confirmed.
+import { useUser, useAuth } from '@clerk/nextjs';
 
 import { WelcomeTour } from './WelcomeTour';
 
@@ -16,7 +11,8 @@ export default function DashboardOverview() {
     // Fetch real data from backend
     const [analytics, setAnalytics] = useState<any>(null);
     const [showTour, setShowTour] = useState(false);
-    const { user } = useAuth();
+    const { user } = useUser();
+    const { getToken } = useAuth();
 
     useEffect(() => {
         const hasSeenTour = localStorage.getItem('creatorly_tour_done');
@@ -35,12 +31,12 @@ export default function DashboardOverview() {
         const fetchAnalytics = async () => {
             if (!user) return;
             try {
-                const tokenIds = auth.currentUser ? await auth.currentUser.getIdToken() : null;
-                if (!tokenIds) throw new Error("No authenticated user found");
+                const token = await getToken();
+                if (!token) throw new Error("No authenticated user found");
 
                 const res = await fetch('/api/creator/analytics', {
                     headers: {
-                        'Authorization': `Bearer ${tokenIds}`
+                        'Authorization': `Bearer ${token}`
                     }
                 });
                 const data = await res.json();
@@ -210,7 +206,7 @@ export default function DashboardOverview() {
                                     <div>
                                         <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Storage Used</p>
                                         <p className="text-sm font-bold text-white">
-                                            {analytics?.usage?.storage?.used || 0} MB / {analytics?.usage?.storage?.limit || 100} MB
+                                            {analytics?.usage?.storage?.used || 0} / {analytics?.usage?.storage?.limit || 100} MB
                                         </p>
                                     </div>
                                     <span className="text-xs font-bold text-indigo-400">

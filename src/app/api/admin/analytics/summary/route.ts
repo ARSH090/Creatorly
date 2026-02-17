@@ -4,7 +4,7 @@ import { User } from '@/lib/models/User';
 import Product from '@/lib/models/Product';
 import { Order } from '@/lib/models/Order';
 import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
-import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { withAdminAuth } from '@/lib/auth/withAuth';
 
 /**
  * GET /api/admin/analytics/summary

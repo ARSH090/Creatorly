@@ -6,14 +6,15 @@ import {
     Users, Wallet, Settings, Bell, LogOut, ChevronRight,
     Sparkles, Plus, Share2, Menu, X, User, CreditCard, Folder, LifeBuoy
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { auth } from "@/lib/firebase/client";
+import { useUser, useClerk, useAuth } from "@clerk/nextjs";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-    const { user, signOut } = useAuth();
+    const { user } = useUser();
+    const { signOut } = useClerk();
+    const { getToken } = useAuth();
     const pathname = usePathname();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [stats, setStats] = useState<any>(null);
@@ -24,16 +25,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         const fetchDashboardData = async () => {
             if (!user) return; // Wait for user
             try {
-                // Get fresh token if needed, or use the one from context if available/reliable
-                // But context 'token' might be null initially. 
-                // Safest to get ID token directly from user object or use context token if populated.
-                // Safest to get ID token directly from user object or use context token if populated.
-                const tokenIds = auth.currentUser ? await auth.currentUser.getIdToken() : null;
-                if (!tokenIds) return;
+                // Get Clerk token
+                const token = await getToken();
+                if (!token) return;
 
                 const res = await fetch('/api/creator/analytics', {
                     headers: {
-                        'Authorization': `Bearer ${tokenIds}`
+                        'Authorization': `Bearer ${token}`
                     }
                 });
                 const data = await res.json();
@@ -132,9 +130,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             <div className="flex items-center gap-3 pl-4 border-l border-white/5">
                                 <div className="text-right hidden sm:block">
                                     <p className="text-sm font-bold text-white leading-none mb-1">
-                                        {user?.displayName || (user?.email ? user.email.split('@')[0] : 'Creator')}
+                                        {user?.fullName || (user?.primaryEmailAddress?.emailAddress ? user.primaryEmailAddress.emailAddress.split('@')[0] : 'Creator')}
                                     </p>
-                                    <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">@{user?.username || (user?.email ? user.email.split('@')[0] : 'username')}</p>
+                                    <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">@{user?.username || (user?.primaryEmailAddress?.emailAddress ? user.primaryEmailAddress.emailAddress.split('@')[0] : 'username')}</p>
                                 </div>
                                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-white/10" />
                             </div>

@@ -1,6 +1,6 @@
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { FinanceDashboard } from '@/components/admin/FinanceDashboard';
-import { getCurrentUser } from '@/lib/firebase/server-auth';
+import { getCurrentUser } from '@/lib/auth/server-auth';
 import { redirect } from 'next/navigation';
 
 export const dynamic = 'force-dynamic';

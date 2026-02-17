@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import MarketplaceItem from '@/lib/models/MarketplaceItem';
 import { z } from 'zod';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 
 const marketplaceSchema = z.object({
     title: z.string().min(5),

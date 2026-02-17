@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import OrderModel from '@/lib/models/Order';
 import { razorpay } from '@/lib/payments/razorpay';
 
-import { getCurrentUser } from '@/lib/firebase/server-auth';
+import { getCurrentUser } from '@/lib/auth/server-auth';
 import { recordSecurityEvent, SecurityEventType } from '@/lib/security/monitoring';
 
 export async function POST(req: NextRequest) {
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
                 performedBy: adminUser.displayName
             },
             req.headers.get('x-forwarded-for') || 'unknown',
-            adminUser.id
+            (adminUser as any)._id
         );
 
         return NextResponse.json({

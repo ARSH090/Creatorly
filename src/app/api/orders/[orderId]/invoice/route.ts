@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { saveInvoice } from '@/lib/services/invoice';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 
 /**
  * GET /api/orders/{orderId}/invoice

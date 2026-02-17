@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
-import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler, throwError } from '@/lib/utils/errorHandler';
 import { ProductSchema } from '@/lib/validation/schemas';
 import { sanitizeHTML } from '@/utils/sanitizers';

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
-import { getCurrentUser } from '@/lib/firebase/server-auth';
+import { getCurrentUser } from '@/lib/auth/server-auth';
 import { recordSecurityEvent, SecurityEventType } from '@/lib/security/monitoring';
 
 export async function POST(
@@ -77,7 +77,7 @@ export async function POST(
             status: statusText,
             reason: reason || 'Admin action',
             date: new Date(),
-            adminId: adminUser.id
+            adminId: (adminUser as any)._id
         };
 
         await User.findByIdAndUpdate(userId, {
@@ -96,7 +96,7 @@ export async function POST(
                 performedBy: adminUser.displayName
             },
             req.headers.get('x-forwarded-for') || 'unknown',
-            adminUser.id
+            (adminUser as any)._id
         );
 
         return NextResponse.json({

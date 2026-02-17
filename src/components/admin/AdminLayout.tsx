@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useAuth } from '@/components/providers/AuthProvider';
+import { useUser, useClerk } from '@clerk/nextjs';
 import {
   LayoutDashboard,
   Users,
@@ -78,10 +78,11 @@ const navigationItems = [
 export function AdminLayout({ children, adminName: initialName, adminEmail: initialEmail, onLogout }: AdminLayoutProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { user, signOut } = useAuth();
+  const { user } = useUser();
+  const { signOut } = useClerk();
 
-  const adminName = initialName || user?.displayName || 'Admin';
-  const adminEmail = initialEmail || user?.email || '';
+  const adminName = initialName || user?.fullName || user?.username || 'Admin';
+  const adminEmail = initialEmail || user?.primaryEmailAddress?.emailAddress || '';
 
   return (
     <div className="flex h-screen bg-gray-900">

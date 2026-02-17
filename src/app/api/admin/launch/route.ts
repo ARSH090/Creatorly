@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { withAdminAuth } from '@/lib/auth/withAuth';
 
 /**
  * FINAL LAUNCH COMMAND API: /api/admin/launch

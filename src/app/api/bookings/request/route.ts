@@ -4,7 +4,7 @@ import Product from '@/lib/models/Product';
 import Booking from '@/lib/models/Booking';
 import Order from '@/lib/models/Order';
 import { razorpay } from '@/lib/payments/razorpay';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 import { startOfDay, endOfDay } from 'date-fns';
 
 export const dynamic = 'force-dynamic';

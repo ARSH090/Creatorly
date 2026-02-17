@@ -1,7 +1,7 @@
 import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
 import { NextResponse } from 'next/server';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 
 export const POST = withAuth(async (req, user) => {
     try {

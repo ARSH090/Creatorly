@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
 import CreatorProfile from '@/lib/models/CreatorProfile';
 import CommunityPost from '@/lib/models/CommunityPost';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 
 export const dynamic = 'force-dynamic';
 

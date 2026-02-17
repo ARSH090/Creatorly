@@ -4,8 +4,8 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
 import Admin from '@/lib/models/Admin';
 import Order from '@/lib/models/Order';
-import { withAdminAuth } from '@/lib/firebase/withAuth';
-import { getCurrentUser } from '@/lib/firebase/server-auth';
+import { withAdminAuth } from '@/lib/auth/withAuth';
+import { getCurrentUser } from '@/lib/auth/server-auth';
 
 export async function checkAdminAccess() {
   const user = await getCurrentUser();

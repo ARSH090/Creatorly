@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
 import User from '@/lib/models/User';
-import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { withAdminAuth } from '@/lib/auth/withAuth';
 import { checkAdminPermission } from '@/lib/middleware/adminAuth';
 
 export const dynamic = 'force-dynamic';

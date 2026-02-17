@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Subscription } from '@/lib/models/Subscription';
-import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { withAdminAuth } from '@/lib/auth/withAuth';
 
 export const GET = withAdminAuth(async (req, user, context) => {
     try {

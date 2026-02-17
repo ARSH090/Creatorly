@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import EmailCampaign from '@/lib/models/EmailCampaign';
-import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 import { hasFeature } from '@/lib/utils/planLimits';
 

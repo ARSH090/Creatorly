@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { CustomDomain } from '@/lib/models/CustomDomain';
-import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 import { hasFeature } from '@/lib/utils/planLimits';
 

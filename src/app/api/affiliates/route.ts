@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { Affiliate, AffiliateClick } from '@/lib/models/Affiliate';
 import * as crypto from 'crypto';
 import { z } from 'zod';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 import { getIP } from '@/lib/security/ip-detection';
 
 /**

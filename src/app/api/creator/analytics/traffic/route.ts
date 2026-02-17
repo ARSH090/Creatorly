@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
-import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { withCreatorAuth } from '@/lib/auth/withAuth';
 import mongoose from 'mongoose';
 
 async function handler(req: NextRequest, user: any) {

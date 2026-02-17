@@ -1,7 +1,8 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IUser extends Document {
-    firebaseUid: string; // Firebase UID for authentication
+    clerkId?: string; // Clerk User ID
+    firebaseUid?: string; // Firebase UID (Deprecated)
     username: string;
     email: string;
     password?: string; // For internal admin auth
@@ -75,10 +76,16 @@ export interface IUser extends Document {
 
 
 const UserSchema: Schema = new Schema({
+    clerkId: {
+        type: String,
+        unique: true,
+        sparse: true,
+        index: true,
+    },
     firebaseUid: {
         type: String,
-        required: true,
         unique: true,
+        sparse: true,
         index: true,
     },
     username: {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { GeminiClient } from '@/lib/ai/gemini';
 import { Content } from '@/lib/models/Content';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 import { z } from 'zod';
 
 const generateSchema = z.object({

@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import OrderModel from '@/lib/models/Order';
 import RefundModel from '@/lib/models/Refund';
 
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 import { z } from 'zod';
 import Razorpay from 'razorpay';
 

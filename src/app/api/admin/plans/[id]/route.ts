@@ -4,7 +4,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Plan from '@/lib/models/Plan';
 import { Subscription } from '@/lib/models/Subscription';
 import { validatePriceChange } from '@/lib/middleware/subscriptionMiddleware';
-import { withAdminAuth } from '@/lib/firebase/withAuth';
+import { withAdminAuth } from '@/lib/auth/withAuth';
 
 export const GET = withAdminAuth(async (req, user, context: any) => {
     try {

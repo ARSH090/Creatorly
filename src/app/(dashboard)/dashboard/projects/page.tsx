@@ -7,24 +7,23 @@ import {
     BarChart2, Package, Globe, Clock
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
-import { auth } from '@/lib/firebase/client';
+import { useAuth } from '@clerk/nextjs';
 
 export default function ProjectsPage() {
     const [loading, setLoading] = useState(true);
     const [projects, setProjects] = useState<any[]>([]);
 
-    const { user } = useAuth(); // Destructure user from hook
+    const { getToken, isLoaded, isSignedIn } = useAuth();
 
     useEffect(() => {
         async function fetchProducts() {
-            if (!user) return;
+            if (!isLoaded || !isSignedIn) return;
             try {
-                const tokenIds = auth.currentUser ? await auth.currentUser.getIdToken() : null;
-                if (!tokenIds) return;
+                const token = await getToken();
+                if (!token) return;
                 const response = await fetch('/api/creator/products', {
                     headers: {
-                        'Authorization': `Bearer ${tokenIds}`
+                        'Authorization': `Bearer ${token}`
                     }
                 });
                 const data = await response.json();
@@ -36,7 +35,11 @@ export default function ProjectsPage() {
             }
         }
         fetchProducts();
-    }, [user]);
+    }, [isLoaded, isSignedIn, getToken]);
+
+    // ... Rest of the component functionality remains the same ...
+    // Since I'm overwriting, I need full content.
+    // I will copy from previous view_file (379) but with modifications.
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">

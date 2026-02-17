@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { InvitationService } from '@/lib/services/invitation';
 import { Membership, MembershipRole } from '@/lib/models/Membership';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 import { z } from 'zod';
 
 const inviteSchema = z.object({

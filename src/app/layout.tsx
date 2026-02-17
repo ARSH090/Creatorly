@@ -52,7 +52,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://creatorly.in"),
 };
 
-import { AuthProvider } from '@/components/providers/AuthProvider';
+import { ClerkProvider } from "@clerk/nextjs";
 
 import ClientLayout from '@/components/layout/ClientLayout';
 import ErrorBoundary from './error-boundary';
@@ -65,38 +65,38 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <link
-          rel="preconnect"
-          href="https://fonts.googleapis.com"
-          crossOrigin="anonymous"
-        />
-        <link
-          rel="preconnect"
-          href="https://fonts.gstatic.com"
-          crossOrigin="anonymous"
-        />
+    <ClerkProvider>
+      <html lang="en" suppressHydrationWarning>
+        <head>
+          <link
+            rel="preconnect"
+            href="https://fonts.googleapis.com"
+            crossOrigin="anonymous"
+          />
+          <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossOrigin="anonymous"
+          />
 
-        {/* DNS prefetch for external services */}
-        <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
-        <link rel="dns-prefetch" href="https://graph.facebook.com" />
-        <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+          {/* DNS prefetch for external services */}
+          <link rel="dns-prefetch" href="https://checkout.razorpay.com" />
+          <link rel="dns-prefetch" href="https://graph.facebook.com" />
+          <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
 
-        <Script src="https://checkout.razorpay.com/v1/checkout.js" />
-      </head>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} data-suppress-hydration-warning="true">
-        <ErrorBoundary>
-          <AuthProvider>
+          <Script src="https://checkout.razorpay.com/v1/checkout.js" />
+        </head>
+        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} data-suppress-hydration-warning="true">
+          <ErrorBoundary>
             <ClientLayout>
               {children}
             </ClientLayout>
-          </AuthProvider>
-        </ErrorBoundary>
-        <SpeedInsights />
-        <Analytics />
-      </body>
-    </html>
+          </ErrorBoundary>
+          <SpeedInsights />
+          <Analytics />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }
 

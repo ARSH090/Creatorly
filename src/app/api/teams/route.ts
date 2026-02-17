@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Team } from '@/lib/models/Team';
 import { Membership, MembershipRole, MembershipStatus } from '@/lib/models/Membership';
-import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { z } from 'zod';
 
 const createTeamSchema = z.object({

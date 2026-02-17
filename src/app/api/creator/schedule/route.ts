@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import ScheduledContent from '@/lib/models/ScheduledContent';
 import { z } from 'zod';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 
 const scheduleSchema = z.object({
     productId: z.string().min(1),

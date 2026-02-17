@@ -1,36 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyFirebaseToken } from './verifyToken';
+import { getMongoUser } from './get-user';
 
 /**
- * Higher-order function to protect API routes with Firebase authentication
- * @param handler The API route handler function
- * @returns Protected handler that requires valid Firebase token
+ * Higher-order function to protect API routes with Clerk authentication
+ * Syncs user to MongoDB if needed.
  */
 export function withAuth(
     handler: (...args: any[]) => Promise<Response>
 ) {
     return async (req: NextRequest, context?: any) => {
-        const authHeader = req.headers.get('Authorization');
+        try {
+            const user = await getMongoUser();
 
-        if (!authHeader?.startsWith('Bearer ')) {
+            if (!user) {
+                return NextResponse.json(
+                    { error: 'Unauthorized - Login required' },
+                    { status: 401 }
+                );
+            }
+
+            // Pass MongoDB user to handler
+            return handler(req, user, context);
+        } catch (error) {
+            console.error("Auth middleware error:", error);
             return NextResponse.json(
-                { error: 'Unauthorized - Missing or invalid Authorization header' },
-                { status: 401 }
+                { error: 'Internal Server Error' },
+                { status: 500 }
             );
         }
-
-        const token = authHeader.split('Bearer ')[1];
-        const auth = await verifyFirebaseToken(token);
-
-        if (!auth) {
-            return NextResponse.json(
-                { error: 'Unauthorized - Invalid or expired token' },
-                { status: 401 }
-            );
-        }
-
-        // Pass MongoDB user to handler
-        return handler(req, auth.mongoUser, context);
     };
 }
 

@@ -1,7 +1,7 @@
 import { connectToDatabase } from '@/lib/db/mongodb';
 export const dynamic = 'force-dynamic';
 import Order from '@/lib/models/Order';
-import { getCurrentUser } from '@/lib/firebase/server-auth';
+import { getCurrentUser } from '@/lib/auth/server-auth';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Package, ExternalLink, Sparkles, ChevronRight, History } from 'lucide-react';

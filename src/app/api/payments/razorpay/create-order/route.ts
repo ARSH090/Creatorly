@@ -4,7 +4,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { razorpay } from '@/lib/payments/razorpay';
 import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
-import { getCurrentUser } from '@/lib/firebase/server-auth';
+import { getCurrentUser } from '@/lib/auth/server-auth';
 
 import { Affiliate } from '@/lib/models/Affiliate';
 
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
                 customerName: customer.name,
                 customerEmail: customer.email,
                 itemsCount: items.length,
-                userId: user?.id || 'guest',
+                userId: (user as any)?._id?.toString() || 'guest',
                 productIds: items.map(i => i.productId.toString()).join(','),
                 affiliateId: affiliateId ? affiliateId.toString() : ''
             }
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
         await Order.create({
             items,
             creatorId,
-            userId: user?.id ? new mongoose.Types.ObjectId(user.id) : new mongoose.Types.ObjectId(),
+            userId: user ? (user as any)._id : new mongoose.Types.ObjectId(),
             customerEmail: customer.email,
             amount: amountWithTax,
             currency: 'INR',

@@ -1,4 +1,4 @@
-import { getCurrentUser } from '@/lib/firebase/server-auth';
+import { getCurrentUser } from '@/lib/auth/server-auth';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { PayoutsManagement } from '@/components/admin/PayoutsManagement';
 import { redirect } from 'next/navigation';

@@ -5,23 +5,22 @@ import {
     Search, Filter, ShoppingBag, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, Eye
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@/hooks/useAuth';
-import { auth } from '@/lib/firebase/client';
+import { useAuth } from '@clerk/nextjs';
 
 export default function OrdersPage() {
-    const { user } = useAuth();
+    const { userId, getToken, isLoaded, isSignedIn } = useAuth();
     const [loading, setLoading] = useState(true);
     const [orders, setOrders] = useState<any[]>([]);
 
     useEffect(() => {
         async function fetchOrders() {
-            if (!user) return;
+            if (!isLoaded || !isSignedIn) return;
             try {
-                const tokenIds = auth.currentUser ? await auth.currentUser.getIdToken() : null;
-                if (!tokenIds) return;
+                const token = await getToken();
+                if (!token) return;
                 const response = await fetch('/api/orders', {
                     headers: {
-                        'Authorization': `Bearer ${tokenIds}`
+                        'Authorization': `Bearer ${token}`
                     }
                 });
                 const data = await response.json();
@@ -33,7 +32,7 @@ export default function OrdersPage() {
             }
         }
         fetchOrders();
-    }, [user]);
+    }, [isLoaded, isSignedIn, getToken]);
 
     const getStatusColor = (status: string) => {
         switch (status) {

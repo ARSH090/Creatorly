@@ -4,7 +4,7 @@ import Order from '@/lib/models/Order';
 import Subscription from '@/lib/models/Subscription';
 import Product from '@/lib/models/Product';
 import { NextResponse } from 'next/server';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 import { log } from '@/utils/logger';
 
 export const POST = withAuth(async (req, user) => {

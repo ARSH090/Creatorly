@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { Order } from '@/lib/models/Order';
 import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
 import { Product } from '@/lib/models/Product';
-import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { withCreatorAuth } from '@/lib/auth/withAuth';
 
 async function handler(req: NextRequest, user: any, context: any) {
     try {

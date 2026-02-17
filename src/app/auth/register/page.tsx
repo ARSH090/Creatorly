@@ -1,49 +1,52 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, Suspense } from 'react';
+import { useSignUp, useSignIn } from '@clerk/nextjs';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '@/components/providers/AuthProvider';
+import { ShieldAlert, CheckCircle, Smartphone } from 'lucide-react';
 
 function RegisterFormContent() {
+    const { isLoaded, signUp, setActive } = useSignUp();
+    const { isLoaded: isSignInLoaded, signIn } = useSignIn();
+
+    // UI State
     const [formData, setFormData] = useState({
+        displayName: '',
         email: '',
         password: '',
-        displayName: '',
     });
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
     const [loading, setLoading] = useState(false);
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const { signUp, signInWithGoogle } = useAuth();
+    const [pendingVerification, setPendingVerification] = useState(false);
+    const [verificationCode, setVerificationCode] = useState('');
 
-    useEffect(() => {
-        const emailParam = searchParams.get('email');
-        if (emailParam) {
-            setFormData(prev => ({ ...prev, email: decodeURIComponent(emailParam) }));
-        }
-    }, [searchParams]);
+    const router = useRouter();
 
     const handleGoogleSignUp = async () => {
-        setLoading(true);
-        setError('');
+        if (!isLoaded) return;
         try {
-            await signInWithGoogle();
-            router.push('/dashboard');
-        } catch (e) {
-            console.error(e);
-            setError('Google sign-up failed');
+            setLoading(true);
+            await signUp.authenticateWithRedirect({
+                strategy: 'oauth_google',
+                redirectUrl: '/sso-callback',
+                redirectUrlComplete: '/dashboard',
+            });
+        } catch (err: any) {
+            console.error('Google Sign Up Error:', err);
+            setError(err.errors?.[0]?.message || 'Google sign-up failed');
             setLoading(false);
         }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isLoaded) return;
+
         setLoading(true);
         setError('');
-        setSuccess('');
 
+        // Basic validation
         if (!formData.displayName.trim()) {
             setError('Your name is required');
             setLoading(false);
@@ -54,42 +57,153 @@ function RegisterFormContent() {
             setLoading(false);
             return;
         }
-        if (formData.password.length < 6) {
-            setError('Password must be at least 6 characters');
+        if (formData.password.length < 8) {
+            setError('Password must be at least 8 characters');
             setLoading(false);
             return;
         }
 
         try {
-            await signUp(formData.email, formData.password, formData.displayName);
-            setSuccess('Account created successfully! Redirecting...');
-            setTimeout(() => {
-                router.push('/dashboard');
-            }, 1000);
+            // 1. Create Sign Up Attempt
+            await signUp.create({
+                emailAddress: formData.email,
+                password: formData.password,
+                firstName: formData.displayName.split(' ')[0],
+                lastName: formData.displayName.split(' ').slice(1).join(' '),
+            });
+
+            // 2. Prepare Verification
+            await signUp.prepareVerification({
+                strategy: 'email_code'
+            });
+
+            setPendingVerification(true);
         } catch (err: any) {
             console.error('Registration error:', err);
-            if (err.code === 'auth/email-already-in-use') {
-                setError('This email is already in use.');
-            } else if (err.code === 'auth/weak-password') {
-                setError('Password is too weak.');
+            // Handle specific Clerk errors
+            if (err.errors?.[0]?.code === 'form_identifier_exists') {
+                setError('This account already exists. Please log in.');
+            } else if (err.errors?.[0]?.code === 'password_complexity') {
+                setError('Password is too weak. Use mix of chars/numbers.');
+            } else if (err.errors?.[0]?.meta?.paramName === 'captcha') {
+                setError('CAPTCHA check failed. Please refresh and try again.');
             } else {
-                setError('Failed to create account. Please try again.');
+                setError(err.errors?.[0]?.message || 'Failed to create account.');
             }
+        } finally {
             setLoading(false);
         }
     };
 
+    const handleVerification = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!isLoaded) return;
+
+        setLoading(true);
+        setError('');
+
+        try {
+            const completeSignUp = await signUp.attemptVerification({
+                strategy: 'email_code',
+                code: verificationCode,
+            });
+
+            if (completeSignUp.status === 'complete') {
+                await setActive({ session: completeSignUp.createdSessionId });
+                window.location.href = '/dashboard';
+            } else if (completeSignUp.status === 'missing_requirements') {
+                console.error("Missing requirements:", completeSignUp.missingFields);
+                setError('Account created but missing requirements (e.g. verified phone). Please contact support.');
+            } else {
+                console.log(JSON.stringify(completeSignUp, null, 2));
+                setError('Verification incomplete. Please try again.');
+            }
+        } catch (err: any) {
+            console.error('Verification Error:', err);
+            if (err.errors?.[0]?.code === 'verification_already_verified') {
+                // Even if already verified, we need to check if we can proceed
+                // But typically this means we are missing requirements if access is not granted.
+                // We can try to reload or check status. 
+                // For now, let's just warn the user.
+                setError('Email already verified, but account setup is incomplete. See previous error regarding requirements.');
+            } else {
+                setError(err.errors?.[0]?.message || 'Invalid verification code');
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Verification UI
+    if (pendingVerification) {
+        return (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
+                <div className="text-center space-y-2 mb-8">
+                    <div className="mx-auto w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center text-indigo-400 mb-4 ring-4 ring-indigo-500/10">
+                        <CheckCircle className="w-8 h-8" />
+                    </div>
+                    <h2 className="text-3xl font-medium tracking-tight text-white">Verify Email</h2>
+                    <p className="text-zinc-500 text-sm">We sent a verification code to <span className="text-white font-medium">{formData.email}</span></p>
+                </div>
+
+                {error && (
+                    <div className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-sm font-bold border border-red-500/20 text-center">
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleVerification} className="space-y-8">
+                    <div className="space-y-4">
+                        <div className="flex justify-center gap-3">
+                            {/* Visual pseudo-input for verification code */}
+                            <input
+                                type="text"
+                                required
+                                autoFocus
+                                className="w-full max-w-[200px] px-4 py-5 bg-zinc-900/50 border border-white/10 rounded-2xl focus:border-indigo-500/50 focus:bg-zinc-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-white placeholder-zinc-700 text-center text-3xl tracking-[0.5em]"
+                                placeholder="000000"
+                                maxLength={6}
+                                value={verificationCode}
+                                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                            />
+                        </div>
+                        <p className="text-center text-xs text-zinc-500 uppercase tracking-widest font-bold">Enter 6-digit Code</p>
+                    </div>
+
+                    <div className="space-y-4">
+                        <button
+                            type="submit"
+                            disabled={loading}
+                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all disabled:opacity-50 shadow-lg shadow-indigo-500/20"
+                        >
+                            {loading ? 'Verifying...' : 'Verify Email'}
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => setPendingVerification(false)}
+                            className="w-full py-2 text-zinc-500 hover:text-zinc-300 text-xs font-bold uppercase tracking-widest transition-colors"
+                        >
+                            Use different email
+                        </button>
+                    </div>
+                </form>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-6">
+            <div className="mb-10">
+                <h2 className="text-3xl font-medium tracking-tight text-white mb-2">Get Started</h2>
+                <p className="text-zinc-500 text-sm">Create your professional creator ID in minutes.</p>
+            </div>
+
+            <div id="clerk-captcha" /> {/* Explicit CAPTCHA mount point */}
+
             {error && (
                 <div className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-sm font-bold border border-red-500/20 animate-in fade-in slide-in-from-top-2">
                     ✗ {error}
-                </div>
-            )}
-
-            {success && (
-                <div className="bg-emerald-500/10 text-emerald-400 p-4 rounded-2xl text-sm font-bold border border-emerald-500/20 animate-in fade-in slide-in-from-top-2">
-                    ✓ {success}
                 </div>
             )}
 
@@ -98,6 +212,7 @@ function RegisterFormContent() {
                     onClick={handleGoogleSignUp}
                     className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-2xl bg-white text-black hover:bg-zinc-200 transition-all active:scale-[0.98] font-bold text-sm"
                     type="button"
+                    disabled={loading}
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <path d="M21.6 12.227C21.6 11.549 21.547 10.953 21.444 10.381H12v3.889h5.787c-.249 1.342-.98 2.486-2.093 3.265v2.717h3.387c1.983-1.828 3.119-4.515 3.119-7.87z" fill="#4285F4" />
@@ -129,19 +244,21 @@ function RegisterFormContent() {
                         placeholder="Full Name"
                         value={formData.displayName}
                         onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                        disabled={loading}
                     />
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Connectivity</label>
+                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Email Address</label>
                     <input
                         type="email"
                         required
                         autoComplete="email"
                         className="w-full px-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
-                        placeholder="Email Address"
+                        placeholder="user@example.com"
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        disabled={loading}
                     />
                 </div>
 
@@ -155,6 +272,7 @@ function RegisterFormContent() {
                         placeholder="••••••••"
                         value={formData.password}
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        disabled={loading}
                     />
                 </div>
 
@@ -227,9 +345,6 @@ export default function RegisterPage() {
                     <div className="relative">
                         <div className="absolute inset-0 bg-indigo-500/10 blur-[100px] rounded-full -z-10" />
                         <div className="bg-zinc-900/40 border border-white/8 backdrop-blur-3xl rounded-4xl p-8 md:p-12">
-                            <h2 className="text-3xl font-medium tracking-tight text-white mb-2">Get Started</h2>
-                            <p className="text-zinc-500 text-sm mb-10">Create your professional creator ID in minutes.</p>
-
                             <Suspense fallback={<div className="text-zinc-500 animate-pulse">Establishing secure connection...</div>}>
                                 <RegisterFormContent />
                             </Suspense>

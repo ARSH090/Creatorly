@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 
 const FB_AUTH_URL = 'https://www.facebook.com/v19.0/dialog/oauth';
 const SCOPES = [

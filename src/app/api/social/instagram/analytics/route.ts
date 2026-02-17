@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { withAuth } from '@/lib/firebase/withAuth';
+import { withAuth } from '@/lib/auth/withAuth';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { DMLog } from '@/lib/models/DMLog';
 

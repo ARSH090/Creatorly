@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { withCreatorAuth } from '@/lib/firebase/withAuth';
+import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { AutoReplyRule } from '@/lib/models/AutoReplyRule';
 import { z } from 'zod';

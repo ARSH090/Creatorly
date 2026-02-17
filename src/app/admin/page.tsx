@@ -2,36 +2,41 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { auth } from '@/lib/firebase/client';
-import { onAuthStateChanged } from 'firebase/auth';
+import { useUser, useAuth, useClerk } from "@clerk/nextjs";
 
 export default function AdminDashboard() {
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<any>(null);
     const [error, setError] = useState('');
     const router = useRouter();
+    const { user, isLoaded } = useUser();
+    const { getToken } = useAuth();
+    const { signOut } = useClerk();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (!user) {
-                router.push('/admin/login');
-                return;
-            }
+        if (!isLoaded) return;
 
-            const idTokenResult = await user.getIdTokenResult();
-            if (!idTokenResult.claims.admin) {
-                router.push('/admin/login');
-                return;
-            }
+        if (!user) {
+            router.push('/admin/login');
+            return;
+        }
 
-            // Fetch dashboard stats
+        // Check admin role
+        // Assuming role is synced to publicMetadata, or we just try to fetch API
+        // For now, let's fetch API and handle 403
+        const fetchStats = async () => {
             try {
-                const token = await user.getIdToken();
+                const token = await getToken();
                 const res = await fetch('/api/admin/analytics/summary?days=30', {
                     headers: {
                         'Authorization': `Bearer ${token}`
                     }
                 });
+
+                if (res.status === 403) {
+                    setError("Unauthorized access");
+                    return;
+                }
 
                 if (!res.ok) throw new Error('Failed to fetch stats');
 
@@ -42,18 +47,18 @@ export default function AdminDashboard() {
             } finally {
                 setLoading(false);
             }
-        });
+        };
 
-        return () => unsubscribe();
-    }, [router]);
+        fetchStats();
+
+    }, [isLoaded, user, router, getToken]);
 
     const handleLogout = async () => {
-        await auth.signOut();
-        sessionStorage.removeItem('adminToken');
+        await signOut();
         router.push('/admin/login');
     };
 
-    if (loading) {
+    if (loading || !isLoaded) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
                 <div className="text-center">
@@ -71,6 +76,9 @@ export default function AdminDashboard() {
                     <p className="text-red-600">Error: {error}</p>
                     <button onClick={() => window.location.reload()} className="mt-4 text-purple-600">
                         Retry
+                    </button>
+                    <button onClick={handleLogout} className="mt-4 ml-4 text-gray-600">
+                        Logout
                     </button>
                 </div>
             </div>
