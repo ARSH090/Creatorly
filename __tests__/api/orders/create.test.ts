@@ -1,4 +1,4 @@
-import { POST } from '@/app/api/orders/create/route';
+import { POST } from '@/app/api/orders/route';
 import { authenticatedRequest } from '@/tests/utils/api-test-utils';
 import Product from '@/lib/models/Product';
 import Order from '@/lib/models/Order';

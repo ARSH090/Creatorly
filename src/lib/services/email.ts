@@ -165,7 +165,7 @@ export async function sendWelcomeEmail(email: string, displayName: string = 'the
 
   return sendEmail({
     to: email,
-    subject: '🚀 Welcome to Creatorly – Let's Build Something Amazing!',
+    subject: 'Welcome to Creatorly – Let\'s Build Something Amazing!',
     html,
   });
 }
