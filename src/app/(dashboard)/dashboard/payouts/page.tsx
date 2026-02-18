@@ -5,7 +5,7 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { PayoutRequestModal } from '@/components/dashboard/payout-request-modal';
 import { PayoutSettingsModal } from '@/components/dashboard/payout-settings-modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '../../../components/ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Loader2, ArrowUpRight, CheckCircle2, Clock } from 'lucide-react';
 

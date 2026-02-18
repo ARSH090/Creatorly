@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { AffiliateInviteModal } from '@/components/dashboard/affiliate-invite-modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '../../../components/ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { Loader2, Users, DollarSign, Percent, Copy, Check } from 'lucide-react';
