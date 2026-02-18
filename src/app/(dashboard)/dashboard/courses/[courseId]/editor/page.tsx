@@ -1,13 +1,12 @@
-'use client';
-
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 import { CourseLessonModal } from '@/components/dashboard/course-lesson-modal';
+import { CourseModuleModal } from '@/components/dashboard/course-module-modal';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, ArrowLeft, GripVertical, Video, FileText, Trash2, Edit } from 'lucide-react';
+import { Loader2, ArrowLeft, GripVertical, Video, FileText, Trash2, Edit, ChevronDown, ChevronRight } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function CourseEditorPage() {
@@ -17,13 +16,28 @@ export default function CourseEditorPage() {
 
     const [loading, setLoading] = useState(true);
     const [course, setCourse] = useState<any>(null);
+    const [modules, setModules] = useState<any[]>([]);
+    const [lessons, setLessons] = useState<any[]>([]);
+    const [expandedModules, setExpandedModules] = useState<string[]>([]);
 
-    const fetchCourse = async () => {
+    const fetchData = async () => {
         try {
-            const res = await fetch(`/api/creator/products/${courseId}`);
-            const json = await res.json();
-            if (!res.ok) throw new Error(json.error || 'Failed to fetch course');
-            setCourse(json.product);
+            const [courseRes, modRes, lessonRes] = await Promise.all([
+                fetch(`/api/creator/products/${courseId}`),
+                fetch(`/api/creator/courses/${courseId}/modules`),
+                fetch(`/api/creator/courses/${courseId}/lessons`)
+            ]);
+
+            const courseData = await courseRes.json();
+            const modData = await modRes.json();
+            const lessonData = await lessonRes.json();
+
+            if (courseRes.ok) setCourse(courseData.product);
+            if (modRes.ok) {
+                setModules(modData.modules || []);
+                setExpandedModules(modData.modules.map((m: any) => m._id));
+            }
+            if (lessonRes.ok) setLessons(lessonData.lessons || []);
         } catch (error) {
             console.error(error);
             toast.error('Failed to load course details');
@@ -33,22 +47,22 @@ export default function CourseEditorPage() {
     };
 
     useEffect(() => {
-        if (courseId) fetchCourse();
+        if (courseId) fetchData();
     }, [courseId]);
+
+    const toggleModule = (id: string) => {
+        setExpandedModules(prev =>
+            prev.includes(id) ? prev.filter(mid => mid !== id) : [...prev, id]
+        );
+    };
 
     const handleDeleteLesson = async (lessonId: string) => {
         if (!confirm('Are you sure you want to delete this lesson?')) return;
-
         try {
-            const res = await fetch(`/api/creator/courses/lessons/${lessonId}?courseId=${courseId}`, {
-                method: 'DELETE'
-            });
-
+            const res = await fetch(`/api/creator/courses/lessons/${lessonId}?courseId=${courseId}`, { method: 'DELETE' });
             if (res.ok) {
                 toast.success('Lesson deleted');
-                fetchCourse();
-            } else {
-                throw new Error('Failed to delete lesson');
+                fetchData();
             }
         } catch (error) {
             toast.error('Failed to delete lesson');
@@ -65,132 +79,88 @@ export default function CourseEditorPage() {
         );
     }
 
-    if (!course) {
-        return (
-            <DashboardLayout>
-                <div className="p-8 text-center">
-                    <h2 className="text-xl font-bold">Course not found</h2>
-                    <Button onClick={() => router.back()} className="mt-4">Go Back</Button>
-                </div>
-            </DashboardLayout>
-        );
-    }
-
-    // Sort curriculum by order
-    const curriculum = course.curriculum?.sort((a: any, b: any) => (a.order || 0) - (b.order || 0)) || [];
-
     return (
         <DashboardLayout>
             <div className="max-w-5xl mx-auto p-6 space-y-8">
-                {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="space-y-1">
                         <div className="flex items-center gap-2">
                             <Button variant="ghost" size="icon" onClick={() => router.back()}>
                                 <ArrowLeft className="h-4 w-4" />
                             </Button>
-                            <h1 className="text-3xl font-bold tracking-tight">{course.name}</h1>
+                            <h1 className="text-3xl font-bold tracking-tight">{course?.name}</h1>
                         </div>
-                        <p className="text-muted-foreground ml-10">Manage curriculum and lessons</p>
+                        <p className="text-muted-foreground ml-10">Manage course modules and lessons</p>
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => window.open(`/products/${course.slug}`, '_blank')}>
-                            View Course
-                        </Button>
-                        <CourseLessonModal courseId={courseId} onSuccess={fetchCourse} />
+                        <CourseModuleModal courseId={courseId} onSuccess={fetchData} />
+                        <CourseLessonModal courseId={courseId} onSuccess={fetchData} />
                     </div>
                 </div>
 
-                {/* Quick Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card className="bg-[#1a1a1a] border-[#333]">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-400">Total Lessons</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-white">{curriculum.length}</div>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-[#1a1a1a] border-[#333]">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-400">Total Duration</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-white">0 min</div>
-                            <p className="text-xs text-gray-500">Auto-calculated</p>
-                        </CardContent>
-                    </Card>
-                    <Card className="bg-[#1a1a1a] border-[#333]">
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-gray-400">Students</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-white">{course.stats?.totalSales || 0}</div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Curriculum */}
-                <Card className="border-[#333]">
-                    <CardHeader>
-                        <CardTitle>Course Curriculum</CardTitle>
-                        <CardDescription>Drag and drop to reorder lessons (coming soon)</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {curriculum.length === 0 ? (
-                            <div className="text-center py-12 border-2 border-dashed border-[#333] rounded-lg">
-                                <FileText className="h-12 w-12 text-gray-600 mx-auto mb-4" />
-                                <h3 className="text-lg font-medium text-gray-300">No lessons yet</h3>
-                                <p className="text-gray-500 mb-4">Start building your course by adding the first lesson.</p>
-                                <CourseLessonModal courseId={courseId} onSuccess={fetchCourse} />
-                            </div>
-                        ) : (
-                            curriculum.map((lesson: any, index: number) => (
-                                <div key={lesson._id} className="flex items-center justify-between p-4 bg-[#1a1a1a] border border-[#333] rounded-lg hover:border-indigo-500/50 transition-colors group">
+                <div className="space-y-6">
+                    {modules.length === 0 ? (
+                        <div className="text-center py-20 border-2 border-dashed border-[#333] rounded-3xl">
+                            <FolderPlus className="h-12 w-12 text-gray-600 mx-auto mb-4" />
+                            <h3 className="text-lg font-bold text-white">No content structure yet</h3>
+                            <p className="text-gray-500 mb-6">Create your first module to begin organizing lessons.</p>
+                            <CourseModuleModal courseId={courseId} onSuccess={fetchData} />
+                        </div>
+                    ) : (
+                        modules.map((module, mIdx) => (
+                            <div key={module._id} className="space-y-4">
+                                <div
+                                    onClick={() => toggleModule(module._id)}
+                                    className="flex items-center justify-between p-4 bg-[#111] border border-white/5 rounded-2xl cursor-pointer hover:border-white/10 transition-all group"
+                                >
                                     <div className="flex items-center gap-4">
-                                        <div className="cursor-move text-gray-600 hover:text-gray-400">
-                                            <GripVertical className="h-5 w-5" />
-                                        </div>
-                                        <div className="h-10 w-10 rounded bg-[#2a2a2a] flex items-center justify-center text-indigo-400">
-                                            {lesson.videoUrl ? <Video className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
-                                        </div>
+                                        {expandedModules.includes(module._id) ? <ChevronDown className="w-5 h-5 text-zinc-500" /> : <ChevronRight className="w-5 h-5 text-zinc-500" />}
                                         <div>
-                                            <h4 className="font-medium text-white">{lesson.title}</h4>
-                                            <div className="flex items-center gap-2 mt-1">
-                                                <Badge variant="secondary" className="text-[10px] h-5 bg-[#2a2a2a] text-gray-400">
-                                                    Lesson {index + 1}
-                                                </Badge>
-                                                {lesson.duration > 0 && (
-                                                    <span className="text-xs text-gray-500">{lesson.duration} min</span>
-                                                )}
-                                                {!lesson.isPublished && (
-                                                    <Badge variant="outline" className="text-[10px] h-5 border-yellow-800 text-yellow-600">Draft</Badge>
-                                                )}
-                                            </div>
+                                            <h3 className="font-black uppercase tracking-tight text-sm flex items-center gap-3">
+                                                <span className="text-zinc-600">SECTION {mIdx + 1}</span>
+                                                {module.title}
+                                            </h3>
                                         </div>
                                     </div>
-
                                     <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <CourseLessonModal
-                                            courseId={courseId}
-                                            lesson={lesson}
-                                            onSuccess={fetchCourse}
-                                            trigger={
-                                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                            }
-                                        />
-                                        <Button variant="ghost" size="sm" onClick={() => handleDeleteLesson(lesson._id)} className="h-8 w-8 p-0 text-red-500 hover:text-red-400 hover:bg-red-500/10">
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        <CourseModuleModal courseId={courseId} module={module} onSuccess={fetchData} trigger={<Button variant="ghost" size="sm" className="h-8 w-8 p-0"><Edit className="h-4 w-4" /></Button>} />
                                     </div>
                                 </div>
-                            ))
-                        )}
-                    </CardContent>
-                </Card>
+
+                                {expandedModules.includes(module._id) && (
+                                    <div className="pl-12 space-y-3">
+                                        {lessons.filter(l => l.moduleId === module._id).length === 0 ? (
+                                            <p className="text-xs text-zinc-600 italic py-2">No lessons in this module yet.</p>
+                                        ) : (
+                                            lessons.filter(l => l.moduleId === module._id).map((lesson, lIdx) => (
+                                                <div key={lesson._id} className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl hover:border-indigo-500/30 transition-all group">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-8 h-8 rounded-xl bg-zinc-900 flex items-center justify-center text-indigo-400">
+                                                            {lesson.videoUrl ? <Video className="w-4 h-4" /> : <FileText className="w-4 h-4" />}
+                                                        </div>
+                                                        <div>
+                                                            <h4 className="text-sm font-bold text-white">{lesson.title}</h4>
+                                                            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-black">Lesson {lIdx + 1}</p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <CourseLessonModal courseId={courseId} lesson={lesson} onSuccess={fetchData} trigger={<Button variant="ghost" size="sm" className="h-8 w-8 p-0"><Edit className="h-4 w-4" /></Button>} />
+                                                        <Button variant="ghost" size="sm" onClick={() => handleDeleteLesson(lesson._id)} className="h-8 w-8 p-0 text-rose-500 hover:text-rose-400 hover:bg-rose-500/10">
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
         </DashboardLayout>
     );
 }
+
+import { FolderPlus } from 'lucide-react';

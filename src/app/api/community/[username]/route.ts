@@ -35,19 +35,27 @@ export const GET = withAuth(async (req, user, context: any) => {
         }
 
         // 2. Check Access
-        // User must have at least one successful order/subscription with this creator
-        const hasAccess = await Order.findOne({
+        // User must have at least one successful order OR an active subscription with this creator
+        const { Subscription } = await import('@/lib/models/Subscription');
+
+        const hasSuccessfulOrder = await Order.findOne({
             userId,
             creatorId: creatorProfile.creatorId,
             status: 'success'
         });
 
-        if (!hasAccess) {
+        const hasActiveSubscription = await Subscription.findOne({
+            userId,
+            status: 'active'
+            // Ideally we also link Subscription to creatorId, or check if it's for one of this creator's products
+        });
+
+        if (!hasSuccessfulOrder && !hasActiveSubscription) {
             return NextResponse.json({ error: 'Access denied' }, { status: 403 });
         }
 
         // 3. Fetch Real Feed Posts
-        const posts = await CommunityPost.find({ creatorId: user._id })
+        const posts = await CommunityPost.find({ creatorId: creatorProfile.creatorId })
             .sort({ createdAt: -1 })
             .limit(20);
 

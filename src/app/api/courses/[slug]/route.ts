@@ -28,14 +28,44 @@ export const GET = withAuth(async (req, user, context: any) => {
             return NextResponse.json({ error: 'Access denied' }, { status: 403 });
         }
 
-        // 3. Fetch Progress
+        // 3. Fetch Curriculum (Modules & Lessons)
+        const [modules, lessons] = await Promise.all([
+            import('@/lib/models/CourseContent').then(m => m.Module.find({ productId: product._id }).sort({ order: 1 })),
+            import('@/lib/models/CourseContent').then(m => m.Lesson.find({ productId: product._id }).sort({ order: 1 }))
+        ]);
+
+        // Construct hierarchical curriculum
+        const curriculum = modules.map(mod => ({
+            id: mod._id.toString(),
+            title: mod.title,
+            description: mod.description,
+            order: mod.order,
+            lessons: lessons
+                .filter(l => l.moduleId.toString() === mod._id.toString())
+                .map(l => ({
+                    id: l._id.toString(),
+                    title: l.title,
+                    type: l.videoUrl ? 'video' : 'text',
+                    content: l.content || l.videoUrl,
+                    duration: l.durationMinutes ? `${l.durationMinutes}:00` : '0:00',
+                    isFreePreview: l.isPreview
+                }))
+        }));
+
+        // If no modules found, check if there's an embedded curriculum (legacy)
+        const finalCurriculum = curriculum.length > 0 ? curriculum : (product as any).curriculum || [];
+
+        // 4. Fetch Progress
         let progress = await CourseProgress.findOne({ userId, productId: product._id });
         if (!progress) {
             progress = await CourseProgress.create({ userId, productId: product._id, completedLessons: [] });
         }
 
         return NextResponse.json({
-            product,
+            product: {
+                ...product.toObject(),
+                curriculum: finalCurriculum
+            },
             progress
         });
 

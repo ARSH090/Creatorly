@@ -9,6 +9,7 @@ interface CartItem {
     quantity: number;
     type: string;
     creator: string;
+    metadata?: Record<string, any>;
 }
 
 interface CheckoutState {

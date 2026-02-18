@@ -1,13 +1,15 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
+import { Lesson, Module } from '@/lib/models/CourseContent';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { slugify } from '@/utils/slugify';
 
 /**
  * POST /api/creator/courses/:id/lessons
  * Add lesson to course
- * Body: { title, description, videoUrl?, content?, order? }
+ * Body: { moduleId, title, description, videoUrl?, content?, order? }
  */
 async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
@@ -16,11 +18,10 @@ async function handler(req: NextRequest, user: any, context: any) {
     const courseId = params.id;
 
     const body = await req.json();
-    const { title, description, videoUrl, content, order } = body;
+    const { moduleId, title, description, videoUrl, content, order, durationMinutes } = body;
 
-    if (!title) {
-        throw new Error('Lesson title is required');
-    }
+    if (!title) throw new Error('Lesson title is required');
+    if (!moduleId) throw new Error('Module ID is required');
 
     const course = await Product.findOne({
         _id: courseId,
@@ -28,38 +29,50 @@ async function handler(req: NextRequest, user: any, context: any) {
         type: 'course'
     });
 
-    if (!course) {
-        throw new Error('Course not found');
-    }
+    if (!course) throw new Error('Course not found');
 
-    // Initialize curriculum if doesn't exist
-    if (!course.curriculum) {
-        course.curriculum = [];
-    }
+    const targetModule = await Module.findOne({ _id: moduleId, productId: courseId });
+    if (!targetModule) throw new Error('Module not found for this course');
 
     // Determine lesson order
-    const lessonOrder = order !== undefined ? order : course.curriculum.length;
+    let lessonOrder = order;
+    if (lessonOrder === undefined) {
+        const lastLesson = await Lesson.findOne({ moduleId }).sort({ order: -1 });
+        lessonOrder = lastLesson ? lastLesson.order + 1 : 0;
+    }
 
-    // Add lesson/module
-    const lesson = {
-        id: Math.random().toString(36).substring(7),
+    const lesson = await Lesson.create({
+        moduleId,
+        productId: courseId,
         title,
+        slug: slugify(title) + '-' + Math.random().toString(36).substring(7),
         description,
         videoUrl,
         content,
+        durationMinutes: durationMinutes || 0,
         order: lessonOrder,
-        duration: '0',
-        lessons: []
-    };
-
-    course.curriculum.push(lesson);
-    await course.save();
+        isPreview: false,
+        isActive: true
+    });
 
     return {
         success: true,
         lesson,
-        message: 'Lesson added successfully'
+        message: 'Lesson created successfully'
     };
 }
 
 export const POST = withCreatorAuth(withErrorHandler(handler));
+export const GET = withCreatorAuth(withErrorHandler(async (req: NextRequest, user: any, context: any) => {
+    await connectToDatabase();
+    const params = await context.params;
+    const courseId = params.id;
+    const { searchParams } = new URL(req.url);
+    const moduleId = searchParams.get('moduleId');
+
+    const query: any = { productId: courseId };
+    if (moduleId) query.moduleId = moduleId;
+
+    const lessons = await Lesson.find(query).sort({ order: 1 });
+    return { lessons };
+}));

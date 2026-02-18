@@ -274,7 +274,7 @@ export async function sendDownloadInstructionsEmail(
              `).join('')}
           </div>
 
-          <a href="${process.env.NEXTAUTH_URL}/account/downloads" class="button">Download Now</a>
+          <a href="${process.env.NEXTAUTH_URL}/account/downloads" class="button">Access My Library</a>
 
           <p style="font-size: 12px; color: #666; text-align: center; margin-top: 24px;">
             Link valid for 24 hours. Need help? Reply to this email.
@@ -402,3 +402,46 @@ export async function sendAffiliateNotificationEmail(
   });
 }
 
+
+export async function sendMarketingEmail(
+  to: string,
+  subject: string,
+  content: string,
+  creatorName: string,
+  unsubscribeUrl?: string
+) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Inter', -apple-system, sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
+          .header { font-size: 10px; font-weight: 900; color: #444; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.1em; }
+          .content { color: #ccc; font-size: 16px; line-height: 1.6; margin-bottom: 30px; }
+          .content h1 { color: #fff; font-size: 24px; font-weight: 900; font-style: italic; margin-bottom: 20px; text-transform: uppercase; }
+          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.1em; border-top: 1px solid #222; padding-top: 20px; }
+          .unsubscribe { color: #6366f1; text-decoration: none; font-weight: 700; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">Sent via Creatorly by ${creatorName}</div>
+          <div class="content">
+            ${content}
+          </div>
+          <div class="footer">
+            &copy; 2026 ${creatorName} • Delivered by Creatorly
+            ${unsubscribeUrl ? `<br/><br/><a href="${unsubscribeUrl}" class="unsubscribe">Unsubscribe</a>` : ''}
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to,
+    subject,
+    html,
+  });
+}

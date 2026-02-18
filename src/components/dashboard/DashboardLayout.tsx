@@ -4,7 +4,8 @@ import React, { useState, useEffect } from "react";
 import {
     LayoutDashboard, Package, ShoppingCart, TrendingUp,
     Users, Wallet, Settings, Bell, LogOut, ChevronRight,
-    Sparkles, Plus, Share2, Menu, X, User, CreditCard, Folder, LifeBuoy
+    Sparkles, Plus, Share2, Menu, X, User, CreditCard, Folder, LifeBuoy,
+    Mail
 } from "lucide-react";
 import { useUser, useClerk, useAuth } from "@clerk/nextjs";
 import Link from 'next/link';
@@ -62,6 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: 'Projects', icon: Folder, href: '/dashboard/projects', badge: stats?.productsCount },
         { name: 'Orders', icon: ShoppingCart, href: '/dashboard/orders', badge: stats?.pendingOrders },
         { name: 'Analytics', icon: TrendingUp, href: '/dashboard/analytics' },
+        { name: 'Marketing', icon: Mail, href: '/dashboard/email/campaigns' },
         { name: 'Team', icon: Users, href: '/dashboard/team' },
         { name: 'Settings', icon: Settings, href: '/dashboard/settings' },
         { name: 'Support', icon: LifeBuoy, href: '/dashboard/support' },

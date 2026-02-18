@@ -40,6 +40,16 @@ export async function GET(
             return NextResponse.json({ error: 'Booking is disabled' }, { status: 403 });
         }
 
+        const productId = searchParams.get('productId');
+        let slotDuration = profile.availability.defaultSlotDuration || 30;
+
+        if (productId) {
+            const product = await import('@/lib/models/Product').then(m => m.Product.findById(productId));
+            if (product && product.coachingDuration) {
+                slotDuration = product.coachingDuration;
+            }
+        }
+
         const dayConfig = profile.availability.weeklySchedule.find(d => d.dayOfWeek === dayOfWeek);
         if (!dayConfig || !dayConfig.active || dayConfig.slots.length === 0) {
             return NextResponse.json({ slots: [] });
@@ -56,7 +66,6 @@ export async function GET(
 
         // 4. Generate all possible slots
         const availableSlots: string[] = [];
-        const slotDuration = profile.availability.defaultSlotDuration || 30;
         const bufferTime = profile.availability.bufferTime || 15;
 
         dayConfig.slots.forEach(range => {

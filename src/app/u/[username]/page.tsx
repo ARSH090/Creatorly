@@ -8,6 +8,8 @@ import { Metadata } from 'next';
 import StoreHeader from '@/components/storefront/StoreHeader';
 import CreatorBio from '@/components/storefront/CreatorBio';
 import ProductGrid from '@/components/storefront/ProductGrid';
+import LinksSection from '@/components/storefront/LinksSection';
+import ChatWidget from '@/components/storefront/ChatWidget';
 import { ShieldAlert } from 'lucide-react';
 
 import { getCurrentUser } from '@/lib/auth/server-auth';
@@ -84,7 +86,6 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
             creatorId: creator._id,
             status: 'success'
         });
-        // Flatten all product IDs from all items in all orders
         purchasedProductIds = orders.flatMap(o => o.items.map(item => item.productId.toString()));
     }
 
@@ -97,7 +98,7 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
         textColor: '#ffffff',
         fontFamily: 'Inter',
         borderRadius: 'md',
-        buttonStyle: 'rounded'
+        buttonStyle: 'rounded' as const
     };
 
     const plainProducts = products.map((p: any) => ({
@@ -118,8 +119,16 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
         avatar: (creator as any).avatar || '',
         logo: profile?.logo,
         socialLinks: profile?.socialLinks || {},
-        theme: theme
+        theme: theme as any
     };
+
+    // Default layout if none provided
+    const layout = (profile?.layout?.length ? profile.layout : [
+        { id: 'hero', enabled: true },
+        { id: 'links', enabled: true },
+        { id: 'products', enabled: true },
+        { id: 'newsletter', enabled: true }
+    ]) as any[];
 
     return (
         <div
@@ -133,61 +142,78 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
             <StoreHeader creator={plainCreator} />
 
             <main className="max-w-4xl mx-auto px-6 pt-32 pb-12 space-y-16 relative">
-                {/* Intent/View Tracker (Anti-Gravity) */}
-                {/* Server-Side View Tracker (Production-Safe) */}
+                {/* View Tracker */}
                 {await (async () => {
                     const { AnalyticsEvent: EventModel } = await import('@/lib/models/AnalyticsEvent');
-                    // Async fire-and-forget server-side logging
                     EventModel.create({
                         eventType: 'page_view',
                         creatorId: creator._id,
                         path: `/u/${username}`,
-                        metadata: {
-                            isDirect: true,
-                            source: 'server-component'
-                        }
+                        metadata: { source: 'server-component' }
                     }).catch(console.error);
                     return null;
                 })()}
 
+                {layout.map((section) => {
+                    if (!section.enabled) return null;
 
-                {/* Hero / Bio Section */}
-                <CreatorBio creator={plainCreator} />
+                    switch (section.id) {
+                        case 'hero':
+                            return <CreatorBio key="hero" creator={plainCreator} />;
 
-                {/* Products Section */}
-                <section id="products" className="space-y-8">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-2xl font-black uppercase tracking-widest">Featured Products</h2>
-                        <div className="h-px flex-1 bg-white/10 mx-6 hidden md:block" />
-                    </div>
+                        case 'links':
+                            return (
+                                <LinksSection
+                                    key="links"
+                                    links={profile?.links || []}
+                                    theme={theme as any}
+                                    creatorId={creator._id.toString()}
+                                />
+                            );
 
-                    <Suspense fallback={<ProductGridSkeleton />}>
-                        <ProductGrid
-                            products={plainProducts}
-                            purchasedProductIds={purchasedProductIds}
-                            creator={{
-                                id: creator._id.toString(),
-                                username: creator.username,
-                                displayName: creator.displayName
-                            }}
-                            theme={theme}
-                        />
-                    </Suspense>
-                </section>
+                        case 'products':
+                            return (
+                                <section key="products" id="products" className="space-y-8">
+                                    <div className="flex items-center justify-between">
+                                        <h2 className="text-2xl font-black uppercase tracking-widest">Featured Products</h2>
+                                        <div className="h-px flex-1 bg-white/10 mx-6 hidden md:block" />
+                                    </div>
 
-                {/* Newsletter Section */}
-                {profile?.features?.newsletterEnabled !== false && (
-                    <section id="newsletter" className="max-w-xl mx-auto">
-                        <NewsletterSignup creatorId={creator._id.toString()} theme={theme} />
-                    </section>
-                )}
+                                    <Suspense fallback={<ProductGridSkeleton />}>
+                                        <ProductGrid
+                                            products={plainProducts}
+                                            purchasedProductIds={purchasedProductIds}
+                                            creator={{
+                                                id: creator._id.toString(),
+                                                username: creator.username,
+                                                displayName: creator.displayName
+                                            }}
+                                            theme={theme as any}
+                                        />
+                                    </Suspense>
+                                </section>
+                            );
 
-                {/* Footer Section */}
+                        case 'newsletter':
+                            return profile?.features?.newsletterEnabled !== false && (
+                                <section key="newsletter" id="newsletter" className="max-w-xl mx-auto">
+                                    <NewsletterSignup creatorId={creator._id.toString()} theme={theme as any} />
+                                </section>
+                            );
+
+                        default:
+                            return null;
+                    }
+                })}
+
                 <footer className="pt-20 pb-10 text-center border-t border-white/5">
                     <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em]">
                         Powered by Creatorly
                     </p>
                 </footer>
+
+                {/* Real-time 1-on-1 Chat */}
+                <ChatWidget creatorId={creator._id.toString()} />
             </main>
         </div>
     );

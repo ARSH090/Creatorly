@@ -160,6 +160,29 @@ export async function POST(req: Request) {
                 }
             }
 
+            // D. Enroll in 'purchase' email sequence if exists
+            try {
+                const { enrollInSequence } = await import('@/lib/services/marketing');
+                await enrollInSequence(order.customerEmail, order.creatorId.toString(), 'purchase');
+            } catch (seqErr) {
+                console.error('Sequence enrollment error:', seqErr);
+            }
+
+            // D. Decrement Stock for products
+            try {
+                const Product = (await import('@/lib/models/Product')).default;
+                for (const item of order.items) {
+                    await Product.findByIdAndUpdate(item.productId, {
+                        $inc: { stock: -item.quantity }
+                    }, {
+                        // Only decrement if stock is not null (unlimited)
+                        condition: { stock: { $ne: null } }
+                    });
+                }
+            } catch (sErr) {
+                console.error('Stock decrement error:', sErr);
+            }
+
             console.log(`✅ Order ${payment.order_id} captured and verified`);
         }
 
@@ -168,24 +191,47 @@ export async function POST(req: Request) {
             const sub = event.payload.subscription.entity;
             await Subscription.findOneAndUpdate(
                 { razorpaySubscriptionId: sub.id },
-                { status: 'active', currentStart: new Date(sub.current_start * 1000), currentEnd: new Date(sub.current_end * 1000) }
+                {
+                    status: 'active',
+                    startDate: new Date(sub.current_start * 1000),
+                    endDate: new Date(sub.current_end * 1000)
+                }
             );
+            console.log(`✅ Subscription ${sub.id} activated`);
         }
 
         if (event.event === 'subscription.charged') {
             const sub = event.payload.subscription.entity;
-            const payment = event.payload.payment.entity;
-            console.log(`💰 Subscription recurring payment for ${sub.id}`);
-            // TODO: Log recurring payment in a Revenue table
+            await Subscription.findOneAndUpdate(
+                { razorpaySubscriptionId: sub.id },
+                {
+                    status: 'active',
+                    startDate: new Date(sub.current_start * 1000),
+                    endDate: new Date(sub.current_end * 1000),
+                    $inc: { renewalCount: 1 }
+                }
+            );
+            console.log(`💰 Subscription ${sub.id} charged/renewed`);
         }
 
         if (event.event === 'subscription.cancelled') {
             const sub = event.payload.subscription.entity;
             await Subscription.findOneAndUpdate(
                 { razorpaySubscriptionId: sub.id },
-                { status: 'cancelled' }
+                { status: 'canceled', autoRenew: false }
             );
+            console.log(`❌ Subscription ${sub.id} cancelled`);
         }
+
+        if (event.event === 'subscription.expired' || event.event === 'subscription.halted') {
+            const sub = event.payload.subscription.entity;
+            await Subscription.findOneAndUpdate(
+                { razorpaySubscriptionId: sub.id },
+                { status: 'expired' }
+            );
+            console.log(`⚠️ Subscription ${sub.id} expired/halted`);
+        }
+
 
         return NextResponse.json({ received: true });
     } catch (error: any) {

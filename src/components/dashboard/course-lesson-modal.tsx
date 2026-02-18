@@ -37,32 +37,52 @@ export function CourseLessonModal({ courseId, lesson, trigger, onSuccess }: Cour
     const [videoUrl, setVideoUrl] = useState('');
     const [content, setContent] = useState('');
     const [order, setOrder] = useState<number | ''>('');
+    const [moduleId, setModuleId] = useState<string>('');
+    const [modules, setModules] = useState<any[]>([]);
 
     // Initialize form when opening/editing
     useEffect(() => {
+        async function fetchModules() {
+            try {
+                const res = await fetch(`/api/creator/courses/${courseId}/modules`);
+                const data = await res.json();
+                if (res.ok) setModules(data.modules || []);
+            } catch (err) {
+                console.error('Failed to fetch modules', err);
+            }
+        }
+
+        if (open) fetchModules();
+
         if (lesson) {
             setTitle(lesson.title || '');
             setDescription(lesson.description || '');
             setVideoUrl(lesson.videoUrl || '');
             setContent(lesson.content || '');
             setOrder(lesson.order !== undefined ? lesson.order : '');
+            setModuleId((lesson as any).moduleId || '');
         } else {
-            // Reset for create
             setTitle('');
             setDescription('');
             setVideoUrl('');
             setContent('');
             setOrder('');
+            setModuleId('');
         }
-    }, [lesson, open]);
+    }, [lesson, open, courseId]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!moduleId) {
+            toast.error('Please select a module');
+            return;
+        }
         setLoading(true);
 
         try {
             const payload = {
                 courseId,
+                moduleId,
                 title,
                 description,
                 videoUrl,
@@ -119,7 +139,21 @@ export function CourseLessonModal({ courseId, lesson, trigger, onSuccess }: Cour
 
                 <form onSubmit={handleSubmit} className="space-y-4 py-4">
                     <div className="space-y-2">
-                        <Label htmlFor="title" className="text-gray-200">Title <span className="text-red-500">*</span></Label>
+                        <Label htmlFor="moduleId" className="text-gray-200">Module <span className="text-red-500">*</span></Label>
+                        <Select value={moduleId} onValueChange={setModuleId}>
+                            <SelectTrigger className="bg-[#0a0a0a] border-gray-700">
+                                <SelectValue placeholder="Select a module" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-[#1a1a1a] border-gray-700 text-white">
+                                {modules.map((mod) => (
+                                    <SelectItem key={mod._id} value={mod._id}>{mod.title}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="title" className="text-gray-200">Lesson Title <span className="text-red-500">*</span></Label>
                         <Input
                             id="title"
                             value={title}

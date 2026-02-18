@@ -1,11 +1,25 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export interface ILink {
+    id: string;
+    title: string;
+    url: string;
+    thumbnail?: string;
+    isActive: boolean;
+    order: number;
+    clicks: number;
+    description?: string;
+}
+
 export interface ICreatorProfile extends Document {
     creatorId: mongoose.Types.ObjectId;
     storeName: string;
     logo?: string;
     banner?: string;
     description?: string;
+
+    // Custom links (Link-in-Bio)
+    links: ILink[];
 
     // Theme & Branding
     theme: {
@@ -102,6 +116,17 @@ const CreatorProfileSchema: Schema = new Schema({
         linkedin: String,
         website: String
     },
+
+    links: [{
+        id: { type: String, required: true },
+        title: { type: String, required: true },
+        url: { type: String, required: true },
+        thumbnail: String,
+        isActive: { type: Boolean, default: true },
+        order: { type: Number, default: 0 },
+        clicks: { type: Number, default: 0 },
+        description: String
+    }],
 
     layout: [{
         id: String,

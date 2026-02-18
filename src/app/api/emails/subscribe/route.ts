@@ -46,6 +46,10 @@ export async function POST(req: NextRequest) {
         // 3. Trigger Welcome Email
         await sendNewsletterWelcomeEmail(email, creatorName);
 
+        // 4. Enroll in 'signup' email sequence if exists
+        const { enrollInSequence } = await import('@/lib/services/marketing');
+        await enrollInSequence(email, creatorId, 'signup');
+
         return NextResponse.json({ success: true, message: 'Subscribed successfully' });
     } catch (error: any) {
         console.error('[Newsletter] Subscription error:', error);

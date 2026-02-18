@@ -18,6 +18,7 @@ const FONTS = [
 
 const SECTIONS = [
     { id: 'hero', name: 'Hero / Bio', icon: Type },
+    { id: 'links', name: 'Custom Links', icon: Layers },
     { id: 'products', name: 'Product Grid', icon: Layers },
     { id: 'socials', name: 'Social Links', icon: Zap },
     { id: 'newsletter', name: 'Newsletter', icon: Save },
@@ -37,10 +38,13 @@ export default function StorefrontBuilder() {
 
     const [layout, setLayout] = useState([
         { id: 'hero', enabled: true },
+        { id: 'links', enabled: true },
         { id: 'products', enabled: true },
         { id: 'socials', enabled: true },
         { id: 'newsletter', enabled: false },
     ]);
+
+    const [links, setLinks] = useState<any[]>([]);
 
     useEffect(() => {
         async function fetchProfile() {
@@ -50,6 +54,7 @@ export default function StorefrontBuilder() {
                     const data = await response.json();
                     if (data.theme) setTheme(data.theme);
                     if (data.layout) setLayout(data.layout);
+                    if (data.links) setLinks(data.links);
                 }
             } catch (error) {
                 console.error('Fetch Profile Error:', error);
@@ -84,6 +89,7 @@ export default function StorefrontBuilder() {
                 body: JSON.stringify({
                     theme,
                     layout,
+                    links,
                 }),
             });
             if (!response.ok) throw new Error('Save failed');
@@ -120,7 +126,7 @@ export default function StorefrontBuilder() {
                     </div>
 
                     <div className="flex border-b border-white/5">
-                        {['design', 'layout'].map(tab => (
+                        {['design', 'links', 'layout'].map(tab => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -182,6 +188,53 @@ export default function StorefrontBuilder() {
                                         ))}
                                     </div>
                                 </section>
+                            </div>
+                        ) : activeTab === 'links' ? (
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Custom Links</h3>
+                                    <button
+                                        onClick={() => setLinks([...links, { id: Math.random().toString(36).substr(2, 9), title: 'New Link', url: 'https://', isActive: true, order: links.length }])}
+                                        className="p-2 bg-indigo-500 rounded-lg hover:bg-indigo-600 transition-colors"
+                                    >
+                                        <Plus className="w-3 h-3 text-white" />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {links.map((link, idx) => (
+                                        <div key={link.id} className="p-4 bg-white/5 border border-white/5 rounded-2xl bg-zinc-900/50 space-y-4">
+                                            <div className="flex items-center justify-between">
+                                                <input
+                                                    className="bg-transparent border-none text-sm font-bold focus:ring-0 p-0 w-full"
+                                                    value={link.title}
+                                                    onChange={(e) => {
+                                                        const newLinks = [...links];
+                                                        newLinks[idx].title = e.target.value;
+                                                        setLinks(newLinks);
+                                                    }}
+                                                    placeholder="Link Title"
+                                                />
+                                                <button
+                                                    onClick={() => setLinks(links.filter((_, i) => i !== idx))}
+                                                    className="text-zinc-500 hover:text-rose-500"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <input
+                                                className="bg-zinc-800/50 border border-white/5 rounded-lg text-xs p-2 w-full text-zinc-400"
+                                                value={link.url}
+                                                onChange={(e) => {
+                                                    const newLinks = [...links];
+                                                    newLinks[idx].url = e.target.value;
+                                                    setLinks(newLinks);
+                                                }}
+                                                placeholder="https://your-link.com"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         ) : (
                             <div className="space-y-6">
@@ -267,6 +320,22 @@ export default function StorefrontBuilder() {
                                     <p className="text-xs text-zinc-400 max-w-[240px] leading-relaxed">
                                         Digital creator building tools for the future of the internet.
                                     </p>
+                                </div>
+
+                                {/* Links Mock */}
+                                <div className="space-y-3">
+                                    {links.filter(l => l.isActive).map((link) => (
+                                        <div
+                                            key={link.id}
+                                            className="w-full py-4 px-6 border border-white/10 flex items-center justify-center transition-all"
+                                            style={{
+                                                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                                borderRadius: theme.borderRadius === '2rem' ? '1rem' : '0.5rem',
+                                            }}
+                                        >
+                                            <span className="text-xs font-bold">{link.title}</span>
+                                        </div>
+                                    ))}
                                 </div>
 
                                 {/* Product Card Mock */}

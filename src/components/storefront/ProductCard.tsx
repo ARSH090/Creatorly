@@ -6,6 +6,7 @@ import { ShoppingBag, Star, Zap, TrendingUp, Eye, Play, Lock, FileText, Users, L
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useCheckoutStore } from '@/lib/store/useCheckoutStore';
+import BookingModal from './BookingModal';
 
 interface ProductCardProps {
     product: {
@@ -32,6 +33,8 @@ interface ProductCardProps {
 export default function ProductCard({ product, creator, theme, hasAccess }: ProductCardProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
+    const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
+    const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null);
     const { addToCart, setStep } = useCheckoutStore();
     const router = useRouter();
 
@@ -47,6 +50,12 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
             return;
         }
 
+        // If coaching and no slot selected, open modal
+        if (product.type === 'coaching' && !selectedSlot) {
+            setIsBookingModalOpen(true);
+            return;
+        }
+
         try {
             setIsCheckingOut(true);
 
@@ -58,7 +67,11 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
                 image: product.image,
                 quantity: 1,
                 type: product.type,
-                creator: creator.username
+                creator: creator.username,
+                metadata: selectedSlot ? {
+                    bookingDate: selectedSlot.date.toISOString(),
+                    bookingTime: selectedSlot.time
+                } : undefined
             });
 
             // Redirect to Cart for review/details
@@ -70,6 +83,27 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
         } finally {
             setIsCheckingOut(false);
         }
+    };
+
+    const onSlotSelect = (slot: { date: Date; time: string }) => {
+        setIsBookingModalOpen(false);
+        setSelectedSlot(slot);
+
+        // Auto-add to cart after slot selection
+        addToCart({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            image: product.image,
+            quantity: 1,
+            type: product.type,
+            creator: creator.username,
+            metadata: {
+                bookingDate: slot.date.toISOString(),
+                bookingTime: slot.time
+            }
+        });
+        router.push('/cart');
     };
 
     const getTypeIcon = () => {
@@ -183,6 +217,14 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
                     </div>
                 </div>
             </div>
+
+            <BookingModal
+                isOpen={isBookingModalOpen}
+                onClose={() => setIsBookingModalOpen(false)}
+                product={product}
+                creator={creator}
+                onSelectSlot={onSlotSelect}
+            />
         </motion.div>
     );
 }

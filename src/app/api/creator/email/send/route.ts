@@ -20,7 +20,7 @@ async function handler(req: NextRequest, user: any) {
     }
 
     const body = await req.json();
-    const { campaignId } = body;
+    const campaignId = body.campaignId;
 
     if (!campaignId) {
         throw new Error('campaignId is required');
@@ -39,39 +39,82 @@ async function handler(req: NextRequest, user: any) {
         throw new Error('Campaign already sent');
     }
 
-    // Get subscriber emails from orders
-    const subscribers = await Order.aggregate([
-        {
-            $match: {
-                creatorId: user._id,
-                paymentStatus: 'paid',
-                customerEmail: { $exists: true, $ne: null }
-            }
-        },
-        {
-            $group: {
-                _id: '$customerEmail',
-                name: { $first: '$customerName' }
-            }
+    // 1. Fetch Creator Info
+    const User = (await import('@/lib/models/User')).default;
+    const creator = await User.findById(user._id).select('displayName').lean();
+    const creatorName = creator?.displayName || 'a Creator';
+
+    // 2. Identify Recipients
+    let recipientEmails: string[] = [];
+
+    if (campaign.listId) {
+        // Fetch from specific list
+        const { EmailList } = await import('@/lib/models/EmailList');
+        const list = await EmailList.findById(campaign.listId);
+        if (list) {
+            recipientEmails = list.subscribers || [];
         }
-    ]);
+    } else {
+        // Broadcast to ALL: Orders + NewsletterLeads
+        const orders = await Order.aggregate([
+            {
+                $match: {
+                    creatorId: user._id,
+                    paymentStatus: 'paid',
+                    customerEmail: { $exists: true, $ne: null }
+                }
+            },
+            { $group: { _id: '$customerEmail' } }
+        ]);
 
-    const recipientCount = subscribers.length;
+        const { NewsletterLead } = await import('@/lib/models/NewsletterLead');
+        const leads = await NewsletterLead.find({
+            creatorId: user._id,
+            status: 'active'
+        }).select('email').lean();
 
-    // TODO: Integrate with email service (SendGrid, Resend, etc.)
-    // For now, mark as sent and log
-    console.log(`Sending campaign ${campaign.name} to ${recipientCount} subscribers`);
+        const allEmails = new Set([
+            ...orders.map(o => o._id),
+            ...leads.map(l => l.email)
+        ]);
+        recipientEmails = Array.from(allEmails);
+    }
+
+    const recipientCount = recipientEmails.length;
+    if (recipientCount === 0) {
+        throw new Error('No recipients found for this campaign');
+    }
+
+    // 3. Send Emails (Serial for stability, could be batched)
+    const { sendMarketingEmail } = await import('@/lib/services/email');
+
+    // In production, this should be moved to a background job/worker
+    // But for a few dozen/hundred emails, we can try this in the request
+    let sentCount = 0;
+    for (const email of recipientEmails) {
+        try {
+            await sendMarketingEmail(
+                email,
+                campaign.subject,
+                campaign.content,
+                creatorName
+            );
+            sentCount++;
+        } catch (err) {
+            console.error(`Failed to send campaign to ${email}:`, err);
+        }
+    }
 
     campaign.status = 'sent';
     campaign.sentAt = new Date();
-    campaign.stats.sent = recipientCount;
+    campaign.stats.sent = sentCount;
     await campaign.save();
 
     return {
         success: true,
         campaignId: campaign._id,
-        recipientCount,
-        message: `Campaign sent to ${recipientCount} subscribers`
+        recipientCount: sentCount,
+        message: `Campaign sent to ${sentCount} recipients`
     };
 }
 

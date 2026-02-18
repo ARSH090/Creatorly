@@ -92,6 +92,13 @@ export interface IProduct extends Document {
     maxDownloads?: number;
     downloadExpiryDays?: number;
 
+    // Booking Specific
+    coachingDuration?: number; // in minutes
+    bookingConfig?: {
+        locationType: 'zoom' | 'google_meet' | 'phone' | 'in_person';
+        locationDetails?: string;
+    };
+
     createdAt: Date;
     updatedAt: Date;
     deletedAt?: Date;
@@ -188,6 +195,13 @@ const ProductSchema: Schema = new Schema({
     stock: { type: Number, default: null }, // null = unlimited
     maxDownloads: { type: Number, default: 3 },
     downloadExpiryDays: { type: Number, default: 30 },
+
+    // Booking Specific
+    coachingDuration: { type: Number, default: 30 },
+    bookingConfig: {
+        locationType: { type: String, enum: ['zoom', 'google_meet', 'phone', 'in_person'], default: 'google_meet' },
+        locationDetails: String
+    },
 
     deletedAt: { type: Date, index: true }
 }, { timestamps: true });
