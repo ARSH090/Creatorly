@@ -40,14 +40,13 @@ export async function POST(
             await user.save();
 
             // Log admin action
-            await logAdminAction(
-                adminUser.email,
-                'BAN_USER',
-                'user',
-                id,
-                { reason },
-                req
-            );
+            logAdminAction({
+                adminId: adminUser.email,
+                action: 'BAN_USER',
+                resource: 'user',
+                details: { reason, userId: id },
+                timestamp: new Date()
+            });
 
             return NextResponse.json({
                 message: 'User banned successfully',

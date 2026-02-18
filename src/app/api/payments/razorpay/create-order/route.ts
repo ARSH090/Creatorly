@@ -116,8 +116,6 @@ export async function POST(req: NextRequest) {
         const amountInPaise = Math.round(amountWithTax * 100);
 
         // 2. Create Razorpay Order
-        const user = await getCurrentUser();
-
         const razorpayOrder = await razorpay.orders.create({
             amount: amountInPaise,
             currency: 'INR',
@@ -143,6 +141,7 @@ export async function POST(req: NextRequest) {
             userId: user ? (user as any)._id : new mongoose.Types.ObjectId(),
             customerEmail: customer.email,
             amount: amountWithTax,
+            total: amountWithTax,
             currency: 'INR',
             razorpayOrderId: razorpayOrder.id,
             status: 'pending',

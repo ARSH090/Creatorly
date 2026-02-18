@@ -23,6 +23,8 @@ export interface IOrder extends Document {
     paidAt?: Date;
     commissionAmount?: number;
     affiliateId?: string;
+    couponId?: string;
+    discountAmount?: number;
     subscriptionId?: mongoose.Types.ObjectId | string;
 
     // Delivery & Tracking
@@ -83,6 +85,8 @@ const OrderSchema: Schema = new Schema({
     paidAt: { type: Date },
     commissionAmount: { type: Number, default: 0 },
     affiliateId: { type: String },
+    couponId: { type: String },
+    discountAmount: { type: Number, default: 0 },
 
     downloadCount: { type: Number, default: 0 },
     downloadLimit: { type: Number, default: 3 },

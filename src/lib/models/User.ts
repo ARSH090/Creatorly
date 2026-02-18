@@ -266,18 +266,6 @@ const UserSchema: Schema = new Schema({
         type: Schema.Types.ObjectId,
         ref: 'Subscription'
     },
-    deletedAt: {
-        type: Date,
-        index: true
-    },
-    aiUsageCount: {
-        type: Number,
-        default: 0
-    },
-    storageUsageMb: {
-        type: Number,
-        default: 0
-    },
 
     // Tier Management & Subscription
     subscriptionTier: {

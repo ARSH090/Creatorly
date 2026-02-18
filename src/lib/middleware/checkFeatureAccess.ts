@@ -74,7 +74,7 @@ export async function checkFeatureAccess(
         }
 
         // Get tier limits
-        const limits = TIER_LIMITS[tier];
+        const limits = TIER_LIMITS[tier as keyof typeof TIER_LIMITS] as Record<string, any>;
         if (!limits) {
             return {
                 allowed: false,
@@ -84,7 +84,8 @@ export async function checkFeatureAccess(
         }
 
         // Check specific feature limit
-        const limit = limits[feature];
+        const limitKey = feature === 'storage' ? 'storageMb' : feature;
+        const limit = limits[limitKey];
 
         // Boolean features (community, customDomain, etc.)
         if (typeof limit === 'boolean') {
