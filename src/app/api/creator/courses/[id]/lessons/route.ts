@@ -4,7 +4,7 @@ import Product from '@/lib/models/Product';
 import { Lesson, Module } from '@/lib/models/CourseContent';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
-import { slugify } from '@/utils/slugify';
+import { slugify } from '@/lib/utils/slugify';
 
 /**
  * POST /api/creator/courses/:id/lessons

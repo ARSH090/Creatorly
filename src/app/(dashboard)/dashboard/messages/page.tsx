@@ -82,6 +82,8 @@ export default function MessagesPage() {
         }
     };
 
+    if (!user) return null;
+
     return (
         <DashboardLayout>
             <div className="flex h-[calc(100vh-120px)] overflow-hidden bg-black/50 border border-white/5 rounded-[2.5rem] mt-6 mx-6">
@@ -110,8 +112,8 @@ export default function MessagesPage() {
                                     key={conv.user._id}
                                     onClick={() => setActiveConv(conv)}
                                     className={`w-full p-4 rounded-3xl flex items-center gap-4 transition-all group ${activeConv?.user._id === conv.user._id
-                                            ? 'bg-indigo-500'
-                                            : 'hover:bg-white/5'
+                                        ? 'bg-indigo-500'
+                                        : 'hover:bg-white/5'
                                         }`}
                                 >
                                     <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center overflow-hidden border border-white/5 shadow-2xl">
@@ -168,8 +170,8 @@ export default function MessagesPage() {
                                         <div key={msg._id} className={`flex ${msg.senderId === user._id ? 'justify-end' : 'justify-start'}`}>
                                             <div className="space-y-2 max-w-[60%]">
                                                 <div className={`p-4 rounded-[2rem] text-sm leading-relaxed shadow-2xl ${msg.senderId === user._id
-                                                        ? 'bg-indigo-500 text-white rounded-br-none shadow-indigo-500/10'
-                                                        : 'bg-[#111] border border-white/5 text-zinc-300 rounded-bl-none'
+                                                    ? 'bg-indigo-500 text-white rounded-br-none shadow-indigo-500/10'
+                                                    : 'bg-[#111] border border-white/5 text-zinc-300 rounded-bl-none'
                                                     }`}>
                                                     {msg.content}
                                                 </div>

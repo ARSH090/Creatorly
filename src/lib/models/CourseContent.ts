@@ -5,6 +5,7 @@ export interface ILesson extends Document {
     productId: mongoose.Types.ObjectId; // Reference to the Course Product
     title: string;
     slug: string;
+    description?: string;
     content?: string; // Rich text
     videoUrl?: string;
     attachments: Array<{ name: string; url: string }>;
@@ -27,6 +28,7 @@ const LessonSchema: Schema = new Schema({
     productId: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
     title: { type: String, required: true },
     slug: { type: String, required: true },
+    description: String,
     content: String,
     videoUrl: String,
     attachments: [{

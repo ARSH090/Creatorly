@@ -212,7 +212,7 @@ export async function POST(req: NextRequest) {
 
         await Order.create({
             items,
-            creatorId,
+            creatorId: creatorId as mongoose.Types.ObjectId,
             userId: user ? (user as any)._id : new mongoose.Types.ObjectId(),
             customerEmail: customer.email,
             amount: amountWithTax,
