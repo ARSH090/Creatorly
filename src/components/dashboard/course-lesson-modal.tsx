@@ -33,6 +33,7 @@ export function CourseLessonModal({ courseId, lesson, trigger, onSuccess }: Cour
 
     // Form State
     const [title, setTitle] = useState('');
+    const [type, setType] = useState('video');
     const [description, setDescription] = useState('');
     const [videoUrl, setVideoUrl] = useState('');
     const [content, setContent] = useState('');
@@ -56,6 +57,7 @@ export function CourseLessonModal({ courseId, lesson, trigger, onSuccess }: Cour
 
         if (lesson) {
             setTitle(lesson.title || '');
+            setType((lesson as any).type || 'video');
             setDescription(lesson.description || '');
             setVideoUrl(lesson.videoUrl || '');
             setContent(lesson.content || '');
@@ -63,6 +65,7 @@ export function CourseLessonModal({ courseId, lesson, trigger, onSuccess }: Cour
             setModuleId((lesson as any).moduleId || '');
         } else {
             setTitle('');
+            setType('video');
             setDescription('');
             setVideoUrl('');
             setContent('');
@@ -84,6 +87,7 @@ export function CourseLessonModal({ courseId, lesson, trigger, onSuccess }: Cour
                 courseId,
                 moduleId,
                 title,
+                type,
                 description,
                 videoUrl,
                 content,
@@ -152,31 +156,49 @@ export function CourseLessonModal({ courseId, lesson, trigger, onSuccess }: Cour
                         </Select>
                     </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="title" className="text-gray-200">Lesson Title <span className="text-red-500">*</span></Label>
-                        <Input
-                            id="title"
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            placeholder="e.g. Introduction to React"
-                            required
-                            className="bg-[#0a0a0a] border-gray-700"
-                        />
-                    </div>
-
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="videoUrl" className="text-gray-200">Video URL (Optional)</Label>
+                            <Label htmlFor="title" className="text-gray-200">Lesson Title <span className="text-red-500">*</span></Label>
                             <Input
-                                id="videoUrl"
-                                value={videoUrl}
-                                onChange={(e) => setVideoUrl(e.target.value)}
-                                placeholder="https://vimeo.com/..."
+                                id="title"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                placeholder="e.g. Introduction to React"
+                                required
                                 className="bg-[#0a0a0a] border-gray-700"
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="order" className="text-gray-200">Order (Optional)</Label>
+                            <Label htmlFor="type" className="text-gray-200">Type</Label>
+                            <Select value={type} onValueChange={setType}>
+                                <SelectTrigger className="bg-[#0a0a0a] border-gray-700">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-[#1a1a1a] border-gray-700 text-white">
+                                    <SelectItem value="video">Video</SelectItem>
+                                    <SelectItem value="text">Text / Article</SelectItem>
+                                    <SelectItem value="quiz">Quiz</SelectItem>
+                                    <SelectItem value="file">File Download</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        {type === 'video' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="videoUrl" className="text-gray-200">Video URL</Label>
+                                <Input
+                                    id="videoUrl"
+                                    value={videoUrl}
+                                    onChange={(e) => setVideoUrl(e.target.value)}
+                                    placeholder="https://vimeo.com/..."
+                                    className="bg-[#0a0a0a] border-gray-700"
+                                />
+                            </div>
+                        )}
+                        <div className="space-y-2">
+                            <Label htmlFor="order" className="text-gray-200">Order</Label>
                             <Input
                                 id="order"
                                 type="number"
@@ -200,12 +222,19 @@ export function CourseLessonModal({ courseId, lesson, trigger, onSuccess }: Cour
                     </div>
 
                     <div className="space-y-2">
-                        <Label htmlFor="content" className="text-gray-200">Content (Markdown supported)</Label>
+                        <Label htmlFor="content" className="text-gray-200">
+                            {type === 'quiz' ? 'Quiz JSON Configuration' : 'Content (Markdown supported)'}
+                        </Label>
+                        {type === 'quiz' && (
+                            <p className="text-xs text-zinc-500 mb-2">
+                                Format: <code>{`{ "questions": [ { "question": "...", "options": ["A", "B"], "correctAnswer": 0 } ] }`}</code>
+                            </p>
+                        )}
                         <Textarea
                             id="content"
                             value={content}
                             onChange={(e) => setContent(e.target.value)}
-                            placeholder="# Lesson Content..."
+                            placeholder={type === 'quiz' ? '{ "questions": [] }' : '# Lesson Content...'}
                             className="bg-[#0a0a0a] border-gray-700 min-h-[150px] font-mono text-sm"
                         />
                     </div>

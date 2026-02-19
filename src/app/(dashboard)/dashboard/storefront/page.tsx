@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import StoreThemeSelector from '@/components/storefront/StoreThemeSelector';
 
 const LINK_TYPES = [
     { value: 'link', label: '🔗 Link' },
@@ -139,6 +140,17 @@ export default function StorefrontBuilder() {
         }
     };
 
+    const applyThemePreset = (preset: any) => {
+        setTheme(prev => ({
+            ...prev,
+            primaryColor: preset.primaryColor,
+            backgroundColor: preset.backgroundColor,
+            textColor: preset.textColor ?? prev.textColor,
+            fontFamily: preset.fontFamily ?? prev.fontFamily,
+            borderRadius: preset.borderRadius ?? prev.borderRadius,
+        }));
+    };
+
     return (
         <div className="flex flex-col h-[calc(100vh-80px)] overflow-hidden -m-8">
             <div className="flex flex-1">
@@ -179,6 +191,11 @@ export default function StorefrontBuilder() {
                     <div className="flex-1 overflow-y-auto p-8 space-y-12">
                         {activeTab === 'design' ? (
                             <div className="space-y-10">
+                                {/* Quick Themes */}
+                                <section>
+                                    <StoreThemeSelector currentTheme={theme} onApply={applyThemePreset} />
+                                </section>
+
                                 {/* Color Palette */}
                                 <section className="space-y-4">
                                     <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
@@ -362,6 +379,28 @@ export default function StorefrontBuilder() {
                                                 className="bg-zinc-800/50 border border-white/5 rounded-lg text-xs p-2 w-full text-zinc-400 resize-none focus:outline-none"
                                                 placeholder="Short description (optional)"
                                             />
+
+                                            {/* Scheduling */}
+                                            <div className="flex items-center gap-2">
+                                                <div className="flex-1 space-y-1">
+                                                    <label className="text-[10px] uppercase font-bold text-zinc-600">Start (Optional)</label>
+                                                    <input
+                                                        type="datetime-local"
+                                                        value={link.scheduleStart || ''}
+                                                        onChange={(e) => { const nl = [...links]; nl[idx].scheduleStart = e.target.value; setLinks(nl); }}
+                                                        className="bg-zinc-800/50 border border-white/5 rounded-lg text-xs p-2 w-full text-zinc-400 focus:outline-none"
+                                                    />
+                                                </div>
+                                                <div className="flex-1 space-y-1">
+                                                    <label className="text-[10px] uppercase font-bold text-zinc-600">End (Optional)</label>
+                                                    <input
+                                                        type="datetime-local"
+                                                        value={link.scheduleEnd || ''}
+                                                        onChange={(e) => { const nl = [...links]; nl[idx].scheduleEnd = e.target.value; setLinks(nl); }}
+                                                        className="bg-zinc-800/50 border border-white/5 rounded-lg text-xs p-2 w-full text-zinc-400 focus:outline-none"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                     ))}
                                 </div>

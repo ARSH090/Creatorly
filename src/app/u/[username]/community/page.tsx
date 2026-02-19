@@ -1,175 +1,217 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import {
-    MessageSquare, Heart, Share2, MoreVertical,
-    Send, Image as ImageIcon, Sparkles, Lock, Loader2,
-    Users, Globe, Zap
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useEffect, useState, useRef } from 'react';
+import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { Heart, MessageCircle, Lock, ArrowLeft, Send, Image as ImageIcon, Loader2, Users } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 
-export default function MemberFeed({ params }: { params: Promise<{ username: string }> }) {
-    const { username } = React.use(params);
-    const { user, loading: authLoading } = useAuth();
-    const router = useRouter();
+interface Post {
+    id: string;
+    author: string;
+    content: string;
+    likes: number;
+    comments: number;
+    timestamp: string;
+    image?: string;
+    createdAt?: string;
+}
+
+export default function CommunityPage() {
+    const params = useParams();
+    const username = params.username as string;
+
+    const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
-    const [posts, setPosts] = useState<any[]>([]);
+    const [accessDenied, setAccessDenied] = useState(false);
+    const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
+    const [newPost, setNewPost] = useState('');
+    const [posting, setPosting] = useState(false);
+
+    const fetchPosts = async () => {
+        try {
+            const res = await fetch(`/api/community/${username}`);
+            if (res.status === 403) {
+                setAccessDenied(true);
+                return;
+            }
+            const data = await res.json();
+            if (res.ok) setPosts(data.posts || []);
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        async function fetchFeed() {
-            try {
-                // In a real scenario, this would check if the user has an active membership/course
-                const response = await fetch(`/api/community/${username}`);
-                if (!response.ok) {
-                    if (response.status === 403) router.push(`/u/${username}`);
-                    throw new Error('Failed to fetch feed');
-                }
-                const data = await response.json();
-                setPosts(data.posts || []);
-            } catch (error) {
-                console.error('Feed Fetch Error:', error);
-                // Mock posts for demonstration
-                setPosts([
-                    {
-                        id: '1',
-                        author: username,
-                        content: "Hey everyone! Just uploaded the new presets for this month. Check them out in the digital downloads section if you're on the Pro tier! 🚀",
-                        likes: 42,
-                        comments: 12,
-                        timestamp: '2 hours ago',
-                        image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1000'
-                    },
-                    {
-                        id: '2',
-                        author: username,
-                        content: "Working on a new masterclass about storytelling. What's the #1 struggle you face when planning your content?",
-                        likes: 89,
-                        comments: 45,
-                        timestamp: '1 day ago'
-                    }
-                ]);
-            } finally {
-                setLoading(false);
-            }
-        }
+        fetchPosts();
+    }, [username]);
 
-        if (!authLoading && user) fetchFeed();
-        else if (!authLoading && !user) router.push(`/u/${username}`);
-    }, [username, user, authLoading, router]);
+    const handleLike = (postId: string) => {
+        setLikedPosts(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(postId)) {
+                newSet.delete(postId);
+                setPosts(p => p.map(post => post.id === postId ? { ...post, likes: post.likes - 1 } : post));
+            } else {
+                newSet.add(postId);
+                setPosts(p => p.map(post => post.id === postId ? { ...post, likes: post.likes + 1 } : post));
+            }
+            return newSet;
+        });
+    };
+
+    const handlePost = async () => {
+        if (!newPost.trim()) return;
+        setPosting(true);
+        try {
+            const res = await fetch(`/api/community/${username}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: newPost })
+            });
+            if (res.ok) {
+                setNewPost('');
+                await fetchPosts();
+            }
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setPosting(false);
+        }
+    };
 
     if (loading) {
         return (
             <div className="min-h-screen bg-[#030303] flex items-center justify-center">
-                <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
+                <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+            </div>
+        );
+    }
+
+    if (accessDenied) {
+        return (
+            <div className="min-h-screen bg-[#030303] text-white flex items-center justify-center p-6">
+                <div className="text-center space-y-6 max-w-sm">
+                    <div className="w-20 h-20 bg-indigo-500/10 border border-indigo-500/20 rounded-full flex items-center justify-center mx-auto shadow-2xl shadow-indigo-500/10">
+                        <Lock className="w-10 h-10 text-indigo-400" />
+                    </div>
+                    <h2 className="text-2xl font-black uppercase tracking-tighter">Members Only</h2>
+                    <p className="text-zinc-500 text-sm">
+                        Join <span className="text-indigo-400 font-bold">@{username}</span>'s community by purchasing one of their products or subscribing.
+                    </p>
+                    <Link
+                        href={`/u/${username}`}
+                        className="inline-flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-3 rounded-2xl font-bold text-sm transition-all"
+                    >
+                        <ArrowLeft className="w-4 h-4" /> View Products
+                    </Link>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="min-h-screen bg-[#030303] text-white">
-            <header className="h-20 border-b border-white/5 bg-[#030303]/80 backdrop-blur-xl sticky top-0 z-50 flex items-center justify-between px-8">
-                <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-indigo-500/20 flex items-center justify-center">
-                        <Users className="w-5 h-5 text-indigo-400" />
+            {/* Header */}
+            <header className="sticky top-0 z-50 bg-[#030303]/90 backdrop-blur-xl border-b border-white/5 px-4 py-4">
+                <div className="max-w-2xl mx-auto flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Link href={`/u/${username}`} className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+                            <ArrowLeft className="w-4 h-4 text-zinc-400" />
+                        </Link>
+                        <div>
+                            <h1 className="text-sm font-black uppercase tracking-wide">Community</h1>
+                            <p className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">@{username}</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 className="font-black text-sm uppercase tracking-widest text-zinc-500">Community</h1>
-                        <p className="text-xl font-bold">Member Feed</p>
+                    <div className="flex items-center gap-2 text-zinc-500 text-xs font-bold">
+                        <Users className="w-3.5 h-3.5" />
+                        {posts.length} posts
                     </div>
                 </div>
-                <button
-                    onClick={() => router.push(`/u/${username}`)}
-                    className="bg-white/5 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-white/10 transition-all border border-white/5"
-                >
-                    Back to Store
-                </button>
             </header>
 
-            <main className="max-w-2xl mx-auto py-12 px-6 space-y-8 pb-32">
-                {/* Announcement Card */}
-                <div className="bg-gradient-to-br from-indigo-500/20 to-purple-500/0 border border-indigo-500/30 rounded-[2.5rem] p-8 space-y-4">
-                    <div className="flex items-center gap-3">
-                        <Sparkles className="w-5 h-5 text-indigo-400" />
-                        <h2 className="font-black uppercase tracking-widest text-xs text-indigo-300">Exclusive Content</h2>
+            <main className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+                {/* Post composer */}
+                <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-5 space-y-4">
+                    <textarea
+                        value={newPost}
+                        onChange={e => setNewPost(e.target.value)}
+                        placeholder={`Share something with the community...`}
+                        rows={3}
+                        className="w-full bg-transparent text-sm text-white placeholder-zinc-600 focus:outline-none resize-none"
+                    />
+                    <div className="flex items-center justify-between border-t border-white/5 pt-3">
+                        <button className="p-2 rounded-xl text-zinc-600 hover:text-zinc-400 hover:bg-white/5 transition-all">
+                            <ImageIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                            onClick={handlePost}
+                            disabled={posting || !newPost.trim()}
+                            className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-2xl text-xs font-black uppercase tracking-wider transition-all disabled:opacity-50"
+                        >
+                            {posting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                            Post
+                        </button>
                     </div>
-                    <p className="text-zinc-300 font-medium leasing-relaxed">
-                        Welcome to the inner circle. This is where I share raw updates, early access links, and community polls. Thanks for being a member!
-                    </p>
                 </div>
 
-                {/* Posts Feed */}
-                <div className="space-y-6">
-                    {posts.map((post, idx) => (
-                        <motion.div
-                            key={post.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: idx * 0.1 }}
-                            className="bg-[#0A0A0A] border border-white/5 rounded-[2.5rem] overflow-hidden hover:border-white/10 transition-colors"
-                        >
-                            <div className="p-8 space-y-6">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 rounded-2xl bg-zinc-800 border border-white/5" />
-                                        <div>
-                                            <h3 className="font-bold text-lg">@{post.author}</h3>
-                                            <p className="text-xs text-zinc-500 font-medium">{post.timestamp}</p>
-                                        </div>
+                {/* Feed */}
+                {posts.length === 0 ? (
+                    <div className="text-center py-20 space-y-4">
+                        <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto">
+                            <MessageCircle className="w-8 h-8 text-zinc-700" />
+                        </div>
+                        <p className="text-zinc-600 font-bold text-sm uppercase tracking-widest">No posts yet</p>
+                        <p className="text-zinc-700 text-xs">Be the first to post in this community!</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {posts.map(post => (
+                            <article key={post.id} className="bg-white/[0.03] border border-white/5 rounded-3xl p-6 space-y-4 hover:border-white/10 transition-all">
+                                {/* Author row */}
+                                <div className="flex items-center gap-3">
+                                    <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-black text-white text-sm">
+                                        {post.author[0]?.toUpperCase()}
                                     </div>
-                                    <button className="p-2 text-zinc-500 hover:text-white transition-colors">
-                                        <MoreVertical className="w-5 h-5" />
-                                    </button>
+                                    <div>
+                                        <p className="text-xs font-black text-white uppercase tracking-wider">@{post.author}</p>
+                                        <p className="text-[10px] text-zinc-600 font-medium">{post.timestamp}</p>
+                                    </div>
                                 </div>
 
-                                <p className="text-zinc-300 leading-relaxed font-medium">
-                                    {post.content}
-                                </p>
+                                {/* Content */}
+                                <p className="text-sm text-zinc-300 leading-relaxed">{post.content}</p>
 
+                                {/* Image */}
                                 {post.image && (
-                                    <div className="aspect-video rounded-3xl overflow-hidden border border-white/5">
-                                        <img src={post.image} alt="Post content" className="w-full h-full object-cover" />
+                                    <div className="rounded-2xl overflow-hidden bg-zinc-900">
+                                        <img src={post.image} alt="Post media" className="w-full max-h-80 object-cover" />
                                     </div>
                                 )}
 
-                                <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                                    <div className="flex items-center gap-6">
-                                        <button className="flex items-center gap-2 text-zinc-500 hover:text-rose-400 transition-colors group">
-                                            <Heart className="w-5 h-5 group-hover:fill-rose-400" />
-                                            <span className="text-sm font-bold">{post.likes}</span>
-                                        </button>
-                                        <button className="flex items-center gap-2 text-zinc-500 hover:text-indigo-400 transition-colors">
-                                            <MessageSquare className="w-5 h-5" />
-                                            <span className="text-sm font-bold">{post.comments}</span>
-                                        </button>
-                                    </div>
-                                    <button className="p-2 text-zinc-500 hover:text-white transition-colors">
-                                        <Share2 className="w-5 h-5" />
+                                {/* Actions */}
+                                <div className="flex items-center gap-6 pt-2 border-t border-white/5">
+                                    <button
+                                        onClick={() => handleLike(post.id)}
+                                        className={`flex items-center gap-2 text-xs font-bold transition-all
+                                            ${likedPosts.has(post.id) ? 'text-rose-400' : 'text-zinc-600 hover:text-rose-400'}`}
+                                    >
+                                        <Heart className={`w-4 h-4 transition-all ${likedPosts.has(post.id) ? 'fill-current' : ''}`} />
+                                        {post.likes}
+                                    </button>
+                                    <button className="flex items-center gap-2 text-xs font-bold text-zinc-600 hover:text-indigo-400 transition-all">
+                                        <MessageCircle className="w-4 h-4" />
+                                        {post.comments}
                                     </button>
                                 </div>
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-            </main>
-
-            {/* Sticky Comment / Share Bar Mock */}
-            <div className="fixed bottom-10 left-1/2 -translate-x-1/2 w-full max-w-lg px-6 z-50">
-                <div className="bg-[#1A1A1A]/80 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-3 flex items-center gap-3 shadow-2xl">
-                    <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0">
-                        <ImageIcon className="w-5 h-5 text-zinc-500" />
+                            </article>
+                        ))}
                     </div>
-                    <input
-                        type="text"
-                        placeholder="Say something to the community..."
-                        className="flex-1 bg-transparent border-none outline-none text-sm font-medium text-white placeholder-zinc-500"
-                    />
-                    <button className="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center text-white hover:bg-indigo-600 transition-all shadow-xl shadow-indigo-500/40">
-                        <Send className="w-4 h-4" />
-                    </button>
-                </div>
-            </div>
+                )}
+            </main>
         </div>
     );
 }

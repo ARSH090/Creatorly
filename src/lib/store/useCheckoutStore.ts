@@ -12,6 +12,14 @@ interface CartItem {
     metadata?: Record<string, any>;
 }
 
+interface CouponData {
+    code: string;
+    discountType: 'percentage' | 'fixed';
+    discountValue: number;
+    discountAmount: number;
+    finalAmount: number;
+}
+
 interface CheckoutState {
     step: 'cart' | 'customer' | 'payment' | 'review';
     cart: CartItem[];
@@ -20,6 +28,8 @@ interface CheckoutState {
         name: string;
         phone?: string;
     };
+    coupon: CouponData | null;
+    orderBumpAccepted: boolean;
 
     // Actions
     setStep: (step: 'cart' | 'customer' | 'payment' | 'review') => void;
@@ -27,6 +37,8 @@ interface CheckoutState {
     removeFromCart: (id: string) => void;
     updateQuantity: (id: string, quantity: number) => void;
     setCustomer: (info: Partial<CheckoutState['customer']>) => void;
+    setCoupon: (coupon: CouponData | null) => void;
+    setOrderBump: (accepted: boolean) => void;
     clearCart: () => void;
 }
 
@@ -40,8 +52,12 @@ export const useCheckoutStore = create<CheckoutState>()(
                 name: '',
                 phone: ''
             },
+            coupon: null,
+            orderBumpAccepted: false,
 
             setStep: (step) => set({ step }),
+            setCoupon: (coupon) => set({ coupon }),
+            setOrderBump: (accepted) => set({ orderBumpAccepted: accepted }),
 
             addToCart: (item) => set((state) => {
                 const existing = state.cart.find(i => i.id === item.id);

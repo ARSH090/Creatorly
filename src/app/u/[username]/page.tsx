@@ -174,10 +174,18 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
 
 
                         case 'links':
+                            const activeLinks = (profile?.links || []).filter((link: any) => {
+                                if (!link.url) return false;
+                                const now = new Date();
+                                if (link.scheduleStart && new Date(link.scheduleStart) > now) return false;
+                                if (link.scheduleEnd && new Date(link.scheduleEnd) < now) return false;
+                                return true;
+                            });
+
                             return (
                                 <LinksSection
                                     key="links"
-                                    links={profile?.links || []}
+                                    links={activeLinks}
                                     theme={theme as any}
                                     creatorId={creator._id.toString()}
                                 />

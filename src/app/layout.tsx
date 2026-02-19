@@ -60,6 +60,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
 import SyncUser from "@/components/auth/SyncUser";
 
+import { PostHogProvider } from "./posthog-provider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -89,13 +91,15 @@ export default function RootLayout({
           <Script src="https://checkout.razorpay.com/v1/checkout.js" />
         </head>
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} data-suppress-hydration-warning="true">
-          <ErrorBoundary>
-            <ClientLayout>
-              {children}
-            </ClientLayout>
-          </ErrorBoundary>
-          <SpeedInsights />
-          <Analytics />
+          <PostHogProvider>
+            <ErrorBoundary>
+              <ClientLayout>
+                {children}
+              </ClientLayout>
+            </ErrorBoundary>
+            <SpeedInsights />
+            <Analytics />
+          </PostHogProvider>
         </body>
       </html>
     </ClerkProvider>
