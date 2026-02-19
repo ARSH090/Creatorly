@@ -46,7 +46,7 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
     const body = await req.json();
     const {
         displayName, bio, avatar, storeSlug,
-        theme, layout, links, socialLinks
+        theme, layout, links, socialLinks, customDomain
     } = body;
 
     const userUpdates: any = {};
@@ -71,6 +71,7 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
     if (layout) profileUpdates.layout = layout;
     if (links) profileUpdates.links = links;
     if (socialLinks) profileUpdates.socialLinks = socialLinks;
+    if (customDomain !== undefined) profileUpdates.customDomain = customDomain;
 
     const updatedProfile = await CreatorProfile.findOneAndUpdate(
         { creatorId: user._id },

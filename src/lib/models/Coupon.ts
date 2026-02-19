@@ -116,4 +116,5 @@ couponSchema.index({ validFrom: 1, validUntil: 1 });
 
 
 const Coupon: Model<ICoupon> = mongoose.models.Coupon || mongoose.model<ICoupon>('Coupon', couponSchema);
+export { Coupon };
 export default Coupon;

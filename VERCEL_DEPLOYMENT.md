@@ -1,407 +1,719 @@
-# 🚀 Vercel Deployment Guide - Creatorly
-
-## Pre-Deployment Checklist
-
-### ✅ Build Verification
-- [x] Production build completed successfully
-- [x] 80 static pages generated
-- [x] No TypeScript errors
-- [x] All automated tests passing (8/8)
-
-### ⚠️ Environment Variables Required
-
-**Critical - Must be set in Vercel:**
-
-#### Database
-```
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/creatorly?retryWrites=true&w=majority
-```
-
-#### Firebase Admin SDK (Server-side)
-```
-FIREBASE_PROJECT_ID=your-project-id
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk@your-project.iam.gserviceaccount.com
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----"
-```
-
-#### Firebase Client Config (Public)
-```
-NEXT_PUBLIC_FIREBASE_API_KEY=AIza...
-NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-NEXT_PUBLIC_FIREBASE_PROJECT_ID=your-project-id
-NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your-project.appspot.com
-NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
-NEXT_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123
-```
-
-#### Razorpay (Payment Gateway)
-```
-RAZORPAY_KEY_ID=rzp_live_...
-RAZORPAY_KEY_SECRET=your_secret_key
-RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
-```
-
-#### Security & Authentication
-```
-JWT_SECRET=your_jwt_secret_at_least_32_characters_long
-DELIVERY_TOKEN_SECRET=your_delivery_jwt_secret_here
-ENCRYPTION_MASTER_KEY=your_encryption_key_for_sensitive_data
-```
-
-#### Email (Resend)
-```
-RESEND_API_KEY=re_...
-RESEND_FROM_EMAIL=noreply@yourdomain.com
-```
-
-#### AWS S3 (Product Assets)
-```
-AWS_ACCESS_KEY_ID=AKIA...
-AWS_SECRET_ACCESS_KEY=your_secret_key
-AWS_REGION=ap-south-1
-AWS_S3_BUCKET=creatorly-assets
-NEXT_PUBLIC_S3_DOMAIN=https://creatorly-assets.s3.ap-south-1.amazonaws.com
-```
-
-#### Application URLs
-```
-NEXT_PUBLIC_APP_URL=https://your-domain.vercel.app
-NODE_ENV=production
-```
-
-#### Optional (Redis - for rate limiting)
-```
-REDIS_URL=redis://...
-REDIS_TOKEN=your_redis_token
-```
+Let's go through each incomplete item **one by one**. I'll provide a clear task description, implementation steps, and verification criteria. We'll start from the top of your checklist.
 
 ---
 
-## 🚀 Deployment Steps
+## ✅ 1. Core Link-in-Bio Service
 
-### Option 1: Deploy via Vercel CLI (Recommended)
+### 1.1 User registration & login (Email/password + OAuth) – [~] In Progress
 
-1. **Install Vercel CLI** (if not already installed)
-   ```bash
-   npm install -g vercel
-   ```
+**Goal:** Fully functional sign-up/sign-in with email/password and at least one OAuth provider (e.g., Google).
 
-2. **Login to Vercel**
-   ```bash
-   vercel login
-   ```
+#### Tasks:
+- [ ] **Set up authentication library** (e.g., NextAuth.js, Supabase Auth, or custom JWT).
+- [ ] **Create sign-up page** with email/password form.
+- [ ] **Implement email verification** (optional but recommended) – send verification email with token.
+- [ ] **Create login page** with email/password.
+- [ ] **Integrate OAuth** (Google) – follow provider docs.
+- [ ] **Handle session management** – secure cookies/JWT, refresh tokens.
+- [ ] **Add "Forgot password" flow** – email reset link.
+- [ ] **Test edge cases**: duplicate email, invalid password, OAuth cancellation, etc.
 
-3. **Deploy to Preview**
-   ```bash
-   vercel
-   ```
-   - Follow prompts
-   - Link to existing project or create new
-   - Vercel will auto-detect Next.js
-
-4. **Set Environment Variables**
-   ```bash
-   # Set each variable
-   vercel env add MONGODB_URI production
-   vercel env add FIREBASE_PROJECT_ID production
-   # ... repeat for all variables
-   ```
-
-5. **Deploy to Production**
-   ```bash
-   vercel --prod
-   ```
-
-### Option 2: Deploy via GitHub Integration
-
-1. **Push to GitHub**
-   ```bash
-   git add .
-   git commit -m "Production ready deployment"
-   git push origin main
-   ```
-
-2. **Connect to Vercel**
-   - Go to [vercel.com](https://vercel.com)
-   - Click "Add New Project"
-   - Import your GitHub repository
-   - Vercel auto-detects Next.js configuration
-
-3. **Configure Environment Variables**
-   - In Vercel dashboard → Settings → Environment Variables
-   - Add all variables from the list above
-   - Select "Production" environment
-
-4. **Deploy**
-   - Click "Deploy"
-   - Vercel will build and deploy automatically
+#### Verification:
+- [ ] User can register with email/password.
+- [ ] User receives verification email (if enabled) and can verify.
+- [ ] User can log in with correct credentials.
+- [ ] User can log in with Google.
+- [ ] Password reset works.
+- [ ] Session persists across page reloads.
+- [ ] Logout destroys session.
 
 ---
 
-## ⚙️ Vercel Configuration
+### 1.2 Profile creation (Unique username, bio, profile picture) – [~] In Progress
 
-Your `vercel.json` is already configured:
+**Goal:** Users can set a unique username, write a bio, and upload a profile picture.
 
-```json
-{
-  "cleanUrls": true,
-  "crons": [
-    {
-      "path": "/api/workers/process-queue",
-      "schedule": "0 0 * * *"
-    },
-    {
-      "path": "/api/cron/publish",
-      "schedule": "0 1 * * *"
-    },
-    {
-      "path": "/api/cron/refresh-tokens?secret=YOUR_CRON_SECRET_PLACEHOLDER",
-      "schedule": "0 3 * * *"
-    }
-  ]
-}
+#### Tasks:
+- [ ] **Create profile edit page** (accessible after login).
+- [ ] **Username field** – validate uniqueness on server (check DB).
+- [ ] **Bio field** – textarea, limit length (e.g., 160 chars).
+- [ ] **Profile picture upload** – use file upload API, store in cloud storage (e.g., Cloudinary, S3).
+- [ ] **Image cropping/resizing** – optional but nice.
+- [ ] **Save profile data** to database (users table).
+- [ ] **Display profile info** on public page and dashboard.
+
+#### Verification:
+- [ ] User can set a unique username; duplicate shows error.
+- [ ] Bio saves and displays correctly (line breaks, special chars).
+- [ ] Profile picture uploads and appears.
+- [ ] All changes persist after refresh.
+
+---
+
+### 1.3 Link CRUD (Add, edit, delete, reorder links) – [ ] Not Started
+
+**Goal:** Full management of links.
+
+#### Tasks:
+- [ ] **Create links table** in DB (id, user_id, title, url, order, thumbnail, active, created_at).
+- [ ] **API endpoints**: GET /api/links (list), POST /api/links (create), PUT /api/links/:id (update), DELETE /api/links/:id (delete), PATCH /api/links/reorder (bulk order update).
+- [ ] **UI for link list** – display links with drag handles.
+- [ ] **Add link form** – title, URL fields.
+- [ ] **Edit link** – inline edit or modal.
+- [ ] **Delete link** – with confirmation.
+- [ ] **Reorder links** – drag-and-drop (use dnd-kit or similar) that calls reorder API.
+- [ ] **Toggle active/inactive** – checkbox or switch.
+
+#### Verification:
+- [ ] Can add a link → appears in list and on public page.
+- [ ] Can edit a link → changes reflect.
+- [ ] Can delete a link → removed.
+- [ ] Can reorder links → order saved and displayed correctly.
+- [ ] Can disable a link → hidden from public page.
+
+---
+
+### 1.4 Link thumbnails (Auto-fetch from URL or manual upload) – [ ] Not Started
+
+**Goal:** Each link can have a thumbnail image.
+
+#### Tasks:
+- [ ] **Extend links table** with `thumbnail_url` (string) and `thumbnail_upload` (boolean or separate upload field).
+- [ ] **Auto-fetch thumbnail** on link creation/update:
+  - Use a service like `metascraper` or call an API to get OpenGraph image from URL.
+  - Store fetched URL in `thumbnail_url`.
+- [ ] **Manual upload**:
+  - Add file input in link form.
+  - Upload image to cloud storage, save URL.
+- [ ] **Display thumbnail** on public page (if exists, else default icon).
+- [ ] **Fallback** – if no thumbnail, show a generic icon.
+
+#### Verification:
+- [ ] Adding a link with a popular URL (e.g., YouTube) auto-fetches thumbnail.
+- [ ] Manual upload works.
+- [ ] Thumbnail displays correctly on public profile.
+- [ ] Fallback works for links without thumbnail.
+
+---
+
+### 1.5 Custom branding (Background color/image, font, button style) – [~] In Progress
+
+**Goal:** Users can customize the look of their profile page.
+
+#### Tasks:
+- [ ] **Extend user profile table** with customization fields: `bg_color`, `bg_image`, `font_family`, `button_style`, etc.
+- [ ] **Create customization UI** – color picker, font dropdown, background image upload.
+- [ ] **Apply styles** to public profile page (inline styles or CSS variables).
+- [ ] **Preview mode** – show changes in real time before saving.
+- [ ] **Save to DB** and load on profile.
+
+#### Verification:
+- [ ] User can change background color → reflected on public page.
+- [ ] User can upload background image → appears.
+- [ ] Font selection changes text.
+- [ ] Button style (rounded, shadow, etc.) changes.
+- [ ] Changes persist.
+
+---
+
+### 1.6 Public profile page (Responsive, fast-loading, shareable) – [~] In Progress
+
+**Goal:** A polished, responsive public page for each user.
+
+#### Tasks:
+- [ ] **Create dynamic route**: `[username].tsx` (or `[slug]`).
+- [ ] **Fetch user data** (profile, links) based on username.
+- [ ] **Render profile picture, bio, links** with thumbnails.
+- [ ] **Apply custom branding**.
+- [ ] **Make responsive** – mobile-first, test on all devices.
+- [ ] **Optimize performance**:
+  - Lazy load images.
+  - Use next/image or similar for optimization.
+  - Minimize CSS/JS.
+- [ ] **Add meta tags** for SEO (title, description, Open Graph).
+- [ ] **Add share buttons** (copy link, Twitter, Facebook).
+
+#### Verification:
+- [ ] Page loads for existing username, returns 404 for non-existent.
+- [ ] Looks good on mobile, tablet, desktop.
+- [ ] Lighthouse score > 90 for performance, accessibility, SEO.
+- [ ] Share buttons work (copies correct URL, social sharing includes image).
+
+---
+
+### 1.7 QR code generation – [ ] Not Started
+
+**Goal:** Generate a QR code for the user's profile URL.
+
+#### Tasks:
+- [ ] **Add QR code button** on dashboard (maybe next to profile URL).
+- [ ] **Generate QR code** using a library like `qrcode.react` or API.
+- [ ] **Display QR code** in a modal or new page.
+- [ ] **Allow download** as PNG/SVG.
+
+#### Verification:
+- [ ] QR code appears and is scannable → opens profile.
+- [ ] Download works.
+
+---
+
+### 1.8 Custom domain support – [ ] Not Started
+
+**Goal:** Users can connect their own domain (e.g., link.mywebsite.com).
+
+#### Tasks:
+- [ ] **Design domain verification flow**:
+  - User enters domain.
+  - Provide DNS record (TXT or CNAME) to verify ownership.
+  - Verify periodically.
+- [ ] **Store custom domain** in DB (unique).
+- [ ] **Handle routing** – when request comes to custom domain, serve the corresponding user's profile.
+- [ ] **SSL certificates** – automatic provisioning (e.g., Let's Encrypt via reverse proxy).
+- [ ] **UI** for adding/removing domains.
+
+#### Verification:
+- [ ] User can add domain, follow verification steps.
+- [ ] After verification, profile accessible via custom domain.
+- [ ] SSL works (https).
+- [ ] Removing domain disables access.
+
+---
+
+We've covered all Core Link-in-Bio items. Next, we'll tackle **Auto DM Service**. Shall I continue with the next section?
+---
+
+## ✅ 2. Auto DM (Direct Message Automation) Service
+
+### 2.1 DM trigger setup – [ ] Not Started
+
+**Goal:** Let users define triggers (e.g., new follower, link click, time-based) that start DM workflows.
+
+#### Tasks:
+- [ ] Create `dm_triggers` model (userId, provider, eventType, filters, active).
+- [ ] API: CRUD for triggers; validation; auth checks.
+- [ ] UI: Trigger builder (event dropdown, filter inputs).
+- [ ] Implement event ingestion (webhooks/queues per provider).
+- [ ] Persist trigger→workflow mapping.
+
+#### Verification:
+- [ ] Trigger can be created, edited, deleted, toggled active.
+- [ ] Event ingestion fires matching workflow reliably.
+- [ ] Non-matching events do not fire.
+
+---
+
+### 2.2 Message templates (text/media) – [ ] Not Started
+
+**Goal:** Manage reusable DM templates with variables and attachments.
+
+#### Tasks:
+- [ ] Model: `dm_templates` (name, content, variables, mediaRefs, provider).
+- [ ] API: CRUD; variable validation; safe HTML/text sanitization.
+- [ ] UI: Rich text editor; media upload; preview with variables.
+- [ ] Attachments: upload to storage; provider compatibility checks.
+
+#### Verification:
+- [ ] Create/update/delete templates; version preserves content.
+- [ ] Variables render correctly; preview shows final message.
+- [ ] Media attaches and is accepted by provider.
+
+---
+
+### 2.3 Platform integration (Instagram/Twitter/Telegram) – [ ] Not Started
+
+**Goal:** Connect accounts; receive events; send DMs within provider limits and policies.
+
+#### Tasks:
+- [ ] OAuth flows per provider; securely store tokens.
+- [ ] Webhooks for events (follows, messages); signature verification.
+- [ ] Sending API client with retries and backoff.
+- [ ] Compliance gates (permissions, consent, spam rules).
+- [ ] Queue per provider to serialize sends.
+
+#### Verification:
+- [ ] Account connects; tokens refresh automatically.
+- [ ] Events arrive and are verified.
+- [ ] A test DM sends successfully to a whitelisted account.
+
+---
+
+### 2.4 Scheduling – [ ] Not Started
+
+**Goal:** Delay or schedule DM sends (absolute time or relative).
+
+#### Tasks:
+- [ ] Scheduler using Redis queues (e.g., delayed jobs) or external worker.
+- [ ] UI: set delay/time; timezone support.
+- [ ] Cancel/reschedule capabilities.
+- [ ] Respect provider quiet hours if applicable.
+
+#### Verification:
+- [ ] Messages send at scheduled time; rescheduling works.
+- [ ] Cancelling prevents send; audit logs updated.
+
+---
+
+### 2.5 Auto-responder logic (rule-based) – [ ] Not Started
+
+**Goal:** If/then rules map incoming events to templates and actions.
+
+#### Tasks:
+- [ ] Rule model (conditions, actions, priority).
+- [ ] Rule engine evaluation; conflict resolution.
+- [ ] Guardrails: per-user caps, frequency constraints.
+- [ ] Tests for complex rule scenarios.
+
+#### Verification:
+- [ ] Rules evaluate deterministically; highest priority wins.
+- [ ] Guardrails prevent spam; limits enforced.
+
+---
+
+### 2.6 DM history log – [ ] Not Started
+
+**Goal:** Persist sent/received messages, statuses, errors.
+
+#### Tasks:
+- [ ] Model: `dm_logs` (userId, provider, direction, status, error, metadata).
+- [ ] Pagination, filters; export (CSV).
+- [ ] Deduplication keys and idempotency.
+
+#### Verification:
+- [ ] Logs appear in dashboard; filters work.
+- [ ] Export produces correct CSV; redactions applied.
+
+---
+
+### 2.7 Rate limiting & compliance – [ ] Not Started
+
+**Goal:** Respect platform limits and legal requirements.
+
+#### Tasks:
+- [ ] Implement per-provider counters in Redis; rolling window limits.
+- [ ] Backoff/exponential retry; circuit breaker for provider errors.
+- [ ] Compliance checks: consent, opt-out, regional rules.
+
+#### Verification:
+- [ ] Limits throttle sends; no provider violations.
+- [ ] Backoff reduces errors under stress.
+
+---
+
+### 2.8 Opt-out management – [ ] Not Started
+
+**Goal:** Allow recipients to unsubscribe and enforce across workflows.
+
+#### Tasks:
+- [ ] Store recipient opt-outs; fast lookup before send.
+- [ ] Inbound STOP/UNSUBSCRIBE keyword detection.
+- [ ] UI: global and per-campaign opt-out toggles.
+- [ ] Audit trail for consent changes.
+
+#### Verification:
+- [ ] Opt-out blocks future sends immediately.
+- [ ] STOP keyword updates state; logs record change.
+
+---
+
+## ✅ 3. Analytics & Insights
+
+### 3.1 Profile views – [ ] Not Started
+
+**Goal:** Track and chart profile views over time.
+
+#### Tasks:
+- [ ] Client event on pageview; server ingestion endpoint.
+- [ ] Store daily aggregates; unique visitor approximation.
+- [ ] Dashboard charts; time range filters.
+
+#### Verification:
+- [ ] Views recorded; charts show correct counts.
+- [ ] Unique visitor metric behaves as expected.
+
+---
+
+### 3.2 Link clicks – [ ] Not Started
+
+**Goal:** Track per-link clicks and CTR.
+
+#### Tasks:
+- [ ] Click redirect endpoint; record click before forwarding.
+- [ ] Join clicks with views to compute CTR.
+- [ ] Charts and tables per link.
+
+#### Verification:
+- [ ] Clicks tracked; redirect latency acceptable.
+- [ ] CTR displays correctly per time range.
+
+---
+
+### 3.3 DM performance – [ ] Not Started
+
+**Goal:** Measure DM effectiveness via link engagement.
+
+#### Tasks:
+- [ ] Append tracking params to links in DMs.
+- [ ] Attribute clicks back to DM template/campaign.
+- [ ] Aggregate per campaign; export.
+
+#### Verification:
+- [ ] Campaign reports show attributed clicks.
+- [ ] No data leakage between campaigns.
+
+---
+
+### 3.4 Audience insights – [ ] Not Started
+
+**Goal:** Devices, referrers, regions (privacy-respecting).
+
+#### Tasks:
+- [ ] Parse user-agent and referrer; Cloudflare headers if available.
+- [ ] Geo coarse region (country-level).
+- [ ] Dashboard summaries; filters.
+
+#### Verification:
+- [ ] Insights populate; privacy policies documented.
+- [ ] Filters slice data correctly.
+
+---
+
+### 3.5 Export reports (CSV/PDF) – [ ] Not Started
+
+**Goal:** Export analytics for offline review.
+
+#### Tasks:
+- [ ] CSV server-side export endpoints.
+- [ ] PDF summaries (pdf-lib/puppeteer).
+- [ ] Scheduled exports and email delivery.
+
+#### Verification:
+- [ ] CSV/PDF downloads open and match dashboard data.
+- [ ] Scheduled exports arrive on time.
+
+---
+
+### 3.6 Real-time dashboard – [~] In Progress
+
+**Goal:** Live stats updates on user dashboard.
+
+#### Tasks:
+- [ ] WebSocket/SSE channel; auth; room per user.
+- [ ] Push new view/click/DM events to clients.
+- [ ] Fallback polling for unsupported environments.
+
+#### Verification:
+- [ ] Live counters update without refresh.
+- [ ] Disconnect/reconnect robustness tested.
+
+---
+
+## ✅ 4. Monetization & Upgrades
+
+### 4.1 Free vs. Pro tiers – [~] In Progress
+
+**Goal:** Gate features by plan; upsell paths.
+
+#### Tasks:
+- [ ] Plan model; entitlements; middleware checks.
+- [ ] UI gating with upgrade CTA.
+- [ ] Server enforcement on writes/reads.
+
+#### Verification:
+- [ ] Free users blocked from Pro features with clear messaging.
+- [ ] Upgrading unlocks features instantly.
+
+---
+
+### 4.2 Payment integration (subscriptions) – [~] In Progress
+
+**Goal:** Reliable subscription billing, webhooks, proration.
+
+#### Tasks:
+- [ ] Checkout/session creation; plan mapping.
+- [ ] Webhook signature verification; idempotent handlers.
+- [ ] Subscription lifecycle (trial, active, cancel, resume).
+- [ ] Receipts/invoices; dunning flows.
+
+#### Verification:
+- [ ] Test payments succeed; webhooks process once.
+- [ ] Status changes reflect in entitlements.
+
+---
+
+### 4.3 Pro features – [ ] Not Started
+
+**Goal:** Implement gated extras (advanced analytics, custom domain, extra links).
+
+#### Tasks:
+- [ ] Feature flags per entitlement.
+- [ ] UI enable/disable per plan.
+- [ ] Back-end checks.
+
+#### Verification:
+- [ ] Access aligns with plan features across app.
+
+---
+
+### 4.4 Affiliate program – [~] In Progress
+
+**Goal:** Referral tracking and payouts.
+
+#### Tasks:
+- [ ] Affiliate codes; attribution via URL params.
+- [ ] Dashboard for clicks/conversions.
+- [ ] Payout logic; fraud checks.
+
+#### Verification:
+- [ ] Conversions attributed correctly; payouts calculated.
+
+---
+
+## ✅ 5. Admin & Moderation
+
+### 5.1 Admin dashboard – [~] In Progress
+
+**Goal:** Overview of users, reports, system health.
+
+#### Tasks:
+- [ ] Secure admin auth; role checks.
+- [ ] Metrics cards; tables; filters.
+- [ ] Health pings and error summaries.
+
+#### Verification:
+- [ ] Admin sees accurate metrics and can drill down.
+
+---
+
+### 5.2 User management – [~] In Progress
+
+**Goal:** Suspend, delete, edit users with audit trails.
+
+#### Tasks:
+- [ ] Admin actions with reason capture.
+- [ ] Soft delete; restore; hard delete policies.
+- [ ] Audit logs and notifications.
+
+#### Verification:
+- [ ] Actions apply immediately; logs record all changes.
+
+---
+
+### 5.3 Content moderation – [ ] Not Started
+
+**Goal:** Flag and review inappropriate profiles/links.
+
+#### Tasks:
+- [ ] Reporting UI; server endpoints.
+- [ ] Review queue; triage; SLA.
+- [ ] Actions: hide, warn, suspend; appeal workflow.
+
+#### Verification:
+- [ ] Reports processed within SLA; actions reversible where appropriate.
+
+---
+
+### 5.4 System logs – [~] In Progress
+
+**Goal:** Error logs and audit trails accessible to admins.
+
+#### Tasks:
+- [ ] Integrate Sentry/structured logging.
+- [ ] Admin log viewer with filters.
+- [ ] Retention and PII redaction policies.
+
+#### Verification:
+- [ ] Logs searchable; sensitive data redacted.
+
+---
+
+## ✅ 6. Security & Compliance
+
+### 6.1 HTTPS & SSL – [x] Done
+
+**Verification:**
+- [x] Enforced across all pages; HSTS enabled; Cloudflare/Vercel set to Full(Strict).
+
+---
+
+### 6.2 Data encryption – [x] Done
+
+**Verification:**
+- [x] Passwords hashed; secrets stored in env; at-rest encryption policy documented.
+
+---
+
+### 6.3 GDPR/CCPA compliance – [~] In Progress
+
+**Goal:** Privacy policy, cookie consent, DSR workflows.
+
+#### Tasks:
+- [ ] Cookie consent banner and preferences.
+- [ ] Data export/delete endpoints; identity verification.
+- [ ] Retention schedules; policy pages.
+
+#### Verification:
+- [ ] DSR requests fulfilled within SLA; audit evidence retained.
+
+---
+
+### 6.4 Rate limiting – [~] In Progress
+
+**Goal:** Prevent abuse on auth and APIs.
+
+#### Tasks:
+- [ ] Redis-backed limiter on sensitive routes.
+- [ ] Ban/allow lists; anomaly detection.
+- [ ] Burst handling and backpressure.
+
+#### Verification:
+- [ ] Abuse attempts throttled; no lockouts for legitimate users.
+
+---
+
+### 6.5 Input sanitization – [~] In Progress
+
+**Goal:** Defend against XSS/SQLi/injection.
+
+#### Tasks:
+- [ ] Zod validation on all writes.
+- [ ] HTML escaping; file type/size checks.
+- [ ] Safe parsing for webhooks and user content.
+
+#### Verification:
+- [ ] Malicious inputs rejected; logs record attempts.
+
+---
+
+## ✅ 7. Performance & Infrastructure
+
+### 7.1 CDN for assets – [~] In Progress
+
+**Goal:** Serve images/CSS/JS via CDN with optimal caching.
+
+#### Tasks:
+- [ ] Next Image config; Cloudflare/Vercel caching.
+- [ ] Cache-control headers; immutable assets.
+
+#### Verification:
+- [ ] Static assets load from CDN; cache hits observed.
+
+---
+
+### 7.2 Database optimization – [~] In Progress
+
+**Goal:** Indexes and query tuning.
+
+#### Tasks:
+- [ ] Review duplicates; remove conflicting index definitions.
+- [ ] Add compound indexes for hot queries; analyze with profiler.
+
+#### Verification:
+- [ ] P95 query latency improved; warnings eliminated.
+
+---
+
+### 7.3 Caching – [ ] Not Started
+
+**Goal:** Page/API caching (Redis, ISR).
+
+#### Tasks:
+- [ ] Identify cacheable endpoints; define TTLs.
+- [ ] Implement Redis caching helpers; invalidation rules.
+- [ ] Use Next ISR where suitable.
+
+#### Verification:
+- [ ] Cache hit ratio increases; latency drops.
+
+---
+
+### 7.4 Load balancing – [~] In Progress
+
+**Goal:** Handle traffic spikes gracefully.
+
+#### Tasks:
+- [ ] Queue backpressure; concurrency caps.
+- [ ] Autoscale configs; pre-warm caches.
+
+#### Verification:
+- [ ] Load tests at 3x expected peak pass; error rate acceptable.
+
+---
+
+### 7.5 Monitoring & alerts – [ ] Not Started
+
+**Goal:** Uptime monitoring, error tracking, APM.
+
+#### Tasks:
+- [ ] Integrate UptimeRobot/Pingdom; alert channels.
+- [ ] Sentry/LogRocket; performance tracing.
+- [ ] Datadog/New Relic optional APM.
+
+#### Verification:
+- [ ] Alerts fire on downtime/errors; dashboards show key KPIs.
+
+---
+
+### 7.6 Backup strategy – [ ] Not Started
+
+**Goal:** Daily DB/file backups with tested restore.
+
+#### Tasks:
+- [ ] Automated backups; encryption; storage lifecycle.
+- [ ] Restore drills; runbooks.
+
+#### Verification:
+- [ ] Restore succeeds from latest backup; RTO/RPO met.
+
+---
+
+### 7.7 CI/CD pipeline – [ ] Not Started
+
+**Goal:** Automated tests and deployments with rollback.
+
+#### Tasks:
+- [ ] GitHub Actions: lint, typecheck, unit/e2e, security scan.
+- [ ] Coverage thresholds; artifacts; preview deploys.
+- [ ] Rollback procedures documented and tested.
+
+#### Verification:
+- [ ] Pipeline green on main; rollbacks validated.
+
+---
+
+## 📊 Final Readiness Report (Snapshot)
+
 ```
+# CREATORLY LAUNCH READINESS REPORT
 
-**Action Required:**
-- Replace `YOUR_CRON_SECRET_PLACEHOLDER` with actual secret
-- Or set as environment variable: `CRON_SECRET`
+Date: 2026-02-18
+Prepared by: Engineering
 
----
+Summary
+- Total feature items: 42
+- Completed: 2
+- In progress: 18
+- Not started: 22
+- Decision: NO-GO (pending critical items)
 
-## 🔍 Post-Deployment Verification
+Category Status
+- Core Link-in-Bio: In Progress
+- Auto DM: Not Started
+- Analytics: Mixed (real-time in progress; core tracking pending)
+- Monetization: In Progress
+- Admin & Moderation: In Progress
+- Security & Compliance: Strong foundation; DSR and sanitization in progress
+- Performance & Infrastructure: Mixed; caching/monitoring/backups/CI pending
 
-### 1. Check Build Logs
-- Verify no errors in Vercel deployment logs
-- Confirm all environment variables loaded
+Verification Summary
+- Staging tests: partial
+- UAT: pending
+- Load testing: pending
+- Security audit: partial (no critical known)
+- Backups & DR: pending
+- Monitoring & alerts: pending
 
-### 2. Test Critical Endpoints
-```bash
-# Homepage
-curl https://your-domain.vercel.app
-
-# Health check (if implemented)
-curl https://your-domain.vercel.app/api/health
-
-# Auth endpoints
-curl https://your-domain.vercel.app/api/auth/session
+Deployment Plan
+- Planned date: TBD
+- Rollback: previous version + DB restore
+- Post-launch monitoring: 48 hours
 ```
-
-### 3. Test User Flows
-- [ ] Sign up new user
-- [ ] Login existing user
-- [ ] Access dashboard
-- [ ] Create product (if applicable)
-- [ ] Test payment flow (Razorpay)
-- [ ] Verify email sending
-
-### 4. Monitor Errors
-- Check Vercel dashboard → Logs
-- Monitor for runtime errors
-- Check database connections
-
----
-
-## 🐛 Common Issues & Solutions
-
-### Issue: Build Fails with TypeScript Errors
-**Solution:**
-```bash
-# Run build locally first
-npm run build
-
-# Fix any TypeScript errors
-# Then deploy again
-```
-
-### Issue: Environment Variables Not Loading
-**Solution:**
-- Verify all variables are set in Vercel dashboard
-- Check variable names match exactly (case-sensitive)
-- Redeploy after adding variables
-
-### Issue: MongoDB Connection Timeout
-**Solution:**
-- Whitelist Vercel IPs in MongoDB Atlas
-- Or use `0.0.0.0/0` for all IPs (less secure)
-- Verify connection string format
-
-### Issue: Redis Connection Fails
-**Solution:**
-- App should fallback gracefully (already implemented)
-- Check logs for "Redis client not available" warnings
-- Optional: Set up Vercel KV or Upstash Redis
-
-### Issue: Firebase Admin SDK Errors
-**Solution:**
-- Ensure `FIREBASE_PRIVATE_KEY` includes newlines: `\n`
-- Wrap in double quotes in Vercel dashboard
-- Verify service account has correct permissions
-
-### Issue: Razorpay Webhooks Not Working
-**Solution:**
-- Update webhook URL in Razorpay dashboard
-- Set to: `https://your-domain.vercel.app/api/razorpay/webhook`
-- Verify `RAZORPAY_WEBHOOK_SECRET` matches
-
----
-
-## 📊 Performance Optimization
-
-### Edge Functions (Optional)
-For better performance, consider using Edge Runtime for:
-- `/api/auth/*` routes
-- `/api/products` (read-only)
-
-Add to route files:
-```typescript
-export const runtime = 'edge';
-```
-
-### Caching Strategy
-- Static pages: Cached by default
-- API routes: Set appropriate `Cache-Control` headers
-- Images: Use Next.js Image Optimization
-
-### Database Connection Pooling
-MongoDB connection is already optimized with singleton pattern.
-
----
-
-## 🔐 Security Checklist
-
-- [ ] All secrets stored in Vercel environment variables (not in code)
-- [ ] `NODE_ENV=production` set
-- [ ] CORS configured properly
-- [ ] Rate limiting enabled (Redis or in-memory)
-- [ ] Webhook signature verification enabled
-- [ ] HTTPS enforced (automatic on Vercel)
-- [ ] Security headers configured
-
----
-
-## 📈 Monitoring & Analytics
-
-### Vercel Analytics
-Enable in Vercel dashboard:
-- Real User Monitoring (RUM)
-- Web Vitals tracking
-- Error tracking
-
-### Custom Monitoring
-Consider adding:
-- Sentry for error tracking
-- LogRocket for session replay
-- Datadog/New Relic for APM
-
----
-
-## 🔄 CI/CD Pipeline
-
-### Automatic Deployments
-- **Production:** Deploys on push to `main` branch
-- **Preview:** Deploys on push to any branch
-- **Pull Requests:** Automatic preview deployments
-
-### Deployment Protection
-Enable in Vercel:
-- Require approval for production deployments
-- Enable deployment protection rules
-- Set up custom domains
-
----
-
-## 🌐 Custom Domain Setup
-
-1. **Add Domain in Vercel**
-   - Dashboard → Settings → Domains
-   - Add your custom domain
-
-2. **Configure DNS**
-   - Add CNAME record: `your-domain.com` → `cname.vercel-dns.com`
-   - Or A record to Vercel IP
-
-3. **SSL Certificate**
-   - Automatic via Let's Encrypt
-   - Usually takes 1-2 minutes
-
----
-
-## 📝 Environment-Specific Configuration
-
-### Development
-```bash
-# .env.local
-NODE_ENV=development
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-```
-
-### Staging/Preview
-```bash
-# Vercel Preview environment
-NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://your-app-git-branch.vercel.app
-```
-
-### Production
-```bash
-# Vercel Production environment
-NODE_ENV=production
-NEXT_PUBLIC_APP_URL=https://your-domain.com
-```
-
----
-
-## 🚨 Rollback Plan
-
-If deployment fails:
-
-1. **Instant Rollback**
-   ```bash
-   vercel rollback
-   ```
-
-2. **Via Dashboard**
-   - Deployments → Previous deployment → Promote to Production
-
-3. **Via Git**
-   ```bash
-   git revert HEAD
-   git push origin main
-   ```
-
----
-
-## 📞 Support Resources
-
-- **Vercel Docs:** https://vercel.com/docs
-- **Next.js Deployment:** https://nextjs.org/docs/deployment
-- **Vercel Support:** https://vercel.com/support
-
----
-
-## ✅ Final Checklist Before Going Live
-
-- [ ] All environment variables configured
-- [ ] Production build successful
-- [ ] Database accessible from Vercel
-- [ ] Payment gateway tested (Razorpay)
-- [ ] Email sending verified
-- [ ] Custom domain configured (if applicable)
-- [ ] SSL certificate active
-- [ ] Error monitoring enabled
-- [ ] Backup strategy in place
-- [ ] Team notified of deployment
-- [ ] Documentation updated
-
----
-
-## 🎉 You're Ready to Deploy!
-
-Run:
-```bash
-vercel --prod
-```
-
-Or push to `main` branch if using GitHub integration.
-
-**Good luck! 🚀**

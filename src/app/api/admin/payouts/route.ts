@@ -1,56 +1,54 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/db/mongodb';
-import Payout from '@/lib/models/Payout';
-import { withAdminAuth } from '@/lib/auth/withAuth';
+﻿import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/admin/[...nextauth]/route';
+import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
+import { Payout } from '@/lib/models/Payout';
+import { User } from '@/lib/models/User';
 
-/**
- * GET /api/admin/payouts
- * List all payouts with filters
- */
-async function handler(req: NextRequest, user: any, context: any) {
-  await connectToDatabase();
+export async function GET(req: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user?.role !== 'admin') {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
 
-  const { searchParams } = new URL(req.url);
-  const page = parseInt(searchParams.get('page') || '1');
-  const limit = parseInt(searchParams.get('limit') || '50');
-  const status = searchParams.get('status'); // pending, approved, paid, rejected
+    await dbConnect();
 
-  // Build query
-  const query: any = {};
-  if (status) query.status = status;
+    const { searchParams } = new URL(req.url);
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '10');
+    const status = searchParams.get('status');
 
-  const skip = (page - 1) * limit;
+    const query: any = {};
+    if (status && status !== 'all') {
+      query.status = status;
+    }
 
-  const [payouts, total] = await Promise.all([
-    Payout.find(query)
-      .populate('creatorId', 'displayName email username')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    Payout.countDocuments(query)
-  ]);
+    const skip = (page - 1) * limit;
 
-  // Calculate summary
-  const summary = payouts.reduce((acc: any, p: any) => {
-    acc[p.status] = (acc[p.status] || 0) + 1;
-    acc.totalAmount += p.amount;
-    return acc;
-  }, { pending: 0, approved: 0, processed: 0, paid: 0, failed: 0, rejected: 0, totalAmount: 0 });
+    const [payouts, total] = await Promise.all([
+      Payout.find(query)
+        .populate('userId', 'displayName email payoutDetails')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Payout.countDocuments(query)
+    ]);
 
-  return NextResponse.json({
-    success: true,
-    data: {
+    return NextResponse.json({
       payouts,
       pagination: {
+        total,
         page,
         limit,
-        total,
         pages: Math.ceil(total / limit)
-      },
-      summary
-    }
-  });
+      }
+    });
+
+  } catch (error) {
+    console.error('Payout List Error:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
 }
 
-export const GET = withAdminAuth(handler);

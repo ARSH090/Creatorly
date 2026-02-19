@@ -108,7 +108,10 @@ const CHECKS: VerificationCheck[] = [
                 '/api/admin/products',
                 '/api/admin/orders',
                 '/api/admin/payouts',
-                '/api/admin/analytics/summary'
+                '/api/admin/analytics/summary',
+                '/api/admin/coupons',
+                '/api/admin/settings',
+                '/api/admin/logs'
             ];
 
             const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
@@ -402,7 +405,9 @@ async function runAllChecks() {
     }
 }
 
-if (require.main === module) {
+// ESM compatible check
+import { fileURLToPath } from 'url';
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
     runAllChecks().catch(error => {
         console.error('Fatal error:', error);
         process.exit(1);

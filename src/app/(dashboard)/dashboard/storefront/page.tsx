@@ -1,13 +1,23 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Layout, Palette, Type, Image as ImageIcon,
     Layers, Save, Eye, RefreshCcw, Check,
-    ArrowUp, ArrowDown, Trash2, Plus, Zap
+    ArrowUp, ArrowDown, Trash2, Plus, Zap, Upload, Loader2, Link as LinkIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+
+const LINK_TYPES = [
+    { value: 'link', label: '🔗 Link' },
+    { value: 'video', label: '🎬 Video' },
+    { value: 'music', label: '🎵 Music' },
+    { value: 'shop', label: '🛍️ Shop' },
+    { value: 'social', label: '📱 Social' },
+    { value: 'download', label: '⬇️ Download' },
+    { value: 'newsletter', label: '📧 Newsletter' },
+];
 
 const FONTS = [
     { name: 'Inter', value: 'var(--font-inter)' },
@@ -28,12 +38,15 @@ export default function StorefrontBuilder() {
     const { user } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState('design');
+    const [uploadingThumbnailIdx, setUploadingThumbnailIdx] = useState<number | null>(null);
+    const thumbnailInputRefs = useRef<(HTMLInputElement | null)[]>([]);
     const [theme, setTheme] = useState({
         primaryColor: '#6366f1',
         backgroundColor: '#030303',
         textColor: '#ffffff',
         fontFamily: 'Outfit',
         borderRadius: '2rem',
+        backgroundImage: '',
     });
 
     const [layout, setLayout] = useState([
@@ -80,7 +93,32 @@ export default function StorefrontBuilder() {
         ));
     };
 
+    const handleThumbnailUpload = async (e: React.ChangeEvent<HTMLInputElement>, idx: number) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUploadingThumbnailIdx(idx);
+        try {
+            const presignRes = await fetch('/api/creator/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: file.name, contentType: file.type, fileSize: file.size }),
+            });
+            if (!presignRes.ok) throw new Error('Failed to get upload URL');
+            const { uploadUrl, publicUrl } = await presignRes.json();
+            await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+            const newLinks = [...links];
+            newLinks[idx].thumbnail = publicUrl;
+            setLinks(newLinks);
+        } catch (err) {
+            console.error('Thumbnail upload failed', err);
+        } finally {
+            setUploadingThumbnailIdx(null);
+            if (thumbnailInputRefs.current[idx]) thumbnailInputRefs.current[idx]!.value = '';
+        }
+    };
+
     const handleSave = async () => {
+
         try {
             setIsSaving(true);
             const response = await fetch('/api/creator/profile', {
@@ -166,6 +204,27 @@ export default function StorefrontBuilder() {
                                                 className="w-10 h-10 rounded-xl bg-transparent border-none cursor-pointer"
                                             />
                                         </div>
+
+                                        {/* Background Image URL */}
+                                        <div className="space-y-2">
+                                            <span className="text-sm font-bold text-zinc-400">Background Image</span>
+                                            <input
+                                                type="url"
+                                                value={theme.backgroundImage || ''}
+                                                onChange={(e) => setTheme({ ...theme, backgroundImage: e.target.value })}
+                                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50 transition-colors"
+                                                placeholder="https://example.com/bg.jpg"
+                                            />
+                                            {theme.backgroundImage && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setTheme({ ...theme, backgroundImage: '' })}
+                                                    className="text-[10px] text-zinc-600 hover:text-rose-400 transition-colors"
+                                                >
+                                                    Clear image
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 </section>
 
@@ -203,10 +262,10 @@ export default function StorefrontBuilder() {
 
                                 <div className="space-y-4">
                                     {links.map((link, idx) => (
-                                        <div key={link.id} className="p-4 bg-white/5 border border-white/5 rounded-2xl bg-zinc-900/50 space-y-4">
-                                            <div className="flex items-center justify-between">
+                                        <div key={link.id} className="p-4 bg-white/5 border border-white/5 rounded-2xl bg-zinc-900/50 space-y-3">
+                                            <div className="flex items-center justify-between gap-2">
                                                 <input
-                                                    className="bg-transparent border-none text-sm font-bold focus:ring-0 p-0 w-full"
+                                                    className="bg-transparent border-none text-sm font-bold focus:ring-0 p-0 flex-1 min-w-0"
                                                     value={link.title}
                                                     onChange={(e) => {
                                                         const newLinks = [...links];
@@ -215,9 +274,26 @@ export default function StorefrontBuilder() {
                                                     }}
                                                     placeholder="Link Title"
                                                 />
+                                                {/* Enable / Disable toggle */}
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newLinks = [...links];
+                                                        newLinks[idx].isActive = !newLinks[idx].isActive;
+                                                        setLinks(newLinks);
+                                                    }}
+                                                    title={link.isActive ? 'Disable link' : 'Enable link'}
+                                                    className={`w-10 h-5 rounded-full transition-colors flex-shrink-0 relative ${link.isActive ? 'bg-indigo-500' : 'bg-zinc-700'
+                                                        }`}
+                                                >
+                                                    <span
+                                                        className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${link.isActive ? 'translate-x-5' : 'translate-x-0.5'
+                                                            }`}
+                                                    />
+                                                </button>
                                                 <button
                                                     onClick={() => setLinks(links.filter((_, i) => i !== idx))}
-                                                    className="text-zinc-500 hover:text-rose-500"
+                                                    className="text-zinc-500 hover:text-rose-500 flex-shrink-0"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -231,6 +307,60 @@ export default function StorefrontBuilder() {
                                                     setLinks(newLinks);
                                                 }}
                                                 placeholder="https://your-link.com"
+                                            />
+                                            {/* Thumbnail Upload */}
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    ref={el => { thumbnailInputRefs.current[idx] = el; }}
+                                                    type="file"
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                    onChange={(e) => handleThumbnailUpload(e, idx)}
+                                                />
+                                                {link.thumbnail ? (
+                                                    // eslint-disable-next-line @next/next/no-img-element
+                                                    <img src={link.thumbnail} alt="thumb" className="w-8 h-8 rounded object-cover border border-white/10" />
+                                                ) : (
+                                                    <div className="w-8 h-8 rounded bg-zinc-800 border border-white/5 flex items-center justify-center">
+                                                        <ImageIcon className="w-3 h-3 text-zinc-600" />
+                                                    </div>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    disabled={uploadingThumbnailIdx === idx}
+                                                    onClick={() => thumbnailInputRefs.current[idx]?.click()}
+                                                    className="flex items-center gap-1 px-2 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-lg text-[10px] text-zinc-400 transition-colors disabled:opacity-50"
+                                                >
+                                                    {uploadingThumbnailIdx === idx
+                                                        ? <><Loader2 className="w-3 h-3 animate-spin" /> Uploading…</>
+                                                        : <><Upload className="w-3 h-3" /> Image</>}
+                                                </button>
+                                                <input
+                                                    className="bg-zinc-800/50 border border-white/5 rounded-lg text-xs p-1.5 flex-1 text-zinc-400"
+                                                    value={link.thumbnail || ''}
+                                                    onChange={(e) => { const nl = [...links]; nl[idx].thumbnail = e.target.value; setLinks(nl); }}
+                                                    placeholder="or paste URL"
+                                                />
+                                            </div>
+
+                                            {/* Link Type */}
+                                            <select
+                                                value={link.linkType || 'link'}
+                                                onChange={(e) => { const nl = [...links]; nl[idx].linkType = e.target.value; setLinks(nl); }}
+                                                className="bg-zinc-800/50 border border-white/5 rounded-lg text-xs p-2 w-full text-zinc-400 focus:outline-none"
+                                            >
+                                                {LINK_TYPES.map(lt => (
+                                                    <option key={lt.value} value={lt.value}>{lt.label}</option>
+                                                ))}
+                                            </select>
+
+                                            {/* Description */}
+                                            <textarea
+                                                rows={2}
+                                                value={link.description || ''}
+                                                onChange={(e) => { const nl = [...links]; nl[idx].description = e.target.value; setLinks(nl); }}
+                                                className="bg-zinc-800/50 border border-white/5 rounded-lg text-xs p-2 w-full text-zinc-400 resize-none focus:outline-none"
+                                                placeholder="Short description (optional)"
                                             />
                                         </div>
                                     ))}
@@ -297,6 +427,9 @@ export default function StorefrontBuilder() {
                             className="w-full h-full overflow-y-auto scrollbar-hide pt-16 pb-20 px-6 space-y-12"
                             style={{
                                 backgroundColor: theme.backgroundColor,
+                                backgroundImage: theme.backgroundImage ? `url(${theme.backgroundImage})` : undefined,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
                                 color: theme.textColor,
                                 fontFamily: theme.fontFamily
                             }}

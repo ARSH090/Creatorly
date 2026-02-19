@@ -1,59 +1,65 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/db/mongodb';
-import Product from '@/lib/models/Product';
-import { withAdminAuth } from '@/lib/auth/withAuth';
+﻿import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/admin/[...nextauth]/route';
+import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
+import { Product } from '@/lib/models/Product';
+import { User } from '@/lib/models/User';
 
-/**
- * GET /api/admin/products
- * List all products with creator info
- */
-async function handler(req: NextRequest, user: any, context: any) {
-    await connectToDatabase();
+export async function GET(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session || session.user?.role !== 'admin') {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
 
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '50');
-    const status = searchParams.get('status');
-    const productType = searchParams.get('type');
-    const search = searchParams.get('search');
+        await dbConnect();
 
-    // Build query
-    const query: any = {};
+        const { searchParams } = new URL(req.url);
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '10');
+        const search = searchParams.get('search') || '';
+        const status = searchParams.get('status');
+        const type = searchParams.get('type');
 
-    if (status) query.status = status;
-    if (productType) query.type = productType;
+        const query: any = { status: { $ne: 'deleted' } }; // Soft delete check if applicable
 
-    if (search) {
-        query.$or = [
-            { name: { $regex: search, $options: 'i' } },
-            { description: { $regex: search, $options: 'i' } }
-        ];
-    }
+        if (search) {
+            query.name = { $regex: search, $options: 'i' };
+        }
 
-    const skip = (page - 1) * limit;
+        if (status && status !== 'all') {
+            query.status = status;
+        }
 
-    const [products, total] = await Promise.all([
-        Product.find(query)
-            .populate('creatorId', 'displayName email username')
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limit)
-            .lean(),
-        Product.countDocuments(query)
-    ]);
+        if (type && type !== 'all') {
+            query.type = type;
+        }
 
-    return NextResponse.json({
-        success: true,
-        data: {
+        const skip = (page - 1) * limit;
+
+        const [products, total] = await Promise.all([
+            Product.find(query)
+                .populate('creatorId', 'displayName email')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            Product.countDocuments(query)
+        ]);
+
+        return NextResponse.json({
             products,
             pagination: {
+                total,
                 page,
                 limit,
-                total,
                 pages: Math.ceil(total / limit)
             }
-        }
-    });
+        });
+
+    } catch (error) {
+        console.error('Product List Error:', error);
+        return new NextResponse('Internal Server Error', { status: 500 });
+    }
 }
 
-export const GET = withAdminAuth(handler);

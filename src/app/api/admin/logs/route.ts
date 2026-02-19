@@ -1,51 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/db/mongodb';
-import AdminLog from '@/lib/models/AdminLog';
-import { withAdminAuth } from '@/lib/auth/withAuth';
+﻿import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/admin/[...nextauth]/route';
+import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
+import { AdminLog } from '@/lib/models/AdminLog';
 
-/**
- * GET /api/admin/logs
- * Get audit logs with pagination and filters
- */
-async function handler(req: NextRequest, user: any, context: any) {
-    await connectToDatabase();
+export async function GET(req: Request) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session || session.user?.role !== 'admin') {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
 
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '100');
-    const action = searchParams.get('action');
-    const targetType = searchParams.get('targetType');
-    const adminEmail = searchParams.get('adminEmail');
+        await dbConnect();
 
-    // Build query
-    const query: any = {};
-    if (action) query.action = action;
-    if (targetType) query.targetType = targetType;
-    if (adminEmail) query.adminEmail = adminEmail;
+        const { searchParams } = new URL(req.url);
+        const page = parseInt(searchParams.get('page') || '1');
+        const limit = parseInt(searchParams.get('limit') || '20');
+        const search = searchParams.get('search') || '';
 
-    const skip = (page - 1) * limit;
+        const query: any = {};
+        if (search) {
+            query.$or = [
+                { adminEmail: { $regex: search, $options: 'i' } },
+                { action: { $regex: search, $options: 'i' } },
+                { targetType: { $regex: search, $options: 'i' } }
+            ];
+        }
 
-    const [logs, total] = await Promise.all([
-        AdminLog.find(query)
-            .sort({ timestamp: -1 })
-            .skip(skip)
-            .limit(limit)
-            .lean(),
-        AdminLog.countDocuments(query)
-    ]);
+        const skip = (page - 1) * limit;
 
-    return NextResponse.json({
-        success: true,
-        data: {
+        const [logs, total] = await Promise.all([
+            AdminLog.find(query)
+                .sort({ timestamp: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+            AdminLog.countDocuments(query)
+        ]);
+
+        return NextResponse.json({
             logs,
             pagination: {
+                total,
                 page,
                 limit,
-                total,
                 pages: Math.ceil(total / limit)
             }
-        }
-    });
+        });
+
+    } catch (error) {
+        console.error('Logs List Error:', error);
+        return new NextResponse('Internal Server Error', { status: 500 });
+    }
 }
 
-export const GET = withAdminAuth(handler);

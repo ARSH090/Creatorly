@@ -1,13 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { User, Mail, Shield, Bell, Save, Trash2, Camera } from 'lucide-react';
+import { User, Mail, Shield, Save, Camera, Loader2 } from 'lucide-react';
 
 export default function ProfilePage() {
     const { user, refreshUser } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
+    const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+    const [avatarUrl, setAvatarUrl] = useState<string>('');
     const [message, setMessage] = useState({ type: '', text: '' });
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const [formData, setFormData] = useState({
         displayName: '',
@@ -22,7 +25,7 @@ export default function ProfilePage() {
                 ...prev,
                 displayName: user.displayName || '',
                 email: user.email || '',
-                username: (user as any).username || prev.username, // Fallback if already set
+                username: (user as any).username || prev.username,
             }));
 
             // Fetch extended profile data
@@ -34,12 +37,71 @@ export default function ProfilePage() {
                         displayName: data.displayName || user.displayName || '',
                         username: data.username || '',
                         bio: data.bio || '',
-                        email: user.email || '' // Keep email from auth or DB
+                        email: user.email || ''
                     }));
+                    if (data.avatar) setAvatarUrl(data.avatar);
                 })
-                .catch(err => console.error("Failed to fetch profile", err));
+                .catch(err => console.error('Failed to fetch profile', err));
         }
     }, [user]);
+
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+        if (!allowedTypes.includes(file.type)) {
+            setMessage({ type: 'error', text: 'Only JPG, PNG, WebP, or GIF images are allowed.' });
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            setMessage({ type: 'error', text: 'Image must be smaller than 5 MB.' });
+            return;
+        }
+
+        setIsUploadingAvatar(true);
+        setMessage({ type: '', text: '' });
+
+        try {
+            // 1. Get a presigned S3 upload URL
+            const presignRes = await fetch('/api/creator/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    filename: file.name,
+                    contentType: file.type,
+                    fileSize: file.size,
+                }),
+            });
+            if (!presignRes.ok) throw new Error('Failed to get upload URL');
+            const { uploadUrl, publicUrl } = await presignRes.json();
+
+            // 2. Upload directly to S3
+            const uploadRes = await fetch(uploadUrl, {
+                method: 'PUT',
+                body: file,
+                headers: { 'Content-Type': file.type },
+            });
+            if (!uploadRes.ok) throw new Error('Upload to storage failed');
+
+            // 3. Persist the new avatar URL
+            const updateRes = await fetch('/api/user/profile', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ avatar: publicUrl }),
+            });
+            if (!updateRes.ok) throw new Error('Failed to save avatar URL');
+
+            setAvatarUrl(publicUrl);
+            setMessage({ type: 'success', text: 'Avatar updated!' });
+            await refreshUser();
+        } catch (err: any) {
+            setMessage({ type: 'error', text: err.message || 'Avatar upload failed.' });
+        } finally {
+            setIsUploadingAvatar(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -79,14 +141,35 @@ export default function ProfilePage() {
                 {/* Left: Avatar & Quick Info */}
                 <div className="space-y-6">
                     <div className="bg-zinc-900/50 rounded-3xl p-8 border border-white/5 text-center flex flex-col items-center">
-                        <div className="relative group">
-                            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-4 border-white/10 overflow-hidden mb-4">
-                                {/* Placeholder for avatar */}
-                                <div className="w-full h-full flex items-center justify-center text-white text-4xl font-black">
-                                    {(user?.displayName || 'C').charAt(0).toUpperCase()}
-                                </div>
+                        <div className="relative group mb-4">
+                            {/* Hidden file input for avatar upload */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp,image/gif"
+                                className="hidden"
+                                onChange={handleAvatarUpload}
+                            />
+                            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-4 border-white/10 overflow-hidden">
+                                {isUploadingAvatar ? (
+                                    <div className="w-full h-full flex items-center justify-center bg-black/50">
+                                        <Loader2 className="w-8 h-8 text-white animate-spin" />
+                                    </div>
+                                ) : avatarUrl ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-white text-4xl font-black">
+                                        {(user?.displayName || 'C').charAt(0).toUpperCase()}
+                                    </div>
+                                )}
                             </div>
-                            <button className="absolute bottom-0 right-0 p-2 bg-indigo-500 rounded-full border-2 border-[#030303] text-white hover:bg-indigo-600 transition-colors shadow-lg">
+                            <button
+                                type="button"
+                                disabled={isUploadingAvatar}
+                                onClick={() => fileInputRef.current?.click()}
+                                className="absolute bottom-0 right-0 p-2 bg-indigo-500 rounded-full border-2 border-[#030303] text-white hover:bg-indigo-600 transition-colors shadow-lg disabled:opacity-50"
+                            >
                                 <Camera className="w-4 h-4" />
                             </button>
                         </div>
@@ -208,7 +291,7 @@ export default function ProfilePage() {
                             <div className="p-2 bg-amber-500/10 rounded-lg">
                                 <Shield className="w-5 h-5 text-amber-400" />
                             </div>
-                            <h3 className="text-lg font-bold text-white">Security & Password</h3>
+                            <h3 className="text-lg font-bold text-white">Security &amp; Password</h3>
                         </div>
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 bg-black rounded-2xl border border-white/5">
                             <div>
@@ -219,6 +302,29 @@ export default function ProfilePage() {
                                 Change Password
                             </button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* QR Code Section */}
+            <div className="bg-zinc-900/50 rounded-3xl p-8 border border-white/5 mt-8">
+                <h3 className="text-lg font-bold text-white mb-4">Profile QR Code</h3>
+                <div className="flex items-center gap-6">
+                    <img
+                        src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(typeof window !== 'undefined' ? `${window.location.origin}/u/${formData.username || 'creator'}` : '')}`}
+                        alt="QR"
+                        className="w-56 h-56 rounded-2xl border border-white/10 bg-white/5"
+                    />
+                    <div className="space-y-2">
+                        <p className="text-sm text-zinc-400">Scan to open your public profile</p>
+                        <a
+                            href={`/u/${formData.username || 'creator'}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center px-4 py-2 bg-indigo-500 rounded-xl text-white text-sm font-bold hover:bg-indigo-600"
+                        >
+                            Open Profile
+                        </a>
                     </div>
                 </div>
             </div>

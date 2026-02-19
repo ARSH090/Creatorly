@@ -10,6 +10,7 @@ import CreatorBio from '@/components/storefront/CreatorBio';
 import ProductGrid from '@/components/storefront/ProductGrid';
 import LinksSection from '@/components/storefront/LinksSection';
 import ChatWidget from '@/components/storefront/ChatWidget';
+import ShareButtons from '@/components/storefront/ShareButtons';
 import { ShieldAlert } from 'lucide-react';
 
 import { getCurrentUser } from '@/lib/auth/server-auth';
@@ -159,7 +160,18 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
 
                     switch (section.id) {
                         case 'hero':
-                            return <CreatorBio key="hero" creator={plainCreator} />;
+                            return (
+                                <div key="hero">
+                                    <CreatorBio creator={plainCreator} />
+                                    <div className="mt-6">
+                                        <ShareButtons
+                                            username={creator.username}
+                                            displayName={creator.displayName}
+                                        />
+                                    </div>
+                                </div>
+                            );
+
 
                         case 'links':
                             return (

@@ -22,6 +22,10 @@ export interface IPlatformSettings extends Document {
     bankTransfer: { enabled: boolean };
     stripe?: { enabled: boolean };
   };
+  subscriptionPlans: {
+    monthly: { price: number; razorpayPlanId?: string; active: boolean };
+    yearly: { price: number; razorpayPlanId?: string; active: boolean };
+  };
   emailConfig: {
     from: string;
     replyTo: string;
@@ -103,6 +107,18 @@ const PlatformSettingsSchema = new Schema<IPlatformSettings>(
       upi: { enabled: { type: Boolean, default: true } },
       bankTransfer: { enabled: { type: Boolean, default: true } },
       stripe: { enabled: { type: Boolean, default: false } },
+    },
+    subscriptionPlans: {
+      monthly: {
+        price: { type: Number, default: 999 },
+        razorpayPlanId: String,
+        active: { type: Boolean, default: true }
+      },
+      yearly: {
+        price: { type: Number, default: 9999 },
+        razorpayPlanId: String,
+        active: { type: Boolean, default: true }
+      }
     },
     emailConfig: {
       from: {

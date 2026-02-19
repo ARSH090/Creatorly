@@ -14,8 +14,10 @@ export interface ISubscription extends Document {
     billingPeriod: 'monthly' | 'yearly';
     startDate: Date;
     endDate: Date;
-    status: 'active' | 'canceled' | 'expired' | 'past_due' | 'pending';
+    trialEndsAt?: Date;
+    status: 'active' | 'canceled' | 'expired' | 'past_due' | 'pending' | 'trialing';
     autoRenew: boolean;
+    autopayEnabled: boolean;
 
     // Payment provider fields
     razorpaySubscriptionId?: string;
@@ -76,11 +78,14 @@ const SubscriptionSchema: Schema = new Schema({
     },
     status: {
         type: String,
-        enum: ['active', 'canceled', 'expired', 'past_due', 'pending'],
+        enum: ['active', 'canceled', 'expired', 'past_due', 'pending', 'trialing'],
         default: 'active',
         index: true
     },
     autoRenew: { type: Boolean, default: true },
+
+    trialEndsAt: { type: Date },
+    autopayEnabled: { type: Boolean, default: false },
 
     razorpaySubscriptionId: { type: String, sparse: true, unique: true },
     razorpayCustomerId: { type: String },

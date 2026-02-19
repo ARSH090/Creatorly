@@ -1,96 +1,67 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/db/mongodb';
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/admin/[...nextauth]/route';
+import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { Order } from '@/lib/models/Order';
-import { withAdminAuth } from '@/lib/auth/withAuth';
-import { logAdminAction } from '@/lib/admin/logger';
+import { AdminLog } from '@/lib/models/AdminLog';
+import { razorpay } from '@/lib/payments/razorpay';
 
-/**
- * POST /api/admin/orders/:id/refund
- * Issue refund for an order
- */
-async function handler(req: NextRequest, user: any, context: any) {
-    await connectToDatabase();
-
-    const params = await context.params;
-    const orderId = params.id;
-
-    const body = await req.json();
-    const { amount, reason } = body;
-
-    const order = await Order.findById(orderId);
-    if (!order) {
-        return NextResponse.json(
-            { success: false, error: 'Order not found' },
-            { status: 404 }
-        );
-    }
-
-    if (order.paymentStatus !== 'paid') {
-        return NextResponse.json(
-            { success: false, error: 'Order is not paid' },
-            { status: 400 }
-        );
-    }
-
-    // Validate refund amount
-    const refundAmount = amount || order.total;
-    if (refundAmount > order.total) {
-        return NextResponse.json(
-            { success: false, error: 'Refund amount cannot exceed order total' },
-            { status: 400 }
-        );
-    }
-
-    // TODO: Process actual refund with Razorpay
-    // For now, just update order status
-    const Razorpay = require('razorpay');
-    const razorpay = new Razorpay({
-        key_id: process.env.RAZORPAY_KEY_ID,
-        key_secret: process.env.RAZORPAY_KEY_SECRET
-    });
-
+export async function POST(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
     try {
-        // Process refund with Razorpay
-        const refund = await razorpay.payments.refund(order.razorpayPaymentId, {
-            amount: Math.round(refundAmount * 100), // Convert to paise
-            notes: {
-                reason: reason || 'Admin refund',
-                admin: user.email
-            }
-        });
+        const session = await getServerSession(authOptions);
+        if (!session || session.user?.role !== 'admin') {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
 
-        // Update order
-        order.paymentStatus = 'refunded';
-        order.refundAmount = refundAmount;
-        order.refundReason = reason;
+        const { id } = await params;
+        await dbConnect();
+
+        const order = await Order.findById(id);
+        if (!order) return new NextResponse('Order not found', { status: 404 });
+
+        if (order.status !== 'paid') {
+            return new NextResponse('Order is not eligible for refund', { status: 400 });
+        }
+
+        const paymentId = order.paymentDetails?.razorpayPaymentId;
+        if (!paymentId) {
+            return new NextResponse('Payment ID missing', { status: 400 });
+        }
+
+        // Process Refund with Razorpay
+        try {
+            await razorpay.payments.refund(paymentId, {
+                notes: {
+                    reason: 'Admin initiated refund',
+                    admin: session.user.email
+                }
+            });
+        } catch (rpError: any) {
+            console.error('Razorpay Refund Error:', rpError);
+            return new NextResponse(`Razorpay Error: ${rpError.error?.description || rpError.message}`, { status: 502 });
+        }
+
+        // Update Order Status
+        order.status = 'refunded';
         order.refundedAt = new Date();
-        order.refundedBy = user.email;
-        order.razorpayRefundId = refund.id;
-
         await order.save();
 
-        // Log action
-        await logAdminAction(
-            user.email,
-            'REFUND_ORDER',
-            'order',
-            orderId,
-            { amount: refundAmount, reason },
-            req
-        );
-
-        return NextResponse.json({
-            success: true,
-            data: { order, refund },
-            message: 'Refund processed successfully'
+        // Log Admin Action
+        await AdminLog.create({
+            adminEmail: session.user.email,
+            action: 'refund_order',
+            targetType: 'order',
+            targetId: order._id,
+            ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
         });
-    } catch (error: any) {
-        console.error('Refund error:', error);
-        return NextResponse.json(
-            { success: false, error: 'Failed to process refund: ' + error.message },
-            { status: 500 }
-        );
+
+        return NextResponse.json({ message: 'Order refunded successfully' });
+
+    } catch (error) {
+        console.error('Refund API Error:', error);
+        return new NextResponse('Internal Server Error', { status: 500 });
     }
 }
-
-export const POST = withAdminAuth(handler);

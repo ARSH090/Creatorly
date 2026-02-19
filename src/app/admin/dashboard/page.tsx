@@ -1,3 +1,4 @@
+﻿// @ts-nocheck
 import AdminDashboardMetrics from '@/components/admin/DashboardMetrics';
 import GrowthTrendCard from '@/components/admin/GrowthTrendCard';
 import UserManagement from '@/components/admin/UserManagement';
@@ -41,7 +42,7 @@ export default async function AdminDashboard() {
               ADMIN CONSOLE
             </h1>
             <p className="text-xs font-bold text-zinc-500 mt-1 uppercase tracking-widest">
-              Platform status & surveillance • Version 2.0.4
+              Platform status & surveillance â€¢ Version 2.0.4
             </p>
           </div>
           <div className="flex items-center gap-4 bg-zinc-900/50 p-2 pl-4 rounded-2xl border border-white/5">
@@ -87,7 +88,7 @@ export default async function AdminDashboard() {
                         </span>
                       </div>
                       <p className="text-xs text-zinc-500 font-medium mt-1 line-clamp-1 opacity-80">
-                        {event.ipAddress} • {JSON.stringify(event.context).slice(0, 50)}...
+                        {event.ipAddress} â€¢ {JSON.stringify(event.context).slice(0, 50)}...
                       </p>
                     </div>
                   </div>

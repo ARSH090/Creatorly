@@ -4,6 +4,7 @@ import { CustomDomain } from '@/lib/models/CustomDomain';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 import { hasFeature } from '@/lib/utils/planLimits';
+import { promises as dns } from 'dns';
 
 /**
  * POST /api/creator/domains/verify
@@ -41,8 +42,6 @@ async function handler(req: NextRequest, user: any, context: any) {
         });
     }
 
-    // TODO: Implement actual DNS verification
-    // For now, simulate verification
     const isVerified = await verifyDNS(domain, customDomain.verificationToken || '');
 
     if (isVerified) {
@@ -70,16 +69,21 @@ async function handler(req: NextRequest, user: any, context: any) {
     }
 }
 
-// Helper functions
 function generateVerificationToken(): string {
     return Math.random().toString(36).substring(2, 15) +
         Math.random().toString(36).substring(2, 15);
 }
 
 async function verifyDNS(domain: string, token: string): Promise<boolean> {
-    // TODO: Implement actual DNS lookup
-    // For now, return false to show verification instructions
-    return false;
+    try {
+        const txt = await dns.resolveTxt(domain).catch(() => [])
+        const txtOk = Array.isArray(txt) && txt.some(r => r.join('').includes(`creatorly-verify=${token}`))
+        const cnameRecords = await dns.resolveCname(domain).catch(() => [])
+        const cnameOk = Array.isArray(cnameRecords) && cnameRecords.length > 0
+        return !!(txtOk && cnameOk)
+    } catch {
+        return false
+    }
 }
 
 export const POST = withCreatorAuth(withErrorHandler(handler));

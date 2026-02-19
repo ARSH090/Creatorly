@@ -5,7 +5,7 @@ import {
     LayoutDashboard, Package, ShoppingCart, TrendingUp,
     Users, Wallet, Settings, Bell, LogOut, ChevronRight,
     Sparkles, Plus, Share2, Menu, X, User, CreditCard, Folder, LifeBuoy,
-    Mail
+    Mail, Globe
 } from "lucide-react";
 import { useUser, useClerk, useAuth } from "@clerk/nextjs";
 import Link from 'next/link';
@@ -59,6 +59,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const navigation = [
         { name: 'Overview', icon: LayoutDashboard, href: '/dashboard', badge: null },
         { name: 'My Profile', icon: User, href: '/dashboard/profile' },
+        { name: 'Storefront', icon: Sparkles, href: '/dashboard/storefront' },
+        { name: 'Custom Domain', icon: Globe, href: '/dashboard/domain' },
         { name: 'Billing', icon: CreditCard, href: '/dashboard/billing' },
         { name: 'Projects', icon: Folder, href: '/dashboard/projects', badge: stats?.productsCount },
         { name: 'Orders', icon: ShoppingCart, href: '/dashboard/orders', badge: stats?.pendingOrders },

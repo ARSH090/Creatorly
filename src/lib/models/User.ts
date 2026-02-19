@@ -10,6 +10,7 @@ export interface IUser extends Document {
     bio?: string;
     avatar?: string;
     storeSlug?: string;
+    phone?: string;
     razorpayContactId?: string;
     razorpayAccountId?: string; // Linked account ID for transfers
 
@@ -27,7 +28,7 @@ export interface IUser extends Document {
 
     // NEW: Tier Management & Subscription
     subscriptionTier: 'free' | 'creator' | 'pro';
-    subscriptionStatus: 'active' | 'expired' | 'cancelled' | 'banned';
+    subscriptionStatus: 'active' | 'trialing' | 'expired' | 'cancelled' | 'banned';
     subscriptionStartAt?: Date;
     subscriptionEndAt?: Date;
     razorpaySubscriptionId?: string;
@@ -96,6 +97,7 @@ export interface IUser extends Document {
     flagReason?: string;
     flaggedAt?: Date;
     kycStatus: 'none' | 'pending' | 'verified' | 'rejected';
+    trialUsed: boolean;
     planLimits?: {
         maxProducts: number;
         maxStorageMb: number;
@@ -146,6 +148,7 @@ const UserSchema: Schema = new Schema({
         unique: true,
         sparse: true,
     },
+    phone: String,
     razorpayContactId: String, // For payouts
     razorpayAccountId: String, // For Razorpay Transfers
 
@@ -276,7 +279,7 @@ const UserSchema: Schema = new Schema({
     },
     subscriptionStatus: {
         type: String,
-        enum: ['active', 'expired', 'cancelled', 'banned'],
+        enum: ['active', 'trialing', 'expired', 'cancelled', 'banned'],
         default: 'active',
         index: true
     },
@@ -338,6 +341,10 @@ const UserSchema: Schema = new Schema({
         enum: ['none', 'pending', 'verified', 'rejected'],
         default: 'none',
         index: true
+    },
+    trialUsed: {
+        type: Boolean,
+        default: false
     }
 }, { timestamps: true });
 

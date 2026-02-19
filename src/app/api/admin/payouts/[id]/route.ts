@@ -1,175 +1,52 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/db/mongodb';
-import Payout from '@/lib/models/Payout';
-import { withAdminAuth } from '@/lib/auth/withAuth';
-import { logAdminAction } from '@/lib/admin/logger';
+import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/app/api/auth/admin/[...nextauth]/route';
+import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
+import { Payout } from '@/lib/models/Payout';
+import { AdminLog } from '@/lib/models/AdminLog';
 
-/**
- * POST /api/admin/payouts/:id/approve
- * Approve payout request
- */
-async function approveHandler(req: NextRequest, user: any, context: any) {
-    await connectToDatabase();
+export async function PUT(
+    req: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const session = await getServerSession(authOptions);
+        if (!session || session.user?.role !== 'admin') {
+            return new NextResponse('Unauthorized', { status: 401 });
+        }
 
-    const params = await context.params;
-    const payoutId = params.id;
+        const { id } = await params;
+        const body = await req.json(); // { status: 'paid' | 'rejected', notes: string }
+        await dbConnect();
 
-    const body = await req.json();
-    const { notes } = body;
+        const payout = await Payout.findById(id);
+        if (!payout) return new NextResponse('Payout not found', { status: 404 });
 
-    const payout = await Payout.findById(payoutId);
-    if (!payout) {
-        return NextResponse.json(
-            { success: false, error: 'Payout not found' },
-            { status: 404 }
-        );
+        // Update Payout
+        const oldStatus = payout.status;
+        payout.status = body.status;
+        if (body.status === 'paid') {
+            payout.processedAt = new Date();
+            payout.transactionReference = body.transactionReference; // Optional manual reference
+        }
+        if (body.notes) {
+            payout.notes = body.notes; // Assuming schema has notes or we add it
+        }
+
+        await payout.save();
+
+        await AdminLog.create({
+            adminEmail: session.user.email,
+            action: 'update_payout_status',
+            targetType: 'payout',
+            targetId: payout._id,
+            changes: { from: oldStatus, to: body.status, notes: body.notes },
+            ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+        });
+
+        return NextResponse.json(payout);
+
+    } catch (error) {
+        return new NextResponse('Internal Server Error', { status: 500 });
     }
-
-    if (payout.status !== 'pending') {
-        return NextResponse.json(
-            { success: false, error: 'Payout is not pending' },
-            { status: 400 }
-        );
-    }
-
-    payout.status = 'approved';
-    payout.processedBy = user.email;
-    payout.processedAt = new Date();
-    if (notes) payout.notes = notes;
-
-    await payout.save();
-
-    // Log action
-    await logAdminAction(
-        user.email,
-        'APPROVE_PAYOUT',
-        'payout',
-        payoutId,
-        { amount: payout.amount, creatorId: payout.creatorId },
-        req
-    );
-
-    return NextResponse.json({
-        success: true,
-        data: { payout },
-        message: 'Payout approved successfully'
-    });
 }
-
-/**
- * POST /api/admin/payouts/:id/reject
- * Reject payout request
- */
-async function rejectHandler(req: NextRequest, user: any, context: any) {
-    await connectToDatabase();
-
-    const params = await context.params;
-    const payoutId = params.id;
-
-    const body = await req.json();
-    const { reason } = body;
-
-    if (!reason) {
-        return NextResponse.json(
-            { success: false, error: 'Rejection reason is required' },
-            { status: 400 }
-        );
-    }
-
-    const payout = await Payout.findById(payoutId);
-    if (!payout) {
-        return NextResponse.json(
-            { success: false, error: 'Payout not found' },
-            { status: 404 }
-        );
-    }
-
-    payout.status = 'rejected';
-    payout.processedBy = user.email;
-    payout.processedAt = new Date();
-    payout.rejectionReason = reason;
-
-    await payout.save();
-
-    // Log action
-    await logAdminAction(
-        user.email,
-        'REJECT_PAYOUT',
-        'payout',
-        payoutId,
-        { reason, amount: payout.amount },
-        req
-    );
-
-    return NextResponse.json({
-        success: true,
-        data: { payout },
-        message: 'Payout rejected successfully'
-    });
-}
-
-/**
- * POST /api/admin/payouts/:id/process
- * Mark payout as paid
- */
-async function processHandler(req: NextRequest, user: any, context: any) {
-    await connectToDatabase();
-
-    const params = await context.params;
-    const payoutId = params.id;
-
-    const body = await req.json();
-    const { transactionId } = body;
-
-    if (!transactionId) {
-        return NextResponse.json(
-            { success: false, error: 'Transaction ID is required' },
-            { status: 400 }
-        );
-    }
-
-    const payout = await Payout.findById(payoutId);
-    if (!payout) {
-        return NextResponse.json(
-            { success: false, error: 'Payout not found' },
-            { status: 404 }
-        );
-    }
-
-    payout.status = 'paid';
-    payout.transactionId = transactionId;
-    payout.processedBy = user.email;
-    payout.processedAt = new Date();
-
-    await payout.save();
-
-    // Log action
-    await logAdminAction(
-        user.email,
-        'PROCESS_PAYOUT',
-        'payout',
-        payoutId,
-        { transactionId, amount: payout.amount },
-        req
-    );
-
-    return NextResponse.json({
-        success: true,
-        data: { payout },
-        message: 'Payout marked as paid successfully'
-    });
-}
-
-export const POST = withAdminAuth(async (req, user, context) => {
-    const { searchParams } = new URL(req.url);
-    const action = searchParams.get('action');
-
-    if (action === 'approve') return approveHandler(req, user, context);
-    if (action === 'reject') return rejectHandler(req, user, context);
-    if (action === 'process') return processHandler(req, user, context);
-
-    return NextResponse.json(
-        { success: false, error: 'Invalid action' },
-        { status: 400 }
-    );
-});
