@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useUser, useAuth } from '@clerk/nextjs';
 
 import { WelcomeTour } from './WelcomeTour';
+import DMSection from './DMSection';
 
 export default function DashboardOverview() {
     // Fetch real data from backend
@@ -205,6 +206,9 @@ export default function DashboardOverview() {
                     </div>
                 </div>
             </div>
+
+            {/* DM Section */}
+            <DMSection />
         </div>
     );
 }
