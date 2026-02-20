@@ -50,6 +50,7 @@ export default function AnalyticsPage() {
     const [conversion, setConversion] = useState<ConversionRow[]>([]);
     const [traffic, setTraffic] = useState<TrafficRow[]>([]);
     const [series, setSeries] = useState<SeriesResponse | null>(null);
+    const [topProducts, setTopProducts] = useState<any[]>([]);
 
     useEffect(() => {
         let cancelled = false;
@@ -60,26 +61,29 @@ export default function AnalyticsPage() {
 
                 const daysParam = range === 'All' ? '90' : range.replace('D', '');
 
-                const [statsRes, convRes, trafficRes, seriesRes] = await Promise.all([
+                const [statsRes, convRes, trafficRes, seriesRes, topRes] = await Promise.all([
                     fetch('/api/creator/analytics'),
                     fetch('/api/creator/analytics/conversion'),
                     fetch('/api/creator/analytics/traffic'),
-                    fetch(`/api/creator/analytics/series?days=${daysParam}`)
+                    fetch(`/api/creator/analytics/series?days=${daysParam}`),
+                    fetch(`/api/creator/analytics/top-products?limit=3`)
                 ]);
 
                 if (!statsRes.ok) throw new Error('Failed to load overview');
 
                 const statsJson = await statsRes.json();
-                const convJson = convRes.ok ? await convRes.json() : [];
-                const trafficJson = trafficRes.ok ? await trafficRes.json() : [];
-                const seriesJson = seriesRes.ok ? await seriesRes.json() : null;
+                const convRaw = convRes.ok ? await convRes.json() : { data: [] };
+                const trafficRaw = trafficRes.ok ? await trafficRes.json() : { data: [] };
+                const seriesRaw = seriesRes.ok ? await seriesRes.json() : { data: null };
+                const topRaw = topRes.ok ? await topRes.json() : { data: { products: [] } };
 
                 if (cancelled) return;
 
                 setStats(statsJson);
-                setConversion(convJson);
-                setTraffic(trafficJson);
-                setSeries(seriesJson);
+                setConversion(convRaw.data || []);
+                setTraffic(trafficRaw.data || []);
+                setSeries(seriesRaw.data || null);
+                setTopProducts(topRaw.data?.products || []);
             } catch (e: any) {
                 if (!cancelled) {
                     setError(e.message || 'Failed to load analytics');
@@ -94,13 +98,6 @@ export default function AnalyticsPage() {
             cancelled = true;
         };
     }, [range]);
-
-    const topProducts = useMemo(() => {
-        return conversion
-            .slice()
-            .sort((a, b) => b.sales - a.sales)
-            .slice(0, 3);
-    }, [conversion]);
 
     const totalRevenue = useMemo(() => {
         if (!series?.revenue) return 0;
@@ -299,13 +296,13 @@ export default function AnalyticsPage() {
                                     <Package className="w-6 h-6 text-zinc-700 group-hover:text-indigo-400 transition-colors" />
                                 </div>
                                 <div className="flex-1">
-                                    <h4 className="text-sm font-bold line-clamp-1">Product #{p.productId.slice(-6)}</h4>
+                                    <h4 className="text-sm font-bold line-clamp-1">{p.title || `Product #${p.productId.slice(-6)}`}</h4>
                                     <p className="text-[10px] font-medium text-zinc-500">
-                                        {p.sales} sales, {p.clicks} clicks
+                                        {p.orders || 0} orders, {p.units || 0} units
                                     </p>
                                 </div>
                                 <div className="text-right">
-                                    <p className="font-bold text-sm">{p.conversionRate.toFixed(1)}%</p>
+                                    <p className="font-bold text-sm">₹{p.revenue?.toLocaleString('en-IN')}</p>
                                 </div>
                             </div>
                         ))}

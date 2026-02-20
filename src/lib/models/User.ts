@@ -13,6 +13,7 @@ export interface IUser extends Document {
     phone?: string;
     razorpayContactId?: string;
     razorpayAccountId?: string; // Linked account ID for transfers
+    razorpayCustomerId?: string; // Razorpay Customer ID for Subscriptions
 
     emailVerified: boolean;
     emailVerifiedAt?: Date;
@@ -69,7 +70,9 @@ export interface IUser extends Document {
     activeSubscription?: any; // Populated field
     deletedAt?: Date; // Soft-delete support
     aiUsageCount: number;
+    aiCredits?: number;
     storageUsageMb?: number;
+    name?: string; // Legacy support
 
     // Password Reset
     passwordResetToken?: string; // SHA256 hash of reset token
@@ -106,6 +109,9 @@ export interface IUser extends Document {
         customDomain: boolean;
         canRemoveBranding: boolean;
     };
+    // Timestamps
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 
@@ -151,6 +157,11 @@ const UserSchema: Schema = new Schema({
     phone: String,
     razorpayContactId: String, // For payouts
     razorpayAccountId: String, // For Razorpay Transfers
+    razorpayCustomerId: {
+        type: String,
+        sparse: true,
+        index: true
+    },
 
     emailVerified: {
         type: Boolean,

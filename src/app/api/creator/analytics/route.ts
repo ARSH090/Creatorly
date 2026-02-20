@@ -23,7 +23,7 @@ async function handler(req: NextRequest, user: any, context: any) {
         // 2. Fetch Orders (Revenue)
         const ordersData = await Order.find({
             creatorId,
-            status: 'success',
+            status: 'completed',
             createdAt: { $gte: startOfToday, $lte: endOfToday }
         });
 
@@ -58,7 +58,7 @@ async function handler(req: NextRequest, user: any, context: any) {
         const [yesterdayOrders, yesterdayVisitors] = await Promise.all([
             Order.find({
                 creatorId,
-                status: 'success',
+                status: 'completed',
                 createdAt: { $gte: startOfYesterday, $lte: endOfYesterday }
             }),
             AnalyticsEvent.countDocuments({

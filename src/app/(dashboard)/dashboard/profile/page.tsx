@@ -1,11 +1,11 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useUser } from '@clerk/nextjs';
 import { User, Mail, Shield, Save, Camera, Loader2 } from 'lucide-react';
 
 export default function ProfilePage() {
-    const { user, refreshUser } = useAuth();
+    const { user } = useUser();
     const [isSaving, setIsSaving] = useState(false);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
     const [avatarUrl, setAvatarUrl] = useState<string>('');
@@ -23,23 +23,24 @@ export default function ProfilePage() {
         if (user) {
             setFormData(prev => ({
                 ...prev,
-                displayName: user.displayName || '',
-                email: user.email || '',
-                username: (user as any).username || prev.username,
+                displayName: user.fullName || user.username || '',
+                email: user.primaryEmailAddress?.emailAddress || '',
+                username: user.username || prev.username,
             }));
 
-            // Fetch extended profile data
-            fetch('/api/user/profile')
+            // Fetch extended profile data from correct endpoint
+            fetch('/api/creator/profile')
                 .then(res => res.json())
                 .then(data => {
+                    const profileData = data.profile || {};
                     setFormData(prev => ({
                         ...prev,
-                        displayName: data.displayName || user.displayName || '',
-                        username: data.username || '',
-                        bio: data.bio || '',
-                        email: user.email || ''
+                        displayName: profileData.displayName || user.fullName || '',
+                        username: profileData.username || user.username || '',
+                        bio: profileData.bio || '',
+                        email: profileData.email || user.primaryEmailAddress?.emailAddress || ''
                     }));
-                    if (data.avatar) setAvatarUrl(data.avatar);
+                    if (profileData.avatar) setAvatarUrl(profileData.avatar);
                 })
                 .catch(err => console.error('Failed to fetch profile', err));
         }
@@ -63,7 +64,7 @@ export default function ProfilePage() {
         setMessage({ type: '', text: '' });
 
         try {
-            // 1. Get a presigned S3 upload URL
+            // 1. Get a presigned S3 upload URL (correct endpoint)
             const presignRes = await fetch('/api/creator/upload', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -84,9 +85,9 @@ export default function ProfilePage() {
             });
             if (!uploadRes.ok) throw new Error('Upload to storage failed');
 
-            // 3. Persist the new avatar URL
-            const updateRes = await fetch('/api/user/profile', {
-                method: 'PUT',
+            // 3. Persist the new avatar URL (correct endpoint)
+            const updateRes = await fetch('/api/creator/profile', {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ avatar: publicUrl }),
             });
@@ -94,7 +95,7 @@ export default function ProfilePage() {
 
             setAvatarUrl(publicUrl);
             setMessage({ type: 'success', text: 'Avatar updated!' });
-            await refreshUser();
+            if (user?.reload) await user.reload();
         } catch (err: any) {
             setMessage({ type: 'error', text: err.message || 'Avatar upload failed.' });
         } finally {
@@ -109,15 +110,15 @@ export default function ProfilePage() {
         setMessage({ type: '', text: '' });
 
         try {
-            const res = await fetch('/api/user/profile', {
-                method: 'PUT',
+            const res = await fetch('/api/creator/profile', {
+                method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
             });
 
             if (res.ok) {
                 setMessage({ type: 'success', text: 'Profile updated successfully!' });
-                await refreshUser();
+                if (user?.reload) await user.reload();
             } else {
                 throw new Error('Failed to update profile');
             }
@@ -127,6 +128,16 @@ export default function ProfilePage() {
             setIsSaving(false);
         }
     };
+
+    const handlePasswordChange = () => {
+        // Redirect to Clerk user profile security tab
+        window.location.href = '/user-profile/security';
+    };
+
+    const joinedDate = user?.createdAt ? new Date(user.createdAt).toLocaleDateString('en-IN', {
+        month: 'short',
+        year: 'numeric'
+    }) : 'Feb 2024';
 
     return (
         <div className="max-w-4xl mx-auto space-y-8">
@@ -158,9 +169,11 @@ export default function ProfilePage() {
                                 ) : avatarUrl ? (
                                     // eslint-disable-next-line @next/next/no-img-element
                                     <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                                ) : user?.imageUrl ? (
+                                    <img src={user.imageUrl} alt="Avatar" className="w-full h-full object-cover" />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center text-white text-4xl font-black">
-                                        {(user?.displayName || 'C').charAt(0).toUpperCase()}
+                                        {(formData.displayName || user?.firstName || 'C').charAt(0).toUpperCase()}
                                     </div>
                                 )}
                             </div>
@@ -173,8 +186,8 @@ export default function ProfilePage() {
                                 <Camera className="w-4 h-4" />
                             </button>
                         </div>
-                        <h2 className="text-xl font-bold text-white mb-1">{user?.displayName}</h2>
-                        <p className="text-zinc-500 text-sm mb-4">@{formData.username || 'creator'}</p>
+                        <h2 className="text-xl font-bold text-white mb-1">{formData.displayName || user?.fullName}</h2>
+                        <p className="text-zinc-500 text-sm mb-4">@{formData.username || user?.username || 'creator'}</p>
                         <div className="flex gap-2">
                             <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-indigo-500/20">
                                 Pro Creator
@@ -191,7 +204,7 @@ export default function ProfilePage() {
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-zinc-500 text-sm">Joined</span>
-                                <span className="text-white text-sm font-medium">Feb 2024</span>
+                                <span className="text-white text-sm font-medium">{joinedDate}</span>
                             </div>
                             <div className="flex items-center justify-between">
                                 <span className="text-zinc-500 text-sm">Email Verified</span>
@@ -291,15 +304,17 @@ export default function ProfilePage() {
                             <div className="p-2 bg-amber-500/10 rounded-lg">
                                 <Shield className="w-5 h-5 text-amber-400" />
                             </div>
-                            <h3 className="text-lg font-bold text-white">Security &amp; Password</h3>
+                            <h3 className="text-lg font-bold text-white">Security & Password</h3>
                         </div>
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-6 bg-black rounded-2xl border border-white/5">
                             <div>
                                 <p className="text-white font-bold mb-1">Update Password</p>
-                                <p className="text-xs text-zinc-500">Last changed 3 months ago</p>
+                                <p className="text-xs text-zinc-500">Manage security settings via Clerk</p>
                             </div>
-                            <button className="w-full sm:w-auto px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-black uppercase tracking-wider rounded-lg transition-colors">
-                                Change Password
+                            <button
+                                onClick={handlePasswordChange}
+                                className="w-full sm:w-auto px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-black uppercase tracking-wider rounded-lg transition-colors">
+                                Manage Security
                             </button>
                         </div>
                     </div>

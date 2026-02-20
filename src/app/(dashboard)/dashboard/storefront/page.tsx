@@ -36,7 +36,7 @@ const SECTIONS = [
 ];
 
 export default function StorefrontBuilder() {
-    const { user } = useAuth();
+    const { user, email, displayName, photoURL, uid } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState('design');
     const [uploadingThumbnailIdx, setUploadingThumbnailIdx] = useState<number | null>(null);
@@ -160,7 +160,7 @@ export default function StorefrontBuilder() {
                         <h2 className="text-xl font-black uppercase tracking-tight">Editor</h2>
                         <div className="flex gap-2">
                             <button
-                                onClick={() => window.open(`/u/${(user as any)?.username || user?.email?.split('@')[0]}`, '_blank')}
+                                onClick={() => window.open(`/u/${(user as any)?.username || email?.split('@')[0]}`, '_blank')}
                                 className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
                             >
                                 <Eye className="w-4 h-4 text-zinc-400" />
@@ -483,11 +483,11 @@ export default function StorefrontBuilder() {
                                 {/* Bio Mock */}
                                 <div className="flex flex-col items-center text-center space-y-4">
                                     <div className="w-24 h-24 rounded-[2rem] bg-zinc-800 border-4 border-black shadow-2xl overflow-hidden">
-                                        <img src={user?.photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'} alt="Bio" className="w-full h-full object-cover" />
+                                        <img src={photoURL || 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix'} alt="Bio" className="w-full h-full object-cover" />
                                     </div>
                                     <div className="space-y-1">
-                                        <h1 className="text-2xl font-black">{user?.displayName || 'Your Name'}</h1>
-                                        <p className="text-zinc-500 text-sm font-medium">@{(user as any)?.username || user?.email?.split('@')[0] || 'username'}</p>
+                                        <h1 className="text-2xl font-black">{displayName || 'Your Name'}</h1>
+                                        <p className="text-zinc-500 text-sm font-medium">@{(user as any)?.username || email?.split('@')[0] || 'username'}</p>
                                     </div>
                                     <p className="text-xs text-zinc-400 max-w-[240px] leading-relaxed">
                                         Digital creator building tools for the future of the internet.

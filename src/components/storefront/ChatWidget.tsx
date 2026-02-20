@@ -30,7 +30,7 @@ export default function ChatWidget({ creatorId }: { creatorId: string }) {
             .then(data => setMessages(data.messages || []));
 
         // Subscribe to Pusher
-        const channelName = [user._id, creatorId].sort().join('--');
+        const channelName = [user.id, creatorId].sort().join('--');
         const pusher = getPusherClient();
         const channel = pusher.subscribe(`chat--${channelName}`);
 
@@ -91,10 +91,10 @@ export default function ChatWidget({ creatorId }: { creatorId: string }) {
                         {/* Messages */}
                         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
                             {messages.map((msg) => (
-                                <div key={msg.id} className={`flex ${msg.senderId === user._id ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.senderId === user._id
-                                            ? 'bg-indigo-500 text-white rounded-br-none'
-                                            : 'bg-zinc-800 text-zinc-200 rounded-bl-none'
+                                <div key={msg.id} className={`flex ${msg.senderId === user.id ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.senderId === user.id
+                                        ? 'bg-indigo-500 text-white rounded-br-none'
+                                        : 'bg-zinc-800 text-zinc-200 rounded-bl-none'
                                         }`}>
                                         {msg.content}
                                     </div>

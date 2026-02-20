@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Users, ShoppingBag, Wallet, Eye, ArrowRight, Plus, Zap } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, ShoppingBag, Wallet, Eye, ArrowRight, Plus, Zap, Loader2 } from "lucide-react";
 import Link from 'next/link';
 import { useUser, useAuth } from '@clerk/nextjs';
 
@@ -10,9 +11,14 @@ import { WelcomeTour } from './WelcomeTour';
 export default function DashboardOverview() {
     // Fetch real data from backend
     const [analytics, setAnalytics] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
     const [showTour, setShowTour] = useState(false);
     const { user } = useUser();
-    const { getToken } = useAuth();
+
+    // Note: useAuth headers are handled automatically if using same-origin cookies with Clerk middleware.
+    // However, if we need explicit tokens for API routes not covered by middleware matcher, we use getToken.
+    // Our /api/v1/* routes check user via getMongoUser which uses auth() on server side.
+    // So standard fetch is fine as long as session cookie is passed (browser default).
 
     useEffect(() => {
         const hasSeenTour = localStorage.getItem('creatorly_tour_done');
@@ -31,30 +37,27 @@ export default function DashboardOverview() {
         const fetchAnalytics = async () => {
             if (!user) return;
             try {
-                const token = await getToken();
-                if (!token) throw new Error("No authenticated user found");
-
-                const res = await fetch('/api/creator/analytics', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+                // New Endpoint: /api/v1/dashboard/summary
+                const res = await fetch('/api/v1/dashboard/summary');
+                if (!res.ok) {
+                    throw new Error(`Error ${res.status}: ${res.statusText}`);
+                }
                 const data = await res.json();
-                if (data.error) throw new Error(data.error);
+
+                // Also fetch recent activity (conceptually 'recent orders' for now)
+                // or /api/v1/dashboard/activity.
+                // For this overview, let's try to get recent orders from cache or separate call if needed.
+                // The summary endpoint returns { revenue, leads, ai_credits }.
+                // We might need a separate call for recent orders if not included.
+                // Plan: Fetch Summary, use it for stats.
+                // Summary response structure from my impl: { revenue: { total, trend, history }, leads: {...}, ai_credits: {...} }
+
                 setAnalytics(data);
             } catch (err) {
-                console.error('Failed to load analytics:', err);
-                // Fallback to minimal zeros if fetch fails
-                setAnalytics({
-                    todayRevenue: 0,
-                    todayVisitors: 0,
-                    totalProducts: 0,
-                    pendingPayout: 0,
-                    revenueChange: 0,
-                    visitorChange: 0,
-                    repeatRate: 0,
-                    recentOrders: []
-                });
+                console.error('Failed to load dashboard data:', err);
+                // Fallback / Error state handled in UI
+            } finally {
+                setLoading(false);
             }
         };
 
@@ -63,66 +66,74 @@ export default function DashboardOverview() {
 
     const stats = [
         {
-            title: "Today's Revenue",
-            value: `₹${analytics?.todayRevenue || 0}`,
-            change: analytics?.revenueChange || 0,
+            title: "Total Revenue",
+            value: `₹${analytics?.revenue?.total || 0}`,
+            change: analytics?.revenue?.trend || 0,
             icon: Wallet,
             color: "text-emerald-400",
             bgColor: "bg-emerald-500/10",
             borderColor: "border-emerald-500/20"
         },
         {
-            title: "Total Products",
-            value: analytics?.totalProducts || 0,
-            change: 12,
-            icon: ShoppingBag,
+            title: "Total Leads",
+            value: analytics?.leads?.total || 0,
+            change: analytics?.leads?.trend || 0,
+            icon: Users, // Changed from ShoppingBag to Users for Leads/Customers context
             color: "text-blue-400",
             bgColor: "bg-blue-500/10",
             borderColor: "border-blue-500/20"
         },
         {
-            title: "Store Visitors",
-            value: analytics?.todayVisitors || 0,
-            change: analytics?.visitorChange || 0,
+            title: "Ai Credits",
+            value: analytics?.ai_credits?.remaining || 0,
+            change: 0, // No trend for credits usually
+            icon: Zap,
+            color: "text-amber-400", // Changed color
+            bgColor: "bg-amber-500/10",
+            borderColor: "border-amber-500/20"
+        },
+        {
+            title: "Store Visitors", // Placeholder until we have analytics integration
+            value: "0",
+            change: 0,
             icon: Eye,
             color: "text-indigo-400",
             bgColor: "bg-indigo-500/10",
             borderColor: "border-indigo-500/20"
-        },
-        {
-            title: "Repeat Customers",
-            value: `${analytics?.repeatRate || 0}%`,
-            change: 5,
-            icon: Users,
-            color: "text-amber-400",
-            bgColor: "bg-amber-500/10",
-            borderColor: "border-amber-500/20"
         }
     ];
+
+    if (loading) {
+        return (
+            <div className="flex h-96 items-center justify-center">
+                <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
             <WelcomeTour run={showTour} onClose={handleTourClose} />
-            {/* Welcome Card */}
 
+            {/* Welcome Card */}
             <div className="bg-gradient-to-r from-indigo-900/50 to-purple-900/50 rounded-3xl p-8 border border-indigo-500/20 relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 blur-[100px] rounded-full -mr-16 -mt-16" />
 
                 <div className="flex flex-col md:flex-row items-center justify-between relative z-10 gap-6">
                     <div>
-                        <h2 className="text-3xl font-bold text-white mb-2">Welcome back, Creator! 👋</h2>
+                        <h2 className="text-3xl font-bold text-white mb-2">Welcome back, {user?.firstName || 'Creator'}! 👋</h2>
                         <p className="text-zinc-300 max-w-lg">
-                            Your store earned <span className="text-white font-bold">₹{analytics?.pendingPayout || 0}</span> this week.
+                            Your store earned <span className="text-white font-bold">₹{analytics?.revenue?.total || 0}</span>.
                             The Indian creator economy is booming, and you're leading the charge.
                         </p>
                     </div>
+                    {/* Simplified Payout Widget */}
                     <div className="w-full md:w-auto bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10 min-w-[200px]">
                         <div className="text-right">
-                            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">Next Payout</p>
-                            <p className="text-3xl font-black text-white">₹{analytics?.pendingPayout || 0}</p>
+                            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">Balance</p>
+                            <p className="text-3xl font-black text-white">₹{analytics?.revenue?.total || 0}</p>
                             <div className="flex justify-end gap-2 mt-2">
-                                <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-bold">Processing</span>
-                                <span className="text-[10px] text-zinc-500 py-0.5">in 2 days</span>
+                                <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-bold">Active</span>
                             </div>
                         </div>
                     </div>
@@ -152,117 +163,47 @@ export default function DashboardOverview() {
                 ))}
             </div>
 
-            {/* Charts & Lists */}
+            {/* Usage & Quick Actions */}
             <div className="grid lg:grid-cols-2 gap-6">
-                {/* Revenue Chart Placeholder */}
-                <div className="bg-[#050505] rounded-3xl p-6 border border-white/5 flex flex-col">
-                    <div className="flex items-center justify-between mb-8">
-                        <h3 className="text-lg font-bold text-white">Revenue Trend</h3>
-                        <div className="flex gap-2">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Live Updates</span>
-                        </div>
-                    </div>
-
-                    <div className="flex-1 min-h-[250px] relative flex items-end justify-between gap-2 px-2 pb-2">
-                        {/* CSS-only chart visual */}
-                        {[40, 65, 50, 75, 60, 85, 95].map((h, i) => (
-                            <div key={i} className="w-full bg-indigo-500/10 rounded-t-lg relative group hover:bg-indigo-500/20 transition-all" style={{ height: `${h}%` }}>
-                                <div className="absolute top-0 w-full h-1 bg-indigo-500/50 hidden group-hover:block" />
-                                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                                    ₹{h * 100}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Usage Meters & Quick Actions */}
-                <div className="space-y-6">
-                    <div className="bg-[#050505] rounded-3xl p-8 border border-white/5">
-                        <h3 className="text-lg font-bold text-white mb-6">Usage Limits</h3>
-                        <div className="space-y-8">
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-end">
-                                    <div>
-                                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">AI Generations</p>
-                                        <p className="text-sm font-bold text-white">
-                                            {analytics?.usage?.ai?.used || 0} / {analytics?.usage?.ai?.limit || 10}
-                                        </p>
-                                    </div>
-                                    <span className="text-xs font-bold text-emerald-400">
-                                        {Math.round(((analytics?.usage?.ai?.used || 0) / (analytics?.usage?.ai?.limit || 10)) * 100)}%
-                                    </span>
-                                </div>
-                                <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-white/5">
-                                    <div
-                                        className="h-full bg-gradient-to-r from-emerald-500 to-teal-500"
-                                        style={{ width: `${Math.min(100, Math.round(((analytics?.usage?.ai?.used || 0) / (analytics?.usage?.ai?.limit || 10)) * 100))}%` }}
-                                    />
-                                </div>
-                            </div>
-                            <div className="space-y-3">
-                                <div className="flex justify-between items-end">
-                                    <div>
-                                        <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">Storage Used</p>
-                                        <p className="text-sm font-bold text-white">
-                                            {analytics?.usage?.storage?.used || 0} / {analytics?.usage?.storage?.limit || 100} MB
-                                        </p>
-                                    </div>
-                                    <span className="text-xs font-bold text-indigo-400">
-                                        {Math.round(((analytics?.usage?.storage?.used || 0) / (analytics?.usage?.storage?.limit || 100)) * 100)}%
-                                    </span>
-                                </div>
-                                <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-white/5">
-                                    <div className="h-full bg-gradient-to-r from-indigo-500 to-purple-500" style={{ width: `${Math.min(100, Math.round(((analytics?.usage?.storage?.used || 0) / (analytics?.usage?.storage?.limit || 100)) * 100))}%` }} />
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-
-                    <div className="bg-indigo-500/5 rounded-3xl p-8 border border-indigo-500/20">
-                        <h3 className="text-lg font-bold text-white mb-6">Quick Actions</h3>
-                        <div className="grid grid-cols-2 gap-4">
-                            <Link href="/dashboard/projects/new" className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all text-center">
-                                <Plus className="w-5 h-5 text-white mx-auto mb-2" />
-                                <span className="text-[10px] font-bold text-white uppercase tracking-widest">New Project</span>
-                            </Link>
-                            <Link href="/dashboard/billing" className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 hover:bg-indigo-500/20 transition-all text-center">
-                                <Zap className="w-5 h-5 text-indigo-400 mx-auto mb-2" />
-                                <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Upgrade Plan</span>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Recent Orders Bottom Row */}
-            <div className="bg-[#050505] rounded-3xl p-8 border border-white/5">
-                <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-lg font-bold text-white">Recent Orders</h3>
-                    <Link href="/dashboard/orders" className="text-xs font-bold text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
-                        View all <ArrowRight className="w-3 h-3" />
-                    </Link>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {analytics?.recentOrders?.map((order: any) => (
-                        <div key={order._id || order.id} className="flex items-center justify-between p-4 rounded-2xl bg-white/3 hover:bg-white/5 transition-colors border border-white/5">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center border border-white/10">
-                                    <ShoppingBag className="w-4 h-4 text-indigo-400" />
-                                </div>
+                {/* Usage Meters */}
+                <div className="bg-[#050505] rounded-3xl p-8 border border-white/5">
+                    <h3 className="text-lg font-bold text-white mb-6">Usage Limits</h3>
+                    <div className="space-y-8">
+                        <div className="space-y-3">
+                            <div className="flex justify-between items-end">
                                 <div>
-                                    <p className="font-bold text-sm text-white">{order.id || order.razorpayOrderId}</p>
-                                    <p className="text-[10px] text-zinc-500">{order.customerEmail}</p>
+                                    <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">AI Generations</p>
+                                    <p className="text-sm font-bold text-white">
+                                        {analytics?.ai_credits?.remaining || 0} / {analytics?.ai_credits?.total || 10}
+                                    </p>
                                 </div>
+                                <span className="text-xs font-bold text-emerald-400">
+                                    {Math.round(((analytics?.ai_credits?.remaining || 0) / (analytics?.ai_credits?.total || 10)) * 100)}%
+                                </span>
                             </div>
-                            <div className="text-right">
-                                <p className="font-bold text-white text-sm">₹{order.amount}</p>
-                                <p className="text-[10px] text-zinc-500">{order.paidAt ? new Date(order.paidAt).toLocaleDateString() : 'Pending'}</p>
+                            <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-white/5">
+                                <div
+                                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500"
+                                    style={{ width: `${Math.min(100, Math.round(((analytics?.ai_credits?.remaining || 0) / (analytics?.ai_credits?.total || 10)) * 100))}%` }}
+                                />
                             </div>
                         </div>
-                    ))}                </div>
+                    </div>
+                </div>
+
+                <div className="bg-indigo-500/5 rounded-3xl p-8 border border-indigo-500/20">
+                    <h3 className="text-lg font-bold text-white mb-6">Quick Actions</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <Link href="/dashboard/projects/new" className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all text-center">
+                            <Plus className="w-5 h-5 text-white mx-auto mb-2" />
+                            <span className="text-[10px] font-bold text-white uppercase tracking-widest">New Project</span>
+                        </Link>
+                        <Link href="/dashboard/billing" className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 hover:bg-indigo-500/20 transition-all text-center">
+                            <Zap className="w-5 h-5 text-indigo-400 mx-auto mb-2" />
+                            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Upgrade Plan</span>
+                        </Link>
+                    </div>
+                </div>
             </div>
         </div>
     );

@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Loader2, ArrowLeft, Send, Calendar, Save } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
+import ReactMarkdown from 'react-markdown';
+
 export default function NewCampaignPage() {
     const router = useRouter();
     const [loading, setLoading] = useState(false);
@@ -23,6 +25,7 @@ export default function NewCampaignPage() {
     const [listId, setListId] = useState('all');
     const [content, setContent] = useState('');
     const [scheduledAt, setScheduledAt] = useState('');
+    const [showPreview, setShowPreview] = useState(false);
 
     useEffect(() => {
         // Fetch lists and total subscribers
@@ -50,20 +53,20 @@ export default function NewCampaignPage() {
         init();
     }, []);
 
-    const handleSubmit = async (e: React.FormEvent, isDraft = false) => {
+    const handleSubmit = async (e: React.FormEvent, isDraft = false, forceSendNow = false) => {
         e.preventDefault();
         setLoading(true);
+
+        const finalScheduledAt = forceSendNow ? new Date().toISOString() : (scheduledAt ? new Date(scheduledAt).toISOString() : undefined);
 
         try {
             const payload = {
                 name,
                 subject,
                 content,
-                listId: listId === 'all' ? undefined : listId, // undefined meant all in backend logic usually
-                scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
-                status: isDraft ? 'draft' : (scheduledAt ? 'scheduled' : 'sent') // Note: Backend usually handles 'sent' status by queueing immediately?
-                // But here we probably just create it. 
-                // The API sets status based on scheduledAt automatically.
+                listId: listId === 'all' ? undefined : listId,
+                scheduledAt: finalScheduledAt,
+                status: isDraft ? 'draft' : (finalScheduledAt ? 'scheduled' : 'draft') // Default to draft if not scheduled/sent
             };
 
             // If we want to send NOW, we might need a separate 'send' endpoint or a flag.
@@ -178,30 +181,58 @@ export default function NewCampaignPage() {
                                     <p className="text-xs text-muted-foreground">Leave blank to save as draft (or send immediately if implemented)</p>
                                 </div>
 
-                                <div className="flex items-end justify-end space-x-2">
-                                    <Button type="button" variant="outline" onClick={(e) => handleSubmit(e, true)} disabled={loading}>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        Save Draft
-                                    </Button>
-                                    <Button type="button" onClick={(e) => handleSubmit(e, false)} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">
-                                        {scheduledAt ? (
-                                            <>
-                                                <Calendar className="mr-2 h-4 w-4" />
-                                                Schedule
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Send className="mr-2 h-4 w-4" />
-                                                Create & Send
-                                            </>
-                                        )}
-                                    </Button>
-                                </div>
+                                <Button type="button" variant="outline" onClick={(e) => handleSubmit(e, true)} disabled={loading}>
+                                    <Save className="mr-2 h-4 w-4" />
+                                    Save Draft
+                                </Button>
+                                <Button type="button" onClick={() => setShowPreview(true)} variant="secondary" className="mr-2">
+                                    Preview
+                                </Button>
+                                <Button type="button" onClick={(e) => {
+                                    // Send Now: Set scheduledAt to now
+                                    setScheduledAt(new Date().toISOString());
+                                    // Wait for state update? No, just pass to submit logic or handle specially
+                                    // Actually handleSubmit uses state 'scheduledAt'. 
+                                    // Better to pass override to handleSubmit
+                                    handleSubmit(e, false, true); // Added forceSendNow arg
+                                }} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">
+                                    {scheduledAt ? (
+                                        <>
+                                            <Calendar className="mr-2 h-4 w-4" />
+                                            Schedule
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Send className="mr-2 h-4 w-4" />
+                                            Send Now
+                                        </>
+                                    )}
+                                </Button>
                             </div>
                         </form>
                     </CardContent>
                 </Card>
+
+                {/* Preview Dialog */}
+                {showPreview && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                        <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+                            <div className="p-4 border-b flex justify-between items-center">
+                                <h3 className="font-bold text-lg">Email Preview</h3>
+                                <Button variant="ghost" size="sm" onClick={() => setShowPreview(false)}>X</Button>
+                            </div>
+                            <div className="p-6 overflow-y-auto flex-1 bg-gray-50">
+                                <div className="bg-white border rounded-lg p-8 shadow-sm prose prose-sm max-w-none">
+                                    <ReactMarkdown>{content}</ReactMarkdown>
+                                </div>
+                            </div>
+                            <div className="p-4 border-t bg-gray-50 text-xs text-center text-muted-foreground">
+                                This is a rough approximation. Actual email client rendering may vary.
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-        </DashboardLayout>
+        </DashboardLayout >
     );
 }

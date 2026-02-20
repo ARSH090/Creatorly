@@ -27,7 +27,7 @@ export async function PUT(
         payout.status = body.status;
         if (body.status === 'paid') {
             payout.processedAt = new Date();
-            payout.transactionReference = body.transactionReference; // Optional manual reference
+            payout.transactionId = body.transactionReference || body.transactionId; // Optional manual reference
         }
         if (body.notes) {
             payout.notes = body.notes; // Assuming schema has notes or we add it

@@ -38,6 +38,30 @@ export async function POST(req: NextRequest) {
             // Only support single creator checkout for now
             if (!creatorId) creatorId = product.creatorId;
 
+            // INVENTORY CHECK
+            // Check variant stock if applicable
+            if (cartItem.variantId && product.hasVariants) {
+                const variant = product.variants?.find((v: any) => v.id === cartItem.variantId);
+                if (!variant) {
+                    return NextResponse.json({ error: `Variant not found for ${product.name}` }, { status: 400 });
+                }
+                if (!variant.isActive) {
+                    return NextResponse.json({ error: `Variant ${variant.title} is unavailable` }, { status: 400 });
+                }
+                if (variant.stock !== null && variant.stock !== undefined && variant.stock < cartItem.quantity) {
+                    return NextResponse.json({ error: `Insufficient stock for ${product.name} (${variant.title})` }, { status: 400 });
+                }
+                // Override price with variant price
+                cartItem.price = variant.price;
+            }
+            // Check main product stock (for physical items without variants or just base stock)
+            else if (product.type === 'physical' && product.stock !== null && product.stock !== undefined) {
+                if (product.stock < cartItem.quantity) {
+                    return NextResponse.json({ error: `Insufficient stock for ${product.name}` }, { status: 400 });
+                }
+            }
+
+
             // Handle Membership / Subscription Logic
             if (product.type === 'membership' || product.paymentType === 'subscription') {
                 if (!product.razorpayPlanId) {
@@ -76,15 +100,21 @@ export async function POST(req: NextRequest) {
                 bookingId = booking._id.toString();
             }
 
-            totalAmount += product.price * cartItem.quantity;
+            // Use the verified price (variant or base)
+            const itemPrice = cartItem.price || product.price || 0;
+
+            totalAmount += itemPrice * cartItem.quantity;
             items.push({
                 productId: product._id,
                 name: product.name,
-                price: product.price,
+                price: itemPrice,
                 quantity: cartItem.quantity,
-                type: product.type
+                type: product.type,
+                variantId: cartItem.variantId, // Pass variantId to Order
+                variantTitle: cartItem.variantTitle
             });
         }
+
 
         // Affiliate Logic
         const affiliateRef = req.cookies.get('affiliate_ref')?.value;
@@ -237,11 +267,32 @@ export async function POST(req: NextRequest) {
             }
         });
 
+        // Detect Upsell Opportunity
+        let upsellOffer = null;
+        for (const cartItem of cart) {
+            const product = await Product.findOne({ _id: cartItem.id });
+            if (product && product.hasUpsell && product.upsellProductId) {
+                const upsellProduct = await Product.findOne({ _id: product.upsellProductId, status: 'published' });
+                if (upsellProduct) {
+                    upsellOffer = {
+                        id: upsellProduct._id,
+                        name: upsellProduct.name,
+                        image: upsellProduct.image,
+                        originalPrice: upsellProduct.price || 0,
+                        offerPrice: Math.round((upsellProduct.price || 0) * 0.7), // 30% OFF
+                        description: upsellProduct.description,
+                    };
+                    break; // Only one upsell per order for now
+                }
+            }
+        }
+
         return NextResponse.json({
             id: razorpayOrder.id,
             isSubscription: !!subscriptionData,
             amount: amountInPaise,
-            currency: 'INR'
+            currency: 'INR',
+            upsell: upsellOffer
         });
 
     } catch (error: any) {

@@ -4,6 +4,8 @@ import { Subscription } from '@/lib/models/Subscription';
 import { User } from '@/lib/models/User';
 import { PlatformSettings } from '@/lib/models/PlatformSettings';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
+import Order from '@/lib/models/Order';
+import Product from '@/lib/models/Product';
 
 export async function POST(req: NextRequest) {
     try {
@@ -108,6 +110,68 @@ export async function POST(req: NextRequest) {
                     subscriptionStatus: 'active',
                     subscriptionEndAt: subscription.endDate
                 });
+            }
+
+        } else if (event.event === 'payment.captured') {
+            const payment = payload.payment.entity;
+            const razorpayOrderId = payment.order_id;
+
+            // Find Order
+            // Find Order
+            // const { Order } = await import('@/lib/models/Order'); // Redundant
+            // Note: We need to define Order model import if not already at top, but let's assume valid import or add it.
+            // Actually Order import is missing in original file, I should add it or use dynamic.
+
+            const order = await Order.findOne({ razorpayOrderId });
+
+            if (order && order.status !== 'completed') {
+                order.status = 'completed';
+                order.paymentStatus = 'paid'; // Also update paymentStatus
+                order.razorpayPaymentId = payment.id;
+                order.paidAt = new Date();
+                await order.save();
+
+                // Send Confirmation Email
+                try {
+                    const { sendPaymentConfirmationEmail } = await import('@/lib/services/email');
+                    await sendPaymentConfirmationEmail(
+                        order.customerEmail,
+                        order.razorpayOrderId ?? 'N/A',
+                        order.amount,
+                        order.items.map((i: any) => ({ name: i.name, quantity: i.quantity, price: i.price }))
+                    );
+                } catch (emailErr) {
+                    console.error('Failed to send payment confirmation email:', emailErr);
+                }
+
+                // Inventory Decrement Logic
+                for (const item of order.items) {
+                    const product = await Product.findById(item.productId);
+                    if (product) {
+                        // 1. Decrement Variant Stock
+                        if (item.variantId && product.hasVariants && product.variants) {
+                            const variantIndex = product.variants.findIndex((v: any) => v.id === item.variantId);
+                            if (variantIndex > -1) {
+                                const variant = product.variants[variantIndex];
+                                if (variant.stock !== null && variant.stock !== undefined) {
+                                    // Mongoose array update
+                                    (product.variants[variantIndex] as any).stock = Math.max(0, variant.stock - item.quantity);
+                                }
+                            }
+                        }
+                        // 2. Decrement Main Product Stock
+                        else if (product.stock !== null && product.stock !== undefined) {
+                            product.stock = Math.max(0, product.stock - item.quantity);
+                            // If stock hits 0, maybe mark as out of stock?
+                            // if (product.stock === 0) product.isActive = false; // Optional
+                        }
+
+                        // Increment sales count?
+                        // product.salesCount = (product.salesCount || 0) + item.quantity;
+
+                        await product.save();
+                    }
+                }
             }
 
         } else if (['subscription.halted', 'subscription.cancelled', 'subscription.paused', 'subscription.completed'].includes(event.event)) {

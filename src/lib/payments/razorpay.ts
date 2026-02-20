@@ -1,16 +1,45 @@
+
 import Razorpay from 'razorpay';
+import crypto from 'crypto';
 
-const key_id = process.env.RAZORPAY_KEY_ID;
-const key_secret = process.env.RAZORPAY_KEY_SECRET;
-
-if (!key_id || !key_secret) {
-    if (process.env.NODE_ENV === 'production') {
-        throw new Error('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET must be defined');
-    }
-    console.warn('RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET are missing. Payment features will fail.');
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    console.warn('Razorpay credentials missing in environment variables');
 }
 
 export const razorpay = new Razorpay({
-    key_id: key_id || 'rzp_test_placeholder',
-    key_secret: key_secret || 'placeholder',
+    key_id: process.env.RAZORPAY_KEY_ID || '',
+    key_secret: process.env.RAZORPAY_KEY_SECRET || '',
 });
+
+export interface IRazorpayOrderOptions {
+    amount: number; // in paise
+    currency: string;
+    receipt: string;
+    notes?: Record<string, string>;
+}
+
+export const createRazorpayOrder = async (options: IRazorpayOrderOptions) => {
+    try {
+        const order = await razorpay.orders.create(options);
+        return order;
+    } catch (error) {
+        console.error('Error creating Razorpay order:', error);
+        throw error;
+    }
+};
+
+export const verifyRazorpaySignature = (
+    orderId: string,
+    paymentId: string,
+    signature: string
+): boolean => {
+    const keySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!keySecret) throw new Error('Razorpay secret not found');
+
+    const generatedSignature = crypto
+        .createHmac('sha256', keySecret)
+        .update(`${orderId}|${paymentId}`)
+        .digest('hex');
+
+    return generatedSignature === signature;
+};

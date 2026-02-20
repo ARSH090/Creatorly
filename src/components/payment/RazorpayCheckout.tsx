@@ -11,7 +11,7 @@ declare global {
 }
 
 export default function RazorpayCheckout() {
-    const { cart, customer, setStep } = useCheckoutStore();
+    const { cart, customer, setStep, setUpsellOffer } = useCheckoutStore();
     const [isInitializing, setIsInitializing] = useState(false);
 
     const subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
@@ -48,6 +48,11 @@ export default function RazorpayCheckout() {
             const order = await response.json();
             if (order.error) throw new Error(order.error);
 
+            // Store Upsell Offer if returned
+            if (order.upsell) {
+                setUpsellOffer(order.upsell);
+            }
+
             // 3. Open Razorpay Modal
             const options = {
                 key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
@@ -60,7 +65,12 @@ export default function RazorpayCheckout() {
                 handler: function (response: any) {
                     // Logic after successful payment
                     console.log('[Razorpay] Payment success:', response);
-                    setStep('review');
+
+                    if (order.upsell) {
+                        setStep('upsell');
+                    } else {
+                        setStep('review');
+                    }
                 },
                 prefill: {
                     name: customer.name,

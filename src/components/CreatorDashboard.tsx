@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function CreatorDashboard() {
-    const { user, loading, signOut } = useAuth();
+    const { user, loading, signOut, displayName, email, photoURL, uid } = useAuth();
     const router = useRouter();
     const [view, setView] = useState<'analytics' | 'products'>('analytics');
     const [myProducts, setMyProducts] = useState<any[]>([]);
@@ -25,7 +25,7 @@ export default function CreatorDashboard() {
             // If user has a temporary ID (user_xxxx), redirect to setup
             // Note: username might be in customClaims or just displayName/email based logic?
             // Assuming user object has username handling or we check email/displayName
-            const username = user?.username || (user?.email ? user.email.split('@')[0] : '');
+            const username = (user as any)?.username || (email ? email.split('@')[0] : '');
             if (username?.startsWith('user_')) {
                 router.push('/setup/url-path');
                 return;
@@ -117,8 +117,8 @@ export default function CreatorDashboard() {
                     {user && (
                         <div className="flex items-center justify-between group">
                             <div className="flex-1 min-w-0">
-                                <p className="text-xs font-bold text-white truncate">{user.displayName || user.email}</p>
-                                <p className="text-[10px] text-zinc-600 font-medium truncate">@{user?.username || (user?.email ? user.email.split('@')[0] : 'creator')}</p>
+                                <p className="text-xs font-bold text-white truncate">{displayName || email}</p>
+                                <p className="text-[10px] text-zinc-600 font-medium truncate">@{(user as any)?.username || (email ? email.split('@')[0] : 'creator')}</p>
                             </div>
                             <button
                                 onClick={() => signOut()}
@@ -161,7 +161,7 @@ export default function CreatorDashboard() {
                     <div className="max-w-6xl">
                         <div className="mb-12">
                             <h2 className="text-3xl lg:text-4xl font-medium tracking-tighter text-white mb-2">
-                                Namaste, {user?.displayName?.split(' ')[0] || (user?.email ? user.email.split('@')[0] : 'Creator')}.
+                                Namaste, {displayName?.split(' ')[0] || (email ? email.split('@')[0] : 'Creator')}.
                             </h2>
                             <p className="text-zinc-500 font-medium">Your digital infrastructure is performing optimally.</p>
                         </div>

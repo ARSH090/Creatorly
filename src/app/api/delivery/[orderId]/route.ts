@@ -22,7 +22,7 @@ export async function GET(
         }
 
         // 2. Validate Order Status
-        if (order.status !== 'success') {
+        if ((order.status as any) !== 'completed') {
             return NextResponse.json({ error: 'Payment not verified' }, { status: 403 });
         }
 

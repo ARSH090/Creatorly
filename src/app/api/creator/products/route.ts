@@ -11,7 +11,7 @@ async function handler(req: NextRequest, user: any, context: any) {
         const products = await Product.find({ creatorId: user._id })
             .sort({ createdAt: -1 });
 
-        return NextResponse.json(successResponse(products));
+        return NextResponse.json(products);
     } catch (error: any) {
         console.error('Creator Products API Error:', error);
         return NextResponse.json(errorResponse('Failed to fetch products', error.message), { status: 500 });

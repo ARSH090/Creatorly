@@ -77,14 +77,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         openGraph: {
             title: product.name,
             description: product.description,
-            images: [product.image],
+            images: product.image ? [product.image] : [],
             type: 'website',
         },
         twitter: {
             card: 'summary_large_image',
             title: product.name,
             description: product.description,
-            images: [product.image],
+            images: product.image ? [product.image] : [],
         }
     };
 }
@@ -116,7 +116,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
         },
         offers: {
             '@type': 'Offer',
-            price: product.price,
+            price: product.price || 0,
             priceCurrency: (product as any).currency || 'INR',
             availability: product.isActive ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
         }
@@ -151,7 +151,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
 
                     {/* Left: Media Gallery */}
-                    <ProductGallery mainImage={product.image} files={product.files} />
+                    <ProductGallery mainImage={product.image || ''} files={product.files} />
 
                     {/* Right: Product Info */}
                     <div className="space-y-10 lg:sticky lg:top-8">
@@ -173,14 +173,14 @@ export default async function ProductPage({ params, searchParams }: Props) {
                         </div>
 
                         <PriceDisplay
-                            price={product.price}
+                            price={product.price || 0}
                             compareAtPrice={product.compareAtPrice}
-                            currency={product.currency}
-                            productName={product.name}
+                            currency={product.currency || 'INR'}
+                            productName={product.name || ''}
                             theme={theme}
                         />
 
-                        <AddToCartButton productId={product._id.toString()} productName={product.name} theme={theme} />
+                        <AddToCartButton productId={product._id.toString()} productName={product.name || ''} theme={theme} />
 
                         <div className="space-y-6 pt-8 border-t border-white/5">
                             <div className="flex items-center gap-4 p-4 bg-white/[0.03] border border-white/10 rounded-3xl">

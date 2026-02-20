@@ -1,3 +1,4 @@
+
 // This is now a Server Component to allow 'revalidate' export
 
 import LandingPage from '@/components/LandingPage';

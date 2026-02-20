@@ -15,3 +15,14 @@ export function getClientIp(req: NextRequest | Request) {
 export function getClientUserAgent(req: NextRequest | Request) {
     return (req as any).headers?.get?.('user-agent') || (req as any).headers?.['user-agent'] || 'unknown';
 }
+
+/**
+ * Generate a unique referral code based on userId.
+ */
+export function generateReferralCode(userId: string): string {
+    // Simple: take last 6 chars of userId and add random suffix
+    const suffix = userId.slice(-6);
+    const random = Math.random().toString(36).substring(2, 6);
+    return `ref_${suffix}${random}`;
+}
+

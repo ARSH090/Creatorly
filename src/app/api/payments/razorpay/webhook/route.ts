@@ -22,7 +22,7 @@ async function processSuccessfulOrder(order: any) {
     for (const item of order.items) {
         const product = await Product.findById(item.productId);
 
-        if (product && ['digital', 'course'].includes(product.type)) {
+        if (product && ['digital', 'course', 'digital_download'].includes((product as any).type || product.productType)) {
             await generateDownloadToken(
                 order._id.toString(),
                 item.productId.toString(),
@@ -213,7 +213,7 @@ export async function POST(req: NextRequest) {
                 // Generate download tokens
                 for (const item of order.items) {
                     const product = await Product.findById(item.productId);
-                    if (product && ['digital', 'course'].includes(product.type)) {
+                    if (product && ['digital', 'course', 'digital_download'].includes((product as any).type || product.productType)) {
                         await generateDownloadToken(
                             order._id.toString(),
                             item.productId.toString(),
@@ -268,7 +268,7 @@ export async function POST(req: NextRequest) {
                     await sendDownloadInstructionsEmail(
                         order.customerEmail,
                         order._id.toString(),
-                        digitalItems.map(i => ({ name: i.name, productId: i.productId.toString() }))
+                        digitalItems.map((i: any) => ({ name: i.name, productId: i.productId.toString() }))
                     );
                 }
 

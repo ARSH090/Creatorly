@@ -62,7 +62,7 @@ export default function CartSummary() {
                 <h3 className="font-black uppercase tracking-widest text-xs text-zinc-500">Items in Cart ({cart.length})</h3>
                 <div className="space-y-4">
                     {cart.map((item) => (
-                        <div key={item.id} className="flex gap-4 p-4 bg-white/[0.03] border border-white/5 rounded-3xl group">
+                        <div key={item.cartItemId} className="flex gap-4 p-4 bg-white/[0.03] border border-white/5 rounded-3xl group">
                             <div className="relative w-20 h-20 rounded-2xl overflow-hidden flex-shrink-0 bg-zinc-900">
                                 {item.image
                                     ? <Image src={item.image} alt={item.name} fill className="object-cover" />
@@ -71,19 +71,21 @@ export default function CartSummary() {
                             <div className="flex-1 flex flex-col justify-between py-1">
                                 <div>
                                     <h4 className="font-bold text-sm text-white line-clamp-1">{item.name}</h4>
-                                    <p className="text-[10px] uppercase font-black tracking-widest text-zinc-600">{item.type}</p>
+                                    <p className="text-[10px] uppercase font-black tracking-widest text-zinc-600">
+                                        {item.variantTitle ? `${item.type} • ${item.variantTitle}` : item.type}
+                                    </p>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <div className="flex items-center gap-2 bg-black border border-white/10 rounded-lg px-2">
-                                        <button onClick={() => updateQuantity(item.id, item.quantity - 1)} className="p-1 text-zinc-500 hover:text-white transition-colors">
+                                        <button onClick={() => updateQuantity(item.cartItemId, item.quantity - 1)} className="p-1 text-zinc-500 hover:text-white transition-colors">
                                             <Minus size={12} />
                                         </button>
                                         <span className="text-xs font-bold w-4 text-center">{item.quantity}</span>
-                                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-1 text-zinc-500 hover:text-white transition-colors">
+                                        <button onClick={() => updateQuantity(item.cartItemId, item.quantity + 1)} className="p-1 text-zinc-500 hover:text-white transition-colors">
                                             <Plus size={12} />
                                         </button>
                                     </div>
-                                    <button onClick={() => removeFromCart(item.id)} className="text-zinc-500 hover:text-red-400 transition-colors">
+                                    <button onClick={() => removeFromCart(item.cartItemId)} className="text-zinc-500 hover:text-red-400 transition-colors">
                                         <Trash2 size={14} />
                                     </button>
                                 </div>

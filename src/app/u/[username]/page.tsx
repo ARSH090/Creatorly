@@ -118,6 +118,7 @@ export default async function CreatorStorefront({ params }: { params: Promise<{ 
         username: creator.username,
         bio: profile?.description || (creator as any).bio || '',
         avatar: (creator as any).avatar || '',
+        joinedDate: creator.createdAt ? new Date(creator.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '2024',
         logo: profile?.logo,
         socialLinks: profile?.socialLinks || {},
         theme: theme as any

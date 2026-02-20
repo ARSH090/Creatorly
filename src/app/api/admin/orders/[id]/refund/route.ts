@@ -22,11 +22,11 @@ export async function POST(
         const order = await Order.findById(id);
         if (!order) return new NextResponse('Order not found', { status: 404 });
 
-        if (order.status !== 'paid') {
+        if ((order.status as any) !== 'completed') {
             return new NextResponse('Order is not eligible for refund', { status: 400 });
         }
 
-        const paymentId = order.paymentDetails?.razorpayPaymentId;
+        const paymentId = order.razorpayPaymentId;
         if (!paymentId) {
             return new NextResponse('Payment ID missing', { status: 400 });
         }

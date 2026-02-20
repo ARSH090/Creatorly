@@ -56,7 +56,7 @@ async function handler(req: NextRequest, user: any) {
             {
                 $match: {
                     creatorId: new mongoose.Types.ObjectId(creatorId),
-                    status: 'success',
+                    status: 'completed',
                     createdAt: { $gte: startDate }
                 }
             },

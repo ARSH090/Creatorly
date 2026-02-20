@@ -70,7 +70,11 @@ export const POST = withCreatorAuth(async (req, user) => {
                 keywords: []
             },
             isActive: data.isPublic,
-            isFeatured: data.isFeatured || data.isFeaturedInCollections
+            isFeatured: data.isFeatured || data.isFeaturedInCollections,
+
+            // Variants
+            hasVariants: data.hasVariants,
+            variants: data.variants || []
         } as any;
 
         // 3. Create Product

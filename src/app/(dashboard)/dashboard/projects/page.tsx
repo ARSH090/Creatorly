@@ -7,13 +7,14 @@ import {
     BarChart2, Package, Globe, Clock
 } from 'lucide-react';
 import Link from 'next/link';
-import { useAuth } from '@clerk/nextjs';
+import { useAuth, useUser } from '@clerk/nextjs';
 
 export default function ProjectsPage() {
     const [loading, setLoading] = useState(true);
     const [projects, setProjects] = useState<any[]>([]);
 
     const { getToken, isLoaded, isSignedIn } = useAuth();
+    const { user } = useUser();
 
     useEffect(() => {
         async function fetchProducts() {
@@ -37,9 +38,7 @@ export default function ProjectsPage() {
         fetchProducts();
     }, [isLoaded, isSignedIn, getToken]);
 
-    // ... Rest of the component functionality remains the same ...
-    // Since I'm overwriting, I need full content.
-    // I will copy from previous view_file (379) but with modifications.
+    // ... Rest of the component functionality ...
 
     return (
         <div className="max-w-7xl mx-auto space-y-8">
@@ -146,15 +145,15 @@ export default function ProjectsPage() {
 
                                 <div className="flex items-center justify-between pt-2">
                                     <div className="flex gap-1">
-                                        <button className="p-2 bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Edit">
+                                        <Link href={`/dashboard/projects/${project._id}`} className="p-2 bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Edit">
                                             <Edit2 className="w-4 h-4" />
-                                        </button>
+                                        </Link>
                                         <button className="p-2 bg-white/5 rounded-lg text-zinc-400 hover:text-white transition-colors" title="Analytics">
                                             <BarChart2 className="w-4 h-4" />
                                         </button>
                                     </div>
                                     <Link
-                                        href={`/u/demo#products`}
+                                        href={`/u/${user?.username || 'demo'}#products`}
                                         target="_blank"
                                         className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 hover:text-indigo-300 transition-colors"
                                     >

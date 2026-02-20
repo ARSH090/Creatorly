@@ -1,15 +1,14 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
-import { Lesson, Module } from '@/lib/models/CourseContent';
+import { CourseLesson as Lesson, CourseModule as Module } from '@/lib/models/CourseContent';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 import { slugify } from '@/lib/utils/slugify';
 
 /**
  * POST /api/creator/courses/:id/lessons
- * Add lesson to course
- * Body: { moduleId, title, description, videoUrl?, content?, order? }
+ * Create a new lesson in a module
  */
 async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
@@ -18,10 +17,11 @@ async function handler(req: NextRequest, user: any, context: any) {
     const courseId = params.id;
 
     const body = await req.json();
-    const { moduleId, title, description, videoUrl, content, order, durationMinutes } = body;
+    const { title, description, videoUrl, content, durationMinutes, order, moduleId } = body;
 
-    if (!title) throw new Error('Lesson title is required');
-    if (!moduleId) throw new Error('Module ID is required');
+    if (!title || !moduleId) {
+        throw new Error('Title and Module ID are required');
+    }
 
     const course = await Product.findOne({
         _id: courseId,
@@ -37,8 +37,8 @@ async function handler(req: NextRequest, user: any, context: any) {
     // Determine lesson order
     let lessonOrder = order;
     if (lessonOrder === undefined) {
-        const lastLesson = await Lesson.findOne({ moduleId }).sort({ order: -1 });
-        lessonOrder = lastLesson ? lastLesson.order + 1 : 0;
+        const lastLesson = await Lesson.findOne({ moduleId }).sort({ orderIndex: -1 });
+        lessonOrder = lastLesson ? (lastLesson as any).orderIndex + 1 : 0;
     }
 
     const lesson = await Lesson.create({
@@ -46,12 +46,14 @@ async function handler(req: NextRequest, user: any, context: any) {
         productId: courseId,
         title,
         slug: slugify(title) + '-' + Math.random().toString(36).substring(7),
-        description,
-        videoUrl,
-        content,
+        lessonType: videoUrl ? 'video' : 'text',
+        content: {
+            videoUrl,
+            textContent: content
+        },
         durationMinutes: durationMinutes || 0,
-        order: lessonOrder,
-        isPreview: false,
+        orderIndex: lessonOrder,
+        isFreePreview: false,
         isActive: true
     });
 
@@ -73,6 +75,6 @@ export const GET = withCreatorAuth(withErrorHandler(async (req: NextRequest, use
     const query: any = { productId: courseId };
     if (moduleId) query.moduleId = moduleId;
 
-    const lessons = await Lesson.find(query).sort({ order: 1 });
+    const lessons = await Lesson.find(query).sort({ orderIndex: 1 });
     return { lessons };
 }));

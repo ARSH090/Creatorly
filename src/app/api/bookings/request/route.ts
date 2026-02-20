@@ -75,8 +75,9 @@ export const POST = withAuth(async (req, user) => {
         }
 
         // 5. Initiate Razorpay Order for Paid Sessions
+        const price = product.price || 0;
         const options = {
-            amount: Math.round(product.price * 100),
+            amount: Math.round(price * 100),
             currency: product.currency || 'INR',
             receipt: `booking_${booking._id}`,
             notes: {
@@ -94,17 +95,19 @@ export const POST = withAuth(async (req, user) => {
 
         // Also create a pending Order record for tracking
         await Order.create({
+            orderNumber: `BK-${booking._id}-${Date.now()}`,
             items: [{
                 productId,
-                name: product.name,
-                price: product.price,
+                name: product.name || product.title,
+                price: price,
                 quantity: 1,
-                type: product.type
+                type: (product as any).type || product.productType
             }],
             creatorId,
             userId: user._id,
             customerEmail,
-            amount: product.price,
+            amount: price,
+            total: price,
             currency: product.currency || 'INR',
             razorpayOrderId: rzpOrder.id,
             status: 'pending',

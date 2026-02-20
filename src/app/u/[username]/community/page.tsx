@@ -1,16 +1,18 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { Heart, MessageCircle, Lock, ArrowLeft, Send, Image as ImageIcon, Loader2, Users } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { Lock, ArrowLeft, Send, Image as ImageIcon, Loader2, Users, MessageCircle } from 'lucide-react';
+import PostCard from '@/components/community/PostCard';
 
 interface Post {
     id: string;
     author: string;
+    authorAvatar?: string;
     content: string;
     likes: number;
+    likedByMe?: boolean;
     comments: number;
     timestamp: string;
     image?: string;
@@ -24,7 +26,6 @@ export default function CommunityPage() {
     const [posts, setPosts] = useState<Post[]>([]);
     const [loading, setLoading] = useState(true);
     const [accessDenied, setAccessDenied] = useState(false);
-    const [likedPosts, setLikedPosts] = useState<Set<string>>(new Set());
     const [newPost, setNewPost] = useState('');
     const [posting, setPosting] = useState(false);
 
@@ -47,20 +48,6 @@ export default function CommunityPage() {
     useEffect(() => {
         fetchPosts();
     }, [username]);
-
-    const handleLike = (postId: string) => {
-        setLikedPosts(prev => {
-            const newSet = new Set(prev);
-            if (newSet.has(postId)) {
-                newSet.delete(postId);
-                setPosts(p => p.map(post => post.id === postId ? { ...post, likes: post.likes - 1 } : post));
-            } else {
-                newSet.add(postId);
-                setPosts(p => p.map(post => post.id === postId ? { ...post, likes: post.likes + 1 } : post));
-            }
-            return newSet;
-        });
-    };
 
     const handlePost = async () => {
         if (!newPost.trim()) return;
@@ -170,44 +157,14 @@ export default function CommunityPage() {
                 ) : (
                     <div className="space-y-4">
                         {posts.map(post => (
-                            <article key={post.id} className="bg-white/[0.03] border border-white/5 rounded-3xl p-6 space-y-4 hover:border-white/10 transition-all">
-                                {/* Author row */}
-                                <div className="flex items-center gap-3">
-                                    <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-black text-white text-sm">
-                                        {post.author[0]?.toUpperCase()}
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-black text-white uppercase tracking-wider">@{post.author}</p>
-                                        <p className="text-[10px] text-zinc-600 font-medium">{post.timestamp}</p>
-                                    </div>
-                                </div>
-
-                                {/* Content */}
-                                <p className="text-sm text-zinc-300 leading-relaxed">{post.content}</p>
-
-                                {/* Image */}
-                                {post.image && (
-                                    <div className="rounded-2xl overflow-hidden bg-zinc-900">
-                                        <img src={post.image} alt="Post media" className="w-full max-h-80 object-cover" />
-                                    </div>
-                                )}
-
-                                {/* Actions */}
-                                <div className="flex items-center gap-6 pt-2 border-t border-white/5">
-                                    <button
-                                        onClick={() => handleLike(post.id)}
-                                        className={`flex items-center gap-2 text-xs font-bold transition-all
-                                            ${likedPosts.has(post.id) ? 'text-rose-400' : 'text-zinc-600 hover:text-rose-400'}`}
-                                    >
-                                        <Heart className={`w-4 h-4 transition-all ${likedPosts.has(post.id) ? 'fill-current' : ''}`} />
-                                        {post.likes}
-                                    </button>
-                                    <button className="flex items-center gap-2 text-xs font-bold text-zinc-600 hover:text-indigo-400 transition-all">
-                                        <MessageCircle className="w-4 h-4" />
-                                        {post.comments}
-                                    </button>
-                                </div>
-                            </article>
+                            <PostCard
+                                key={post.id}
+                                post={post}
+                                communityUsername={username}
+                                onLikeToggle={(postId, liked) => {
+                                    // Optional: update local state if needed for consistency across re-renders
+                                }}
+                            />
                         ))}
                     </div>
                 )}

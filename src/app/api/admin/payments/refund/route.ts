@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
         }
 
-        if (order.status !== 'success') {
+        if ((order.status as any) !== 'completed') {
             return NextResponse.json({ error: 'Only successful orders can be refunded' }, { status: 400 });
         }
 

@@ -95,7 +95,7 @@ export default function EmailCampaignsPage() {
                                             <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
                                                 <span className="flex items-center">
                                                     <Calendar className="h-3 w-3 mr-1" />
-                                                    {campaign.created_at ? format(new Date(campaign.createdAt), 'MMM d, yyyy') : 'Recently'}
+                                                    {campaign.createdAt ? format(new Date(campaign.createdAt), 'MMM d, yyyy') : 'Recently'}
                                                 </span>
                                                 {campaign.status === 'sent' && (
                                                     <span className="flex items-center text-green-600">

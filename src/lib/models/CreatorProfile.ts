@@ -9,6 +9,9 @@ export interface ILink {
     order: number;
     clicks: number;
     description?: string;
+    scheduleStart?: Date;
+    scheduleEnd?: Date;
+    linkType?: string;
 }
 
 export interface ICreatorProfile extends Document {
@@ -125,7 +128,10 @@ const CreatorProfileSchema: Schema = new Schema({
         isActive: { type: Boolean, default: true },
         order: { type: Number, default: 0 },
         clicks: { type: Number, default: 0 },
-        description: String
+        description: String,
+        scheduleStart: Date,
+        scheduleEnd: Date,
+        linkType: { type: String, default: 'link' }
     }],
 
     layout: [{

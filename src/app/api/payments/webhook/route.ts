@@ -79,7 +79,7 @@ export async function POST(req: Request) {
                 return NextResponse.json({ error: 'Currency mismatch' }, { status: 400 });
             }
 
-            order.status = 'success';
+            order.status = 'completed';
             order.razorpayPaymentId = payment.id;
             order.razorpaySignature = signature;
             await order.save();

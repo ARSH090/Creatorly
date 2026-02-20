@@ -9,6 +9,8 @@ import OrderReview from '@/components/checkout/OrderReview';
 import RazorpayCheckout from '@/components/payment/RazorpayCheckout';
 import { Sparkles } from 'lucide-react';
 
+import UpsellModal from '@/components/checkout/UpsellModal';
+
 export default function CheckoutPage() {
     const { step } = useCheckoutStore();
 
@@ -40,6 +42,7 @@ export default function CheckoutPage() {
                     {step === 'cart' && <CartSummary />}
                     {step === 'customer' && <CustomerInfoForm />}
                     {step === 'review' && <OrderReview />}
+                    {step === 'upsell' && <UpsellModal />}
                 </div>
             </main>
         </div>

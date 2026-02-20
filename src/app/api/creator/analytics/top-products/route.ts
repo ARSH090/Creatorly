@@ -24,6 +24,7 @@ async function handler(req: NextRequest, user: any) {
         {
             $match: {
                 creatorId: user._id,
+                status: 'completed',
                 paymentStatus: 'paid'
             }
         },

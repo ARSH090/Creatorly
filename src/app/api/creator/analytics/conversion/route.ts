@@ -80,6 +80,7 @@ async function handler(req: NextRequest, user: any) {
             date: c.date,
             clicks: c.clicks,
             purchases: purchaseCount,
+            sales: purchaseCount,
             conversionRate: Math.round(conversionRate * 100) / 100
         };
     });
@@ -89,11 +90,7 @@ async function handler(req: NextRequest, user: any) {
     const totalPurchases = conversionData.reduce((sum, d) => sum + d.purchases, 0);
     const avgConversion = totalClicks > 0 ? (totalPurchases / totalClicks) * 100 : 0;
 
-    return {
-        days,
-        averageConversion: Math.round(avgConversion * 100) / 100,
-        data: conversionData
-    };
+    return conversionData;
 }
 
 export const GET = withCreatorAuth(withErrorHandler(handler));

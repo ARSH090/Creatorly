@@ -30,8 +30,8 @@ export const GET = withAuth(async (req, user, context: any) => {
 
         // 3. Fetch Curriculum (Modules & Lessons)
         const [modules, lessons] = await Promise.all([
-            import('@/lib/models/CourseContent').then(m => m.Module.find({ productId: product._id }).sort({ order: 1 })),
-            import('@/lib/models/CourseContent').then(m => m.Lesson.find({ productId: product._id }).sort({ order: 1 }))
+            import('@/lib/models/CourseContent').then(m => m.CourseModule.find({ productId: product._id }).sort({ order: 1 })),
+            import('@/lib/models/CourseContent').then(m => m.CourseLesson.find({ productId: product._id }).sort({ order: 1 }))
         ]);
 
         // Construct hierarchical curriculum
@@ -39,16 +39,16 @@ export const GET = withAuth(async (req, user, context: any) => {
             id: mod._id.toString(),
             title: mod.title,
             description: mod.description,
-            order: mod.order,
+            order: mod.orderIndex,
             lessons: lessons
                 .filter(l => l.moduleId.toString() === mod._id.toString())
                 .map(l => ({
                     id: l._id.toString(),
                     title: l.title,
-                    type: l.videoUrl ? 'video' : 'text',
-                    content: l.content || l.videoUrl,
+                    type: l.lessonType === 'video' ? 'video' : 'text',
+                    content: l.content?.textContent || l.content?.videoUrl,
                     duration: l.durationMinutes ? `${l.durationMinutes}:00` : '0:00',
-                    isFreePreview: l.isPreview
+                    isFreePreview: l.isFreePreview
                 }))
         }));
 

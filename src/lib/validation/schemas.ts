@@ -17,6 +17,16 @@ export const ProductSchema = z.object({
         url: z.string().url(),
         size: z.number().optional(),
         mimeType: z.string().optional()
+    })).optional(),
+
+    // Variants
+    hasVariants: z.boolean().optional(),
+    variants: z.array(z.object({
+        id: z.string(),
+        title: z.string(),
+        price: z.number().or(z.string().transform(val => Number(val))),
+        stock: z.number().optional().nullable(),
+        isActive: z.boolean().optional()
     })).optional()
 });
 

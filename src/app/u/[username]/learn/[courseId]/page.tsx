@@ -98,37 +98,61 @@ export default function CourseLearnPage() {
 
     const downloadCertificate = async () => {
         setCertDownloading(true);
-        // Build a simple certificate using canvas
-        const canvas = document.createElement('canvas');
-        canvas.width = 1200;
-        canvas.height = 800;
-        const ctx = canvas.getContext('2d')!;
-        ctx.fillStyle = '#0a0a0a';
-        ctx.fillRect(0, 0, 1200, 800);
-        ctx.strokeStyle = '#6366f1';
-        ctx.lineWidth = 8;
-        ctx.strokeRect(40, 40, 1120, 720);
-        ctx.fillStyle = '#6366f1';
-        ctx.font = 'bold 28px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('CERTIFICATE OF COMPLETION', 600, 130);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 52px sans-serif';
-        ctx.fillText(course?.name || 'Course', 600, 350);
-        ctx.fillStyle = '#a1a1aa';
-        ctx.font = '22px sans-serif';
-        ctx.fillText(`Presented to a student of @${username}`, 600, 430);
-        ctx.fillStyle = '#6366f1';
-        ctx.font = 'bold 18px sans-serif';
-        ctx.fillText(`Completed on ${new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' })}`, 600, 600);
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 24px sans-serif';
-        ctx.fillText('Creatorly', 600, 700);
-        const link = document.createElement('a');
-        link.download = `certificate-${courseId}.png`;
-        link.href = canvas.toDataURL();
-        link.click();
-        setCertDownloading(false);
+        try {
+            const { jsPDF } = await import('jspdf');
+            const doc = new jsPDF({
+                orientation: 'landscape',
+                unit: 'px',
+                format: [1200, 800]
+            });
+
+            // Background
+            doc.setFillColor(10, 10, 10);
+            doc.rect(0, 0, 1200, 800, 'F');
+
+            // Border
+            doc.setDrawColor(99, 102, 241); // indigo-500
+            doc.setLineWidth(8);
+            doc.rect(40, 40, 1120, 720, 'S');
+
+            // Title
+            doc.setTextColor(99, 102, 241);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(28);
+            doc.text('CERTIFICATE OF COMPLETION', 600, 130, { align: 'center' });
+
+            // Course Name
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(52);
+            // Split long course names
+            const splitTitle = doc.splitTextToSize(course?.name || 'Course', 1000);
+            doc.text(splitTitle, 600, 350, { align: 'center' });
+
+            // Student Name
+            doc.setTextColor(161, 161, 170); // zinc-400
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(22);
+            doc.text(`Presented to a student of @${username}`, 600, 430, { align: 'center' });
+
+            // Date
+            doc.setTextColor(99, 102, 241);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(18);
+            const dateStr = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+            doc.text(`Completed on ${dateStr}`, 600, 600, { align: 'center' });
+
+            // Footer
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(24);
+            doc.text('Creatorly', 600, 700, { align: 'center' });
+
+            doc.save(`certificate-${courseId}.pdf`);
+        } catch (err) {
+            console.error('Certificate generation failed', err);
+            toast.error('Failed to generate certificate');
+        } finally {
+            setCertDownloading(false);
+        }
     };
 
     const toggleModule = (id: string) => {

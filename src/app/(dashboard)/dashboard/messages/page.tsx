@@ -43,7 +43,7 @@ export default function MessagesPage() {
         loadMessages();
 
         // Pusher Subscription
-        const channelName = [user._id, activeConv.user._id].sort().join('--');
+        const channelName = [user.id, activeConv.user._id].sort().join('--');
         const pusher = getPusherClient();
         const channel = pusher.subscribe(`chat--${channelName}`);
 
@@ -167,15 +167,15 @@ export default function MessagesPage() {
                                     </div>
                                 ) : (
                                     messages.map((msg) => (
-                                        <div key={msg._id} className={`flex ${msg.senderId === user._id ? 'justify-end' : 'justify-start'}`}>
+                                        <div key={msg._id} className={`flex ${msg.senderId === user.id ? 'justify-end' : 'justify-start'}`}>
                                             <div className="space-y-2 max-w-[60%]">
-                                                <div className={`p-4 rounded-[2rem] text-sm leading-relaxed shadow-2xl ${msg.senderId === user._id
+                                                <div className={`p-4 rounded-[2rem] text-sm leading-relaxed shadow-2xl ${msg.senderId === user.id
                                                     ? 'bg-indigo-500 text-white rounded-br-none shadow-indigo-500/10'
                                                     : 'bg-[#111] border border-white/5 text-zinc-300 rounded-bl-none'
                                                     }`}>
                                                     {msg.content}
                                                 </div>
-                                                <p className={`text-[10px] font-black uppercase tracking-widest text-zinc-700 px-2 ${msg.senderId === user._id ? 'text-right' : 'text-left'}`}>
+                                                <p className={`text-[10px] font-black uppercase tracking-widest text-zinc-700 px-2 ${msg.senderId === user.id ? 'text-right' : 'text-left'}`}>
                                                     {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </p>
                                             </div>

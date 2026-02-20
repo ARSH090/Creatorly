@@ -63,7 +63,7 @@ export default function CartPage() {
 
                         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-50">
                             {cartItems.map((item) => (
-                                <div key={item.id} className="p-4 sm:p-6 flex gap-4 sm:gap-6 group">
+                                <div key={item.cartItemId} className="p-4 sm:p-6 flex gap-4 sm:gap-6 group">
                                     <div className="w-24 h-24 sm:w-32 sm:h-32 bg-gray-100 rounded-xl overflow-hidden shrink-0">
                                         <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                                     </div>
@@ -73,11 +73,13 @@ export default function CartPage() {
                                                 <h3 className="font-bold text-gray-900 text-lg leading-tight">{item.name}</h3>
                                                 <p className="font-bold text-gray-900 shrink-0">₹{item.price}</p>
                                             </div>
-                                            <p className="text-sm text-gray-500 font-medium">by {item.creator}</p>
+                                            <p className="text-sm text-gray-500 font-medium">
+                                                by {item.creator} {item.variantTitle && `• ${item.variantTitle}`}
+                                            </p>
                                         </div>
                                         <div className="flex items-center justify-between mt-4">
                                             <button
-                                                onClick={() => removeItem(item.id)}
+                                                onClick={() => removeItem(item.cartItemId)}
                                                 className="text-gray-400 hover:text-red-500 text-sm font-medium flex items-center gap-1 transition-colors"
                                             >
                                                 <Trash2 className="w-4 h-4" />

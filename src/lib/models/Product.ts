@@ -1,217 +1,117 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
-export interface IProductFile {
-    name: string;
-    url: string;
-    size?: number;
-    mimeType?: string;
-    downloadLimit?: number;
-}
-
-export interface ILesson {
-    id: string;
-    title: string;
-    type: 'video' | 'text' | 'quiz' | 'file';
-    content: string; // URL for video/file, Markdown for text, JSON for quiz
-    duration?: string;
-    isFreePreview?: boolean;
-}
-
-export interface IModule {
-    id: string;
-    _id?: mongoose.Types.ObjectId;
-    title: string;
-    description?: string;
-    videoUrl?: string;
-    content?: string;
-    order: number;
-    lessons: ILesson[];
-}
-
 export interface IProduct extends Document {
     creatorId: mongoose.Types.ObjectId;
-    name: string;
+    productType: 'digital_download' | 'course' | 'service' | 'subscription';
+    title: string;
     slug: string;
     description: string;
-    price: number;
-    compareAtPrice?: number;
-    currency: string;
-    paymentType: 'one_time' | 'subscription' | 'payment_plan';
-    category: string;
-    image: string;
-    thumbnail?: string;
+    shortDescription?: string;
 
-    // Multi-type support
-    type: 'digital' | 'course' | 'membership' | 'physical' | 'coaching';
+    // Pricing
+    pricing: {
+        basePrice: number;
+        salePrice?: number;
+        currency: string;
+        taxInclusive: boolean;
+    };
 
-    // Pricing & Billing
-    billingCycle?: 'monthly' | 'yearly';
+    // Status & Organization
+    status: 'draft' | 'active' | 'archived';
+    categoryId?: mongoose.Types.ObjectId;
+    tags?: string[]; // Array of tag names or IDs
+
+    // Media
+    coverImageUrl?: string;
+
+    // Legacy / Backward Comp.
+    name?: string; // mapped to title
+    price?: number; // mapped from pricing.basePrice
+    isActive?: boolean; // mapped from status
+    isFeatured?: boolean;
+    currency?: string; // mapped from pricing.currency
+    coachingDuration?: number;
+    files?: any[];
+    digitalFileUrl?: string;
+    hasVariants?: boolean;
+    variants?: any[];
+    stock?: number;
+    type?: string;
+    paymentType?: 'one_time' | 'subscription';
     razorpayPlanId?: string;
-
-    // Assets & Delivery
-    files: IProductFile[];
-    digitalFileUrl?: string; // Legacy support
-
-    // Course Specific
-    curriculum?: IModule[];
-
-    // Logic & Scheduling
-    accessRules: {
-        immediateAccess: boolean;
-        dripSchedule?: Date;
-        requiresApproval: boolean;
-        expirationDays?: number;
-    };
-
-    // SEO & Discovery
-    seo: {
-        metaTitle?: string;
-        metaDescription?: string;
-        keywords?: string[];
-    };
-
-    status: 'draft' | 'published' | 'archived';
-    isActive: boolean; // Keep for backward compatibility
-    isFeatured: boolean;
-    inventoryCount?: number; // For physical goods
-
-    // Stan Store: Marketing & Upsells
-    hasUpsell?: boolean;
-    upsellProductId?: mongoose.Types.ObjectId;
-    discountCodes?: Array<{
-        code: string;
-        percentage: number;
-        fixedAmount?: number;
-        validUntil?: Date;
-        maxUses?: number;
-        uses: number;
-    }>;
-
-    // Stan Store: Stock & Downloads
-    stock?: number; // null = unlimited
+    billingCycle?: string;
     maxDownloads?: number;
     downloadExpiryDays?: number;
+    hasUpsell?: boolean;
+    upsellProductId?: string;
+    image?: string;
+    thumbnail?: string;
+    curriculum?: any[];
+    discountCodes?: any[];
+    compareAtPrice?: number;
 
-    // Booking Specific
-    coachingDuration?: number; // in minutes
-    bookingConfig?: {
-        locationType: 'zoom' | 'google_meet' | 'phone' | 'in_person';
-        locationDetails?: string;
-    };
-
+    // Timestamps
     createdAt: Date;
     updatedAt: Date;
+    publishedAt?: Date;
     deletedAt?: Date;
 }
 
-
 const ProductSchema: Schema = new Schema({
-    creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    name: { type: String, required: true },
-    slug: { type: String, required: true, unique: true },
+    creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    productType: {
+        type: String,
+        enum: ['digital_download', 'course', 'service', 'subscription'],
+        required: true,
+        default: 'digital_download'
+    },
+    title: { type: String, required: true, trim: true },
+    slug: { type: String, required: true, unique: true, index: true },
     description: { type: String, required: true },
-    price: { type: Number, required: true, min: 0 },
-    compareAtPrice: { type: Number, min: 0 },
-    currency: { type: String, default: 'INR' },
-    paymentType: {
-        type: String,
-        enum: ['one_time', 'subscription', 'payment_plan'],
-        default: 'one_time'
-    },
-    category: { type: String, required: true },
-    image: { type: String, required: true },
-    thumbnail: { type: String },
+    shortDescription: { type: String, maxlength: 300 },
 
-    type: {
-        type: String,
-        enum: ['digital', 'course', 'membership', 'physical', 'coaching'],
-        default: 'digital',
-        index: true
+    pricing: {
+        basePrice: { type: Number, required: true, min: 0 },
+        salePrice: { type: Number, min: 0 },
+        currency: { type: String, default: 'INR' },
+        taxInclusive: { type: Boolean, default: false }
     },
 
-    billingCycle: {
-        type: String,
-        enum: ['monthly', 'yearly'],
-    },
-    razorpayPlanId: String,
-
-    files: [{
-        name: { type: String, required: true },
-        url: { type: String, required: true },
-        size: Number,
-        mimeType: String,
-        downloadLimit: { type: Number, default: 0 } // 0 = unlimited
-    }],
-    digitalFileUrl: { type: String },
-
-    curriculum: [{
-        id: String,
-        title: String,
-        lessons: [{
-            id: String,
-            title: String,
-            type: { type: String, enum: ['video', 'text', 'quiz', 'file'], default: 'video' },
-            content: String,
-            duration: String,
-            isFreePreview: { type: Boolean, default: false }
-        }]
-    }],
-
-    accessRules: {
-        immediateAccess: { type: Boolean, default: true },
-        dripSchedule: Date,
-        requiresApproval: { type: Boolean, default: false },
-        expirationDays: Number
-    },
-
-    seo: {
-        metaTitle: String,
-        metaDescription: String,
-        keywords: [String]
-    },
+    isFeatured: { type: Boolean, default: false },
+    coachingDuration: { type: Number }, // in minutes
+    type: { type: String }, // Legacy product type string
 
     status: {
         type: String,
-        enum: ['draft', 'published', 'archived'],
-        default: 'published' // Default to published for existing data
-    },
-    isActive: { type: Boolean, default: true },
-    isFeatured: { type: Boolean, default: false },
-    inventoryCount: { type: Number, default: 0 },
-
-    // Stan Store: Marketing & Upsells
-    hasUpsell: { type: Boolean, default: false },
-    upsellProductId: { type: Schema.Types.ObjectId, ref: 'Product' },
-    discountCodes: [{
-        code: { type: String, required: true, uppercase: true },
-        percentage: { type: Number, min: 0, max: 100 },
-        fixedAmount: { type: Number, min: 0 },
-        validUntil: Date,
-        maxUses: Number,
-        uses: { type: Number, default: 0 }
-    }],
-
-    // Stan Store: Stock & Downloads
-    stock: { type: Number, default: null }, // null = unlimited
-    maxDownloads: { type: Number, default: 3 },
-    downloadExpiryDays: { type: Number, default: 30 },
-
-    // Booking Specific
-    coachingDuration: { type: Number, default: 30 },
-    bookingConfig: {
-        locationType: { type: String, enum: ['zoom', 'google_meet', 'phone', 'in_person'], default: 'google_meet' },
-        locationDetails: String
+        enum: ['draft', 'active', 'archived'],
+        default: 'draft',
+        index: true
     },
 
-    deletedAt: { type: Date, index: true }
-}, { timestamps: true });
+    categoryId: { type: Schema.Types.ObjectId, ref: 'ProductCategory' },
+    tags: [{ type: String }],
 
+    coverImageUrl: String,
 
-// Performance & Discovery Indexes
-ProductSchema.index({ creatorId: 1, type: 1 });
-ProductSchema.index({ category: 1 });
-ProductSchema.index({ isActive: 1, isFeatured: 1 });
-ProductSchema.index({ createdAt: -1 });
+    publishedAt: Date,
+    deletedAt: Date
+}, {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+});
+
+// Backward compatibility virtuals
+ProductSchema.virtual('name').get(function (this: any) { return this.title; }).set(function (this: any, v: string) { this.title = v; });
+ProductSchema.virtual('price').get(function (this: any) { return this.pricing?.basePrice; });
+ProductSchema.virtual('isActive').get(function (this: any) { return this.status === 'active'; });
+ProductSchema.virtual('currency').get(function (this: any) { return this.pricing?.currency || 'INR'; });
+
+// Indexes
+ProductSchema.index({ creatorId: 1, status: 1 });
+ProductSchema.index({ creatorId: 1, slug: 1 }, { unique: true });
+ProductSchema.index({ categoryId: 1 });
+ProductSchema.index({ tags: 1 });
 
 const Product: Model<IProduct> = mongoose.models.Product || mongoose.model<IProduct>('Product', ProductSchema);
 export { Product };

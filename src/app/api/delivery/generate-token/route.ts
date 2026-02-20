@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
         // 1. Verify User/Session
         // In a production app, we'd verify the user owns this order OR the email matches.
         const order = await Order.findById(orderId);
-        if (!order || order.status !== 'success') {
+        if (!order || order.status !== 'completed') {
             return NextResponse.json({ error: 'Order not found or unpaid' }, { status: 404 });
         }
 

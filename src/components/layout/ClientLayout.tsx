@@ -16,8 +16,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const isAdmin = pathname?.startsWith('/admin');
     const isAuth = pathname?.startsWith('/auth');
     const isCart = pathname?.startsWith('/cart');
+    const isAutoDMPage = pathname?.startsWith('/autodm');
 
-    const showGlobalNav = !isDashboard && !isStorefront && !isAdmin && !isAuth && !isCart;
+    const showGlobalNav = !isDashboard && !isStorefront && !isAdmin && !isAuth && !isCart && !isAutoDMPage;
 
     return (
         <div className="min-h-screen flex flex-col bg-transparent">

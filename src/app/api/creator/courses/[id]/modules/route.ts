@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
-import { Module } from '@/lib/models/CourseContent';
+import { CourseModule as Module } from '@/lib/models/CourseContent';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 
@@ -36,15 +36,15 @@ async function handler(req: NextRequest, user: any, context: any) {
     // Determine order
     let moduleOrder = order;
     if (moduleOrder === undefined) {
-        const lastModule = await Module.findOne({ productId: courseId }).sort({ order: -1 });
-        moduleOrder = lastModule ? lastModule.order + 1 : 0;
+        const lastModule = await Module.findOne({ productId: courseId }).sort({ orderIndex: -1 });
+        moduleOrder = lastModule ? (lastModule as any).orderIndex + 1 : 0;
     }
 
     const module = await Module.create({
         productId: courseId,
         title,
         description,
-        order: moduleOrder,
+        orderIndex: moduleOrder,
         isActive: true
     });
 
@@ -61,6 +61,6 @@ export const GET = withCreatorAuth(withErrorHandler(async (req: NextRequest, use
     const params = await context.params;
     const courseId = params.id;
 
-    const modules = await Module.find({ productId: courseId }).sort({ order: 1 });
+    const modules = await Module.find({ productId: courseId }).sort({ orderIndex: 1 });
     return { modules };
 }));

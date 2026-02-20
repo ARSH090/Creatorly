@@ -38,7 +38,7 @@ export const GET = withAdminAuth(async (request, user, context) => {
     const totalUsers = await User.countDocuments();
     const totalOrders = await Order.countDocuments();
     const totalRevenue = await Order.aggregate([
-      { $match: { status: 'success' } },
+      { $match: { status: 'completed' } },
       { $group: { _id: null, total: { $sum: '$amount' } } },
     ]);
 
@@ -49,7 +49,7 @@ export const GET = withAdminAuth(async (request, user, context) => {
       .limit(10);
 
     const topCreators = await Order.aggregate([
-      { $match: { status: 'success' } },
+      { $match: { status: 'completed' } },
       { $group: { _id: '$creatorId', total: { $sum: '$amount' }, count: { $sum: 1 } } },
       { $sort: { total: -1 } },
       { $limit: 10 },
