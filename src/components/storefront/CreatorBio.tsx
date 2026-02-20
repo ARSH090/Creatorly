@@ -28,7 +28,7 @@ export default function CreatorBio({ creator }: CreatorBioProps) {
 
     return (
         <div
-            className="rounded-3xl p-8 shadow-2xl border sticky top-24 transition-all duration-500 backdrop-blur-sm"
+            className="rounded-3xl p-6 sm:p-8 shadow-2xl border transition-all duration-500 backdrop-blur-sm relative sm:sticky sm:top-24"
             style={{
                 backgroundColor: `${theme.backgroundColor}CC`, // Add some transparency
                 color: theme.textColor,
@@ -58,12 +58,12 @@ export default function CreatorBio({ creator }: CreatorBioProps) {
                 )}
             </div>
 
-            <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold mb-1" style={{ color: theme.textColor }}>{creator.displayName}</h1>
-                <p className="font-medium opacity-60" style={{ color: theme.textColor }}>@{creator.username}</p>
+            <div className="text-center mb-4 sm:mb-6">
+                <h1 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: theme.textColor }}>{creator.displayName}</h1>
+                <p className="text-xs sm:text-sm font-medium opacity-60" style={{ color: theme.textColor }}>@{creator.username}</p>
             </div>
 
-            <p className="leading-relaxed text-center text-sm mb-8 opacity-80" style={{ color: theme.textColor }}>
+            <p className="leading-relaxed text-center text-xs sm:text-sm mb-6 sm:mb-8 opacity-80" style={{ color: theme.textColor }}>
                 {creator.bio || "Digital creator sharing knowledge and assets."}
             </p>
 

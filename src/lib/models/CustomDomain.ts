@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface ICustomDomain extends Document {
     creatorId: mongoose.Types.ObjectId;
     domain: string;
+    username?: string;
     status: 'pending' | 'verified' | 'failed';
     dnsRecords: {
         type: string;
@@ -21,6 +22,7 @@ export interface ICustomDomain extends Document {
 const CustomDomainSchema: Schema = new Schema({
     creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     domain: { type: String, required: true, unique: true, lowercase: true },
+    username: { type: String, index: true },
     status: {
         type: String,
         enum: ['pending', 'verified', 'failed'],

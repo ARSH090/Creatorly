@@ -37,11 +37,11 @@ export default function Profile({ name, bio, imageUrl }: ProfileProps) {
                     </motion.div>
                 </div>
             </div>
-            <h1 className="text-3xl font-black text-white mb-2 leading-tight tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-black text-white mb-2 leading-tight tracking-tight">
                 {name}
             </h1>
-            <div className="w-12 h-1 bg-indigo-500/50 rounded-full mb-4"></div>
-            <p className="text-zinc-400 text-sm font-semibold max-w-xs leading-relaxed uppercase tracking-wider opacity-80">
+            <div className="w-12 h-1 bg-indigo-500/50 rounded-full mb-3 sm:mb-4"></div>
+            <p className="text-zinc-400 text-[12px] sm:text-sm font-semibold max-w-xs leading-relaxed uppercase tracking-wider opacity-80">
                 {bio}
             </p>
         </motion.div>

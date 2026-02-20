@@ -137,10 +137,10 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
                 />
 
                 {/* Type Badge */}
-                <div className="absolute top-4 left-4 z-10">
-                    <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-2xl px-4 py-2 flex items-center gap-2">
+                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10">
+                    <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl sm:rounded-2xl px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2">
                         <div style={{ color: theme.primaryColor }}>{getTypeIcon()}</div>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-white">{product.type}</span>
+                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white">{product.type}</span>
                     </div>
                 </div>
 
@@ -189,31 +189,31 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
             </div>
 
             {/* Product Meta */}
-            <div className="p-8 space-y-4">
-                <div className="flex justify-between items-start gap-4">
-                    <h3 className="text-xl font-bold leading-tight group-hover:text-white transition-colors">
+            <div className="p-5 sm:p-8 space-y-3 sm:space-y-4">
+                <div className="flex justify-between items-start gap-3 sm:gap-4">
+                    <h3 className="text-lg sm:text-xl font-bold leading-tight group-hover:text-white transition-colors">
                         {product.name}
                     </h3>
                     <div className="text-right">
-                        <p className="text-2xl font-black tracking-tight" style={{ color: theme.primaryColor }}>
+                        <p className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: theme.primaryColor }}>
                             ₹{product.price}
                         </p>
                     </div>
                 </div>
 
-                <p className="text-zinc-500 text-sm line-clamp-2 font-medium">
+                <p className="text-zinc-500 text-xs sm:text-sm line-clamp-2 font-medium">
                     {product.description || 'Elevate your creative workflow with this premium digital asset.'}
                 </p>
 
-                <div className="flex items-center justify-between pt-4 border-t border-white/5">
-                    <div className="flex items-center gap-1.5 bg-white/5 px-3 py-1.5 rounded-full">
-                        <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                        <span className="text-xs font-bold text-zinc-400">4.9 (124)</span>
+                <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-white/5">
+                    <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-full">
+                        <Star className="w-3 h-3 sm:w-3.5 h-3.5 text-amber-500 fill-amber-500" />
+                        <span className="text-[10px] sm:text-xs font-bold text-zinc-400">4.9 (124)</span>
                     </div>
 
                     <div className="flex items-center gap-2 group-hover:gap-3 transition-all">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">View Details</span>
-                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
+                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-500">View Details</span>
+                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
                     </div>
                 </div>
             </div>

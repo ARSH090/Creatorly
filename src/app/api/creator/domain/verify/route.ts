@@ -49,10 +49,28 @@ async function handler(req: NextRequest, user: any) {
         if (verified) {
             // Persist the verified status on the creator profile
             await connectToDatabase();
+            const { User } = await import('@/lib/models/User');
+
+            // 1. Get user for the domain lookup mapping
+            const userData = await User.findById(user._id).select('username');
+
+            // 2. Update Database
             await CreatorProfile.findOneAndUpdate(
                 { creatorId: user._id },
-                { customDomain: cleanDomain, domainVerified: true }
+                { customDomain: cleanDomain, isCustomDomainVerified: true }
             );
+
+            // 3. Sync to Redis for Edge Middleware
+            if (userData?.username) {
+                try {
+                    const { Redis } = await import('@upstash/redis');
+                    const redis = Redis.fromEnv();
+                    await redis.set(`domain:${cleanDomain}`, userData.username);
+                } catch (redisErr) {
+                    console.error('Redis sync failure:', redisErr);
+                    // Don't fail the API call if Redis sync fails, but log it
+                }
+            }
         }
 
         return NextResponse.json({

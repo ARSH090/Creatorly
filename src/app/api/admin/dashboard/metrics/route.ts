@@ -47,7 +47,7 @@ export const GET = withAdminAuth(async (req, user, context) => {
         {
           $group: {
             _id: null,
-            total: { $sum: '$totalAmount' },
+            total: { $sum: '$total' },
           },
         },
       ]),
@@ -68,17 +68,17 @@ export const GET = withAdminAuth(async (req, user, context) => {
     // Revenue calculations
     const todayRevenue = await Order.aggregate([
       { $match: { createdAt: { $gte: startOfDay } } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+      { $group: { _id: null, total: { $sum: '$total' } } },
     ]);
 
     const weekRevenue = await Order.aggregate([
       { $match: { createdAt: { $gte: startOfWeek } } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+      { $group: { _id: null, total: { $sum: '$total' } } },
     ]);
 
     const monthRevenue = await Order.aggregate([
       { $match: { createdAt: { $gte: startOfMonth } } },
-      { $group: { _id: null, total: { $sum: '$totalAmount' } } },
+      { $group: { _id: null, total: { $sum: '$total' } } },
     ]);
 
     // Top creators

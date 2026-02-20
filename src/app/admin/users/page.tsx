@@ -31,6 +31,8 @@ export default function UsersPage() {
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -61,11 +63,72 @@ export default function UsersPage() {
     return () => clearTimeout(debounce);
   }, [search, status, page]);
 
+  const toggleSelectAll = () => {
+    if (selectedUsers.length === users.length) {
+      setSelectedUsers([]);
+    } else {
+      setSelectedUsers(users.map((u) => u._id));
+    }
+  };
+
+  const toggleSelectUser = (userId: string) => {
+    setSelectedUsers((prev) =>
+      prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const handleBulkAction = async (action: string) => {
+    if (!confirm(`Are you sure you want to ${action} ${selectedUsers.length} selected users?`)) return;
+
+    setActionLoading(true);
+    try {
+      const res = await fetch('/api/admin/users/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userIds: selectedUsers, action })
+      });
+      if (res.ok) {
+        // toast.success(`Bulk ${action} successful`);
+        fetchUsers();
+        setSelectedUsers([]);
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleSingleAction = async (userId: string, action: string) => {
+    if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+
+    setActionLoading(true);
+    try {
+      const endpoint = `/api/admin/users/${userId}/${action}`;
+      const res = await fetch(endpoint, { method: 'POST' });
+      if (res.ok) {
+        fetchUsers();
+      }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Users</h1>
-        <Button>Add User (Unavailable)</Button>
+        <div className="flex gap-2">
+          {selectedUsers.length > 0 && (
+            <div className="flex gap-2 animate-in fade-in slide-in-from-top-1">
+              <Button variant="outline" size="sm" onClick={() => handleBulkAction('suspend')} disabled={actionLoading}>Suspend ({selectedUsers.length})</Button>
+              <Button variant="outline" size="sm" onClick={() => handleBulkAction('unsuspend')} disabled={actionLoading}>Unsuspend</Button>
+              <Button variant="destructive" size="sm" onClick={() => handleBulkAction('delete')} disabled={actionLoading}>Delete</Button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-4">
@@ -94,11 +157,18 @@ export default function UsersPage() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12">
+                <input
+                  type="checkbox"
+                  className="rounded border-zinc-300"
+                  checked={users.length > 0 && selectedUsers.length === users.length}
+                  onChange={toggleSelectAll}
+                />
+              </TableHead>
               <TableHead>User</TableHead>
+              <TableHead>Role</TableHead>
               <TableHead>Plan</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Trial Used</TableHead>
-              <TableHead>Joined</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -117,12 +187,23 @@ export default function UsersPage() {
               </TableRow>
             ) : (
               users.map((user) => (
-                <TableRow key={user._id}>
+                <TableRow key={user._id} className={selectedUsers.includes(user._id) ? 'bg-zinc-50' : ''}>
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      className="rounded border-zinc-300"
+                      checked={selectedUsers.includes(user._id)}
+                      onChange={() => toggleSelectUser(user._id)}
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-medium">{user.displayName}</span>
                       <span className="text-sm text-muted-foreground">{user.email}</span>
                     </div>
+                  </TableCell>
+                  <TableCell className="capitalize">
+                    <Badge variant="outline">{user.role}</Badge>
                   </TableCell>
                   <TableCell className="capitalize">{user.plan}</TableCell>
                   <TableCell>
@@ -132,14 +213,17 @@ export default function UsersPage() {
                       <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
                     )}
                   </TableCell>
-                  <TableCell>
-                    {user.trialUsed ? "Yes" : "No"}
-                  </TableCell>
-                  <TableCell>
-                    {format(new Date(user.createdAt), 'MMM d, yyyy')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" asChild>
+                  <TableCell className="text-right flex items-center justify-end gap-2">
+                    {user.isSuspended ? (
+                      <Button variant="ghost" size="sm" className="text-green-600 h-8 px-2" onClick={() => handleSingleAction(user._id, 'unsuspend')} disabled={actionLoading}>
+                        Unsuspend
+                      </Button>
+                    ) : (
+                      <Button variant="ghost" size="sm" className="text-rose-600 h-8 px-2" onClick={() => handleSingleAction(user._id, 'suspend')} disabled={actionLoading}>
+                        Suspend
+                      </Button>
+                    )}
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" asChild>
                       <Link href={`/admin/users/${user._id}`}>
                         <Eye className="h-4 w-4" />
                       </Link>

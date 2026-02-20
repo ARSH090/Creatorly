@@ -48,17 +48,20 @@ export const POST = withCreatorAuth(async (req, user) => {
         // 2. Map Validated Data to Product Schema
         const productData = {
             creatorId: user._id,
-            name: data.name,
-            slug: data.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, ''),
+            title: data.name,
+            slug: data.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '') + '-' + Math.random().toString(36).substring(2, 7),
             description: sanitizeHTML(data.description || ''),
-            price: data.price,
-            currency: data.currency,
+            pricing: {
+                basePrice: data.price,
+                currency: data.currency || 'INR',
+                taxInclusive: false
+            },
             paymentType: 'one_time',
             category: data.category,
             image: data.image,
             type: data.type,
-            status: data.isPublic ? 'published' : 'draft',
-
+            status: data.isPublic ? 'active' : 'draft',
+            isActive: data.isPublic,
             files: data.files || [],
             accessRules: {
                 immediateAccess: true,
@@ -69,7 +72,6 @@ export const POST = withCreatorAuth(async (req, user) => {
                 metaDescription: (data.description || '').slice(0, 160),
                 keywords: []
             },
-            isActive: data.isPublic,
             isFeatured: data.isFeatured || data.isFeaturedInCollections,
 
             // Variants
@@ -106,7 +108,7 @@ export async function GET(req: NextRequest) {
 
         const query = {
             creatorId,
-            status: 'published',
+            status: 'active',
             isActive: true
         };
         const products = await Product.find(query).sort({ createdAt: -1 });

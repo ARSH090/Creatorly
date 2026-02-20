@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, ArrowLeft, Send, Calendar, Save } from 'lucide-react';
+import { Loader2, ArrowLeft, Send, Calendar, Save, Eye } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 import ReactMarkdown from 'react-markdown';
@@ -170,44 +170,62 @@ export default function NewCampaignPage() {
                                 />
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                                <div className="space-y-2">
-                                    <Label>Schedule (Optional)</Label>
+                            <div className="space-y-6 pt-6 border-t border-white/5">
+                                <div className="max-w-xs space-y-2">
+                                    <Label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Schedule (Optional)</Label>
                                     <Input
                                         type="datetime-local"
                                         value={scheduledAt}
                                         onChange={(e) => setScheduledAt(e.target.value)}
+                                        className="bg-black border-white/10 rounded-xl focus:border-indigo-500/50"
                                     />
-                                    <p className="text-xs text-muted-foreground">Leave blank to save as draft (or send immediately if implemented)</p>
+                                    <p className="text-[10px] text-zinc-500">Leave blank to save as draft.</p>
                                 </div>
 
-                                <Button type="button" variant="outline" onClick={(e) => handleSubmit(e, true)} disabled={loading}>
-                                    <Save className="mr-2 h-4 w-4" />
-                                    Save Draft
-                                </Button>
-                                <Button type="button" onClick={() => setShowPreview(true)} variant="secondary" className="mr-2">
-                                    Preview
-                                </Button>
-                                <Button type="button" onClick={(e) => {
-                                    // Send Now: Set scheduledAt to now
-                                    setScheduledAt(new Date().toISOString());
-                                    // Wait for state update? No, just pass to submit logic or handle specially
-                                    // Actually handleSubmit uses state 'scheduledAt'. 
-                                    // Better to pass override to handleSubmit
-                                    handleSubmit(e, false, true); // Added forceSendNow arg
-                                }} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">
-                                    {scheduledAt ? (
-                                        <>
-                                            <Calendar className="mr-2 h-4 w-4" />
-                                            Schedule
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Send className="mr-2 h-4 w-4" />
-                                            Send Now
-                                        </>
-                                    )}
-                                </Button>
+                                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4">
+                                    <div className="flex items-center gap-3 w-full sm:w-auto">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={(e) => handleSubmit(e, true)}
+                                            disabled={loading}
+                                            className="flex-1 sm:flex-none bg-transparent border-white/10 hover:bg-white/5 text-zinc-400 font-bold px-6 py-5 rounded-xl transition-all"
+                                        >
+                                            <Save className="mr-2 h-4 w-4" />
+                                            Save Draft
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            onClick={() => setShowPreview(true)}
+                                            variant="secondary"
+                                            className="flex-1 sm:flex-none bg-zinc-800 hover:bg-zinc-700 text-white font-bold px-6 py-5 rounded-xl transition-all"
+                                        >
+                                            <Eye className="mr-2 h-4 w-4" />
+                                            Preview
+                                        </Button>
+                                    </div>
+
+                                    <Button
+                                        type="button"
+                                        onClick={(e) => handleSubmit(e, false, !scheduledAt)}
+                                        disabled={loading}
+                                        className="w-full sm:w-auto bg-indigo-500 hover:bg-indigo-600 text-white font-black px-10 py-5 rounded-xl transition-all shadow-[0_0_20px_rgba(99,102,241,0.2)] active:scale-[0.98]"
+                                    >
+                                        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : (
+                                            scheduledAt ? (
+                                                <>
+                                                    <Calendar className="mr-2 h-4 w-4" />
+                                                    Schedule Campaign
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Send className="mr-2 h-4 w-4" />
+                                                    Send Now
+                                                </>
+                                            )
+                                        )}
+                                    </Button>
+                                </div>
                             </div>
                         </form>
                     </CardContent>

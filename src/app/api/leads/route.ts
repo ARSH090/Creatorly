@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
         await connectToDatabase();
 
         // Check for referral cookie
-        const referralCode = request.cookies.get('referral_code')?.value;
+        const referralCode = request.cookies.get('referral_code')?.value || request.cookies.get('affiliate_ref')?.value;
         let referredBy: string | undefined;
 
         if (referralCode) {

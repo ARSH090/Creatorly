@@ -75,30 +75,30 @@ export default function EmailCampaignsPage() {
                         </Card>
                     ) : (
                         campaigns.map((campaign) => (
-                            <Card key={campaign._id} className="hover:border-indigo-500/50 transition-colors">
-                                <CardContent className="p-6">
-                                    <div className="flex items-start justify-between">
-                                        <div className="space-y-1">
-                                            <div className="flex items-center space-x-2">
-                                                <h3 className="font-semibold text-lg">{campaign.name}</h3>
+                            <Card key={campaign._id} className="hover:border-indigo-500/50 transition-colors group relative overflow-hidden">
+                                <CardContent className="p-4 sm:p-6">
+                                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                        <div className="space-y-1 flex-1 min-w-0">
+                                            <div className="flex items-center flex-wrap gap-2 mb-1">
+                                                <h3 className="font-bold text-base sm:text-lg truncate max-w-[200px] sm:max-w-md text-white">{campaign.name}</h3>
                                                 <Badge variant={
                                                     campaign.status === 'sent' ? 'default' :
                                                         campaign.status === 'scheduled' ? 'secondary' : 'outline'
-                                                }>
+                                                } className="text-[10px] sm:text-xs">
                                                     {campaign.status === 'sent' ? 'Sent' :
                                                         campaign.status === 'scheduled' ? 'Scheduled' : 'Draft'}
                                                 </Badge>
                                             </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                Subject: "{campaign.subject}"
+                                            <div className="text-xs sm:text-sm text-zinc-500 truncate">
+                                                Subject: <span className="text-zinc-400">"{campaign.subject}"</span>
                                             </div>
-                                            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
+                                            <div className="flex flex-wrap items-center gap-3 text-[10px] sm:text-xs text-zinc-500 mt-2">
                                                 <span className="flex items-center">
                                                     <Calendar className="h-3 w-3 mr-1" />
                                                     {campaign.createdAt ? format(new Date(campaign.createdAt), 'MMM d, yyyy') : 'Recently'}
                                                 </span>
                                                 {campaign.status === 'sent' && (
-                                                    <span className="flex items-center text-green-600">
+                                                    <span className="flex items-center text-emerald-500">
                                                         <Send className="h-3 w-3 mr-1" />
                                                         Sent {campaign.sentAt ? format(new Date(campaign.sentAt), 'MMM d, h:mm a') : ''}
                                                     </span>
@@ -106,19 +106,21 @@ export default function EmailCampaignsPage() {
                                             </div>
                                         </div>
 
-                                        <div className="text-right space-y-1">
-                                            <div className="text-2xl font-bold">{campaign.stats?.sent || 0}</div>
-                                            <div className="text-xs text-muted-foreground uppercase tracking-wider">Recipients</div>
+                                        <div className="flex sm:flex-col justify-between items-end sm:text-right gap-2 pt-3 sm:pt-0 border-t sm:border-none border-white/5">
+                                            <div className="flex flex-col">
+                                                <div className="text-xl sm:text-2xl font-black text-white leading-none">{campaign.stats?.sent || 0}</div>
+                                                <div className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest mt-1">Recipients</div>
+                                            </div>
 
                                             {campaign.status === 'sent' && (
-                                                <div className="flex gap-3 mt-2 text-xs">
-                                                    <div>
-                                                        <span className="font-bold block">{campaign.stats?.opened || 0}</span>
-                                                        <span className="text-muted-foreground">Opened</span>
+                                                <div className="flex gap-4 text-xs">
+                                                    <div className="text-right">
+                                                        <span className="font-black text-white block leading-none">{campaign.stats?.opened || 0}</span>
+                                                        <span className="text-[10px] text-zinc-600 font-bold uppercase">Opened</span>
                                                     </div>
-                                                    <div>
-                                                        <span className="font-bold block">{campaign.stats?.clicked || 0}</span>
-                                                        <span className="text-muted-foreground">Clicked</span>
+                                                    <div className="text-right">
+                                                        <span className="font-black text-white block leading-none">{campaign.stats?.clicked || 0}</span>
+                                                        <span className="text-[10px] text-zinc-600 font-bold uppercase">Clicked</span>
                                                     </div>
                                                 </div>
                                             )}

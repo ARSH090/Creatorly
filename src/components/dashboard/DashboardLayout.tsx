@@ -41,10 +41,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
                 setStats({
                     productsCount: data.totalProducts,
-                    pendingOrders: 0, // Logic for pending orders can be added later
+                    pendingOrders: 0,
                     pendingPayout: (data.pendingPayout || 0).toLocaleString('en-IN'),
                     todayRevenue: (data.todayRevenue || 0).toLocaleString('en-IN'),
-                    todayVisitors: data.todayVisitors
+                    todayVisitors: data.todayVisitors,
+                    profile: data.profile
                 });
 
                 setNotifications([]); // No unread notifications by default for launch
@@ -135,11 +136,26 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             <div className="flex items-center gap-3 pl-4 border-l border-white/5">
                                 <div className="text-right hidden sm:block">
                                     <p className="text-sm font-bold text-white leading-none mb-1">
-                                        {user?.fullName || (user?.primaryEmailAddress?.emailAddress ? user.primaryEmailAddress.emailAddress.split('@')[0] : 'Creator')}
+                                        {stats?.profile?.displayName || user?.fullName || 'Creator'}
                                     </p>
-                                    <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">@{user?.username || (user?.primaryEmailAddress?.emailAddress ? user.primaryEmailAddress.emailAddress.split('@')[0] : 'username')}</p>
+                                    <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">
+                                        @{user?.username || 'username'}
+                                    </p>
                                 </div>
-                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-white/10" />
+                                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-white/10 overflow-hidden">
+                                    {(stats?.profile?.avatar || user?.imageUrl) ? (
+                                        // eslint-disable-next-line @next/next/no-img-element
+                                        <img
+                                            src={stats?.profile?.avatar || user?.imageUrl}
+                                            alt="Avatar"
+                                            className="w-full h-full object-cover"
+                                        />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-white text-[10px] font-bold">
+                                            {(stats?.profile?.displayName || user?.fullName || 'C').charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

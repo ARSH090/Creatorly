@@ -12,34 +12,46 @@ export default function BillingPage() {
     const [loading, setLoading] = useState(true);
     const [subscription, setSubscription] = useState<any>(null);
     const [plans, setPlans] = useState<any[]>([]);
+    const [history, setHistory] = useState<any[]>([]);
 
     useEffect(() => {
         async function loadBilling() {
             try {
                 // Fetch live plans
-                const plansRes = await fetch('/api/plans');
-                const plansData = await plansRes.json();
-                setPlans(plansData.plans || []);
+                const [plansRes, subRes, historyRes] = await Promise.all([
+                    fetch('/api/plans'),
+                    fetch('/api/creator/subscription'),
+                    fetch('/api/creator/billing/history')
+                ]);
 
-                // Mock subscription for now as we don't have a real sub fetch yet,
-                // but we standardize the placeholder to be realistic based on user data
-                setSubscription({
-                    planName: (user as any)?.activeSubscription?.name || 'Basic Creator',
-                    status: 'active',
-                    price: plansData.find((p: any) => p.isCurrent)?.price || 499,
-                    billingPeriod: 'monthly',
-                    nextBillingDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                    }),
-                    features: [
-                        'Unlimited Storefronts',
-                        '5% Transaction Fee',
-                        'Community Support',
-                        'Basic Analytics'
-                    ]
-                });
+                const plansData = await plansRes.json();
+                const subData = await subRes.json();
+                const historyData = await historyRes.json();
+
+                setPlans(plansData.plans || []);
+                setHistory(historyData.history || []);
+
+                if (subData.subscription) {
+                    const sub = subData.subscription;
+                    const planInfo = (plansData.plans || []).find((p: any) => p.tier === sub.plan) || {};
+
+                    setSubscription({
+                        planName: planInfo.name || sub.plan.charAt(0).toUpperCase() + sub.plan.slice(1),
+                        status: sub.isExpired ? 'expired' : 'active',
+                        price: planInfo.price || 0,
+                        billingPeriod: planInfo.interval === 'year' ? 'yearly' : 'monthly',
+                        nextBillingDate: sub.expiresAt ? new Date(sub.expiresAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                        }) : 'Never',
+                        features: planInfo.features || [
+                            'Unlimited Storefronts',
+                            'Basic Analytics'
+                        ],
+                        limits: sub.limits
+                    });
+                }
             } catch (err) {
                 console.error('Failed to load billing details:', err);
             } finally {
@@ -146,19 +158,29 @@ export default function BillingPage() {
                             <div className="space-y-2">
                                 <div className="flex justify-between text-xs mb-1">
                                     <span className="text-zinc-500">Storage</span>
-                                    <span className="text-white font-bold">2.4 GB / 10 GB</span>
+                                    <span className="text-white font-bold">
+                                        {subscription?.limits?.maxStorageMb ? `${(subscription.limits.usedStorageMb || 0).toFixed(1)} MB / ${subscription.limits.maxStorageMb} MB` : '0 / 100 MB'}
+                                    </span>
                                 </div>
                                 <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                                    <div className="h-full bg-indigo-500" style={{ width: '24%' }} />
+                                    <div
+                                        className="h-full bg-indigo-500"
+                                        style={{ width: `${Math.min(100, ((subscription?.limits?.usedStorageMb || 0) / (subscription?.limits?.maxStorageMb || 100)) * 100)}%` }}
+                                    />
                                 </div>
                             </div>
                             <div className="space-y-2">
                                 <div className="flex justify-between text-xs mb-1">
-                                    <span className="text-zinc-500">API Calls</span>
-                                    <span className="text-white font-bold">1.2k / 5k</span>
+                                    <span className="text-zinc-500">Products</span>
+                                    <span className="text-white font-bold">
+                                        {subscription?.limits?.products ? `${subscription.limits.usedProducts || 0} / ${subscription.limits.products}` : '0 / 3'}
+                                    </span>
                                 </div>
                                 <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                                    <div className="h-full bg-purple-500" style={{ width: '24%' }} />
+                                    <div
+                                        className="h-full bg-purple-500"
+                                        style={{ width: `${Math.min(100, ((subscription?.limits?.usedProducts || 0) / (subscription?.limits?.products || 3)) * 100)}%` }}
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -248,18 +270,35 @@ export default function BillingPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {[1, 2, 3].map((i) => (
-                                <tr key={i} className="text-sm hover:bg-white/3 transition-colors group">
-                                    <td className="py-4 px-4 text-zinc-400">Feb 12, 2024</td>
-                                    <td className="py-4 px-4 text-white font-bold">₹499</td>
-                                    <td className="py-4 px-4 text-zinc-300">Basic Creator</td>
-                                    <td className="py-4 px-4 text-right">
-                                        <button className="p-2 text-zinc-500 hover:text-white transition-colors">
-                                            <Download className="w-4 h-4" />
-                                        </button>
+                            {history.length === 0 ? (
+                                <tr>
+                                    <td colSpan={4} className="py-8 text-center text-zinc-500 text-sm">
+                                        No billing history found.
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                history.map((item) => (
+                                    <tr key={item.id} className="text-sm hover:bg-white/3 transition-colors group">
+                                        <td className="py-4 px-4 text-zinc-400">
+                                            {new Date(item.date).toLocaleDateString('en-US', {
+                                                month: 'short',
+                                                day: 'numeric',
+                                                year: 'numeric'
+                                            })}
+                                        </td>
+                                        <td className="py-4 px-4 text-white font-bold">
+                                            {item.currency === 'INR' ? '₹' : (item.currency || '₹')}
+                                            {item.amount.toLocaleString('en-IN')}
+                                        </td>
+                                        <td className="py-4 px-4 text-zinc-300">{item.plan}</td>
+                                        <td className="py-4 px-4 text-right">
+                                            <button className="p-2 text-zinc-500 hover:text-white transition-colors">
+                                                <Download className="w-4 h-4" />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
                         </tbody>
                     </table>
                 </div>

@@ -192,6 +192,7 @@ export async function POST(req: NextRequest) {
             // Update order status
             order.razorpayPaymentId = razorpayPaymentId;
             order.paymentStatus = 'paid';
+            order.status = 'completed';
             order.paidAt = new Date();
             await order.save();
 
@@ -371,6 +372,7 @@ export async function POST(req: NextRequest) {
                         razorpayOrderId: payload.payment.entity.order_id || 'sub_renewal',
                         razorpayPaymentId: paymentId,
                         paymentStatus: 'paid',
+                        status: 'completed',
                         paidAt: new Date(),
                         subscriptionId: sub._id,
                         metadata: {

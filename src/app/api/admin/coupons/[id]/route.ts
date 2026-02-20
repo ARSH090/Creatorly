@@ -1,70 +1,55 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/admin/[...nextauth]/route';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { Coupon } from '@/lib/models/Coupon';
 import { AdminLog } from '@/lib/models/AdminLog';
+import { withAdminAuth } from '@/lib/auth/withAuth';
+import { withErrorHandler } from '@/lib/utils/errorHandler';
 
-export async function DELETE(
-    req: Request,
+async function deleteHandler(
+    req: NextRequest,
+    admin: any,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user?.role !== 'admin') {
-            return new NextResponse('Unauthorized', { status: 401 });
-        }
+    const { id } = await params;
+    await dbConnect();
 
-        const { id } = await params;
-        await dbConnect();
+    const coupon = await Coupon.findByIdAndDelete(id);
+    if (!coupon) return new NextResponse('Coupon not found', { status: 404 });
 
-        const coupon = await Coupon.findByIdAndDelete(id);
-        if (!coupon) return new NextResponse('Coupon not found', { status: 404 });
+    await AdminLog.create({
+        adminEmail: admin.email,
+        action: 'delete_coupon',
+        targetType: 'coupon',
+        targetId: coupon._id,
+        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    });
 
-        await AdminLog.create({
-            adminEmail: session.user.email,
-            action: 'delete_coupon',
-            targetType: 'coupon',
-            targetId: coupon._id,
-            ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
-        });
-
-        return NextResponse.json({ message: 'Coupon deleted' });
-
-    } catch (error) {
-        return new NextResponse('Internal Server Error', { status: 500 });
-    }
+    return NextResponse.json({ message: 'Coupon deleted' });
 }
 
-export async function PUT(
-    req: Request,
+async function putHandler(
+    req: NextRequest,
+    admin: any,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user?.role !== 'admin') {
-            return new NextResponse('Unauthorized', { status: 401 });
-        }
+    const { id } = await params;
+    const body = await req.json();
+    await dbConnect();
 
-        const { id } = await params;
-        const body = await req.json();
-        await dbConnect();
+    const coupon = await Coupon.findByIdAndUpdate(id, body, { new: true });
+    if (!coupon) return new NextResponse('Coupon not found', { status: 404 });
 
-        const coupon = await Coupon.findByIdAndUpdate(id, body, { new: true });
-        if (!coupon) return new NextResponse('Coupon not found', { status: 404 });
+    await AdminLog.create({
+        adminEmail: admin.email,
+        action: 'update_coupon',
+        targetType: 'coupon',
+        targetId: coupon._id,
+        changes: body,
+        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    });
 
-        await AdminLog.create({
-            adminEmail: session.user.email,
-            action: 'update_coupon',
-            targetType: 'coupon',
-            targetId: coupon._id,
-            changes: body,
-            ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
-        });
-
-        return NextResponse.json(coupon);
-
-    } catch (error) {
-        return new NextResponse('Internal Server Error', { status: 500 });
-    }
+    return NextResponse.json(coupon);
 }
+
+export const DELETE = withAdminAuth(withErrorHandler(deleteHandler));
+export const PUT = withAdminAuth(withErrorHandler(putHandler));

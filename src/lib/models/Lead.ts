@@ -9,8 +9,16 @@ export interface ILead extends Document {
     creatorId?: mongoose.Types.ObjectId;
     downloadSent: boolean;
     downloadSentAt?: Date;
-    source?: string; // utm_source, referrer, etc.
+    source?: string;
     referredBy?: string;
+    // DM Fields
+    dmStatus?: 'pending' | 'sent' | 'failed' | 'none';
+    dmProvider?: 'instagram' | 'whatsapp';
+    dmSentAt?: Date;
+    dmError?: string;
+    dmMessageId?: string;
+    dmRecipientId?: string;
+    dmAttempts?: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -38,13 +46,13 @@ const LeadSchema = new Schema<ILead>({
     leadMagnetId: {
         type: Schema.Types.ObjectId,
         ref: 'LeadMagnet',
-        required: false, // Optional for AutoDM general leads
+        required: false,
         index: true,
     },
     creatorId: {
         type: Schema.Types.ObjectId,
         ref: 'User',
-        required: false, // Optional if we don't have a creator context yet
+        required: false,
         index: true,
     },
     downloadSent: {
@@ -62,17 +70,40 @@ const LeadSchema = new Schema<ILead>({
         type: String,
         index: true,
     },
+    // DM Fields
+    dmStatus: {
+        type: String,
+        enum: ['pending', 'sent', 'failed', 'none'],
+        default: 'none',
+    },
+    dmProvider: {
+        type: String,
+        enum: ['instagram', 'whatsapp'],
+    },
+    dmSentAt: {
+        type: Date,
+    },
+    dmError: {
+        type: String,
+    },
+    dmMessageId: {
+        type: String,
+    },
+    dmRecipientId: {
+        type: String,
+    },
+    dmAttempts: {
+        type: Number,
+        default: 0,
+    },
 }, {
     timestamps: true,
 });
 
-// Remove unique index on email/leadMagnetId if it existed, 
-// or keep it for lead magnets but allow general leads.
-// Actually, for AutoDM, a user might express interest in multiple things.
-// LeadSchema.index({ email: 1, leadMagnetId: 1 }, { unique: true });
-
-// Index for general queries
+// Indexes
 LeadSchema.index({ email: 1, createdAt: -1 });
 LeadSchema.index({ creatorId: 1, createdAt: -1 });
+LeadSchema.index({ dmStatus: 1 });
+LeadSchema.index({ creatorId: 1, dmStatus: 1 });
 
 export default mongoose.models.Lead || mongoose.model<ILead>('Lead', LeadSchema);

@@ -5,8 +5,8 @@
   --primary: #FF9E00;
   --secondary: #00843D;
   --accent: #4F46E5;
-  --header-height: 4rem;
-  /* Tailwind `h-16` */
+  --header-height: 5rem;
+  /* Tailwind `h-20` */
   --footer-height: 7rem;
   /* Indigo */
   --background: #030303;

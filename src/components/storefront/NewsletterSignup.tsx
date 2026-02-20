@@ -44,10 +44,10 @@ export default function NewsletterSignup({ creatorId, theme }: NewsletterSignupP
     }
 
     return (
-        <div className="bg-white/5 border border-white/5 rounded-[2.5rem] p-10 space-y-8">
+        <div className="bg-white/5 border border-white/5 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 space-y-6 sm:space-y-8">
             <div className="space-y-2 text-center">
-                <h3 className="text-2xl font-black uppercase tracking-tight">Join the Inner Circle</h3>
-                <p className="text-zinc-500 text-sm font-medium">Get exclusive content and early access to new products.</p>
+                <h3 className="text-xl sm:text-2xl font-black uppercase tracking-tight">Join the Inner Circle</h3>
+                <p className="text-zinc-500 text-[12px] sm:text-sm font-medium">Get exclusive content and early access to new products.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -63,7 +63,7 @@ export default function NewsletterSignup({ creatorId, theme }: NewsletterSignupP
                 />
                 <button
                     disabled={status === 'loading'}
-                    className="w-full py-5 rounded-2xl font-black uppercase tracking-widest text-[11px] shadow-2xl flex items-center justify-center gap-3 hover:translate-y-[-2px] active:translate-y-[0px] transition-all"
+                    className="w-full py-4 sm:py-5 rounded-xl sm:rounded-2xl font-black uppercase tracking-widest text-[10px] sm:text-[11px] shadow-2xl flex items-center justify-center gap-3 hover:translate-y-[-2px] active:translate-y-[0px] transition-all"
                     style={{
                         backgroundColor: theme.primaryColor || '#6366f1',
                         color: '#fff',

@@ -159,9 +159,9 @@ const OrderSchema: Schema = new Schema({
 
 
 // Indexes for performance
-OrderSchema.index({ creatorId: 1, createdAt: -1 });
+OrderSchema.index({ creatorId: 1, status: 1, createdAt: -1 });
+OrderSchema.index({ customerEmail: 1, createdAt: -1 });
 OrderSchema.index({ "items.productId": 1 });
-OrderSchema.index({ customerEmail: 1 });
 OrderSchema.index({ status: 1 });
 
 const Order: Model<IOrder> = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);

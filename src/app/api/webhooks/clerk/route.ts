@@ -58,22 +58,62 @@ export async function POST(req: NextRequest) {
         const eventType = evt.type;
         console.log(`[Clerk Webhook] Received: ${eventType}`);
 
-        if (eventType === 'user.created') {
-            const { id, email_addresses, first_name } = evt.data;
-            const primaryEmail = email_addresses?.find((e: any) => e.id === evt.data.primary_email_address_id);
+        const { id, email_addresses, first_name, last_name, username, image_url } = evt.data;
+        const primaryEmail = email_addresses?.find((e: any) => e.id === evt.data.primary_email_address_id)?.email_address;
+        const displayName = first_name ? `${first_name} ${last_name || ''}`.trim() : (username || primaryEmail?.split('@')[0] || 'User');
 
-            if (primaryEmail?.email_address) {
+        if (eventType === 'user.created' || eventType === 'user.updated') {
+            const { connectToDatabase } = await import('@/lib/db/mongodb');
+            const { User } = await import('@/lib/models/User');
+
+            await connectToDatabase();
+
+            const userUpdate = {
+                clerkId: id,
+                email: primaryEmail,
+                displayName: displayName,
+                username: username || primaryEmail?.split('@')[0] || id,
+                avatar: image_url,
+                role: 'creator', // Default role for new signups
+                emailVerified: true, // Verification is handled by Clerk
+            };
+
+            await User.findOneAndUpdate(
+                { clerkId: id },
+                { $set: userUpdate },
+                { upsert: true, new: true }
+            );
+
+            console.log(`[Clerk Webhook] User ${id} synchronized with MongoDB`);
+
+            if (eventType === 'user.created' && primaryEmail) {
                 try {
-                    await sendWelcomeEmail(primaryEmail.email_address, first_name || 'there');
-                    console.log(`[Clerk Webhook] Welcome email sent to ${primaryEmail.email_address}`);
+                    await sendWelcomeEmail(primaryEmail, first_name || 'there');
+                    console.log(`[Clerk Webhook] Welcome email sent to ${primaryEmail}`);
                 } catch (emailError: any) {
                     console.error('[Clerk Webhook] Welcome email failed:', emailError);
-                    // Don't fail webhook if email fails
                 }
             }
         }
 
-        // Return success immediately (don't make Clerk wait)
+        if (eventType === 'user.deleted') {
+            const { connectToDatabase } = await import('@/lib/db/mongodb');
+            const { User } = await import('@/lib/models/User');
+
+            await connectToDatabase();
+
+            // Soft delete: keep the record but mark as deleted and move clerkId
+            await User.findOneAndUpdate(
+                { clerkId: id },
+                {
+                    $set: { deletedAt: new Date(), status: 'suspended' },
+                    $unset: { clerkId: "" }
+                }
+            );
+            console.log(`[Clerk Webhook] User ${id} (soft) deleted from MongoDB`);
+        }
+
+        // Return success immediately
         return NextResponse.json({ received: true }, { status: 200 });
 
     } catch (error: any) {

@@ -61,6 +61,7 @@ import { Analytics } from "@vercel/analytics/react";
 import SyncUser from "@/components/auth/SyncUser";
 
 import { PostHogProvider } from "./posthog-provider";
+import SessionMonitor from "@/components/auth/SessionMonitor";
 
 export default function RootLayout({
   children,
@@ -70,6 +71,7 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <SyncUser />
+      <SessionMonitor />
       <html lang="en" suppressHydrationWarning>
         <head>
           <link

@@ -87,6 +87,7 @@ const ProductSchema: Schema = new Schema({
         default: 'draft',
         index: true
     },
+    isActive: { type: Boolean, default: false, index: true },
 
     categoryId: { type: Schema.Types.ObjectId, ref: 'ProductCategory' },
     tags: [{ type: String }],
@@ -104,7 +105,6 @@ const ProductSchema: Schema = new Schema({
 // Backward compatibility virtuals
 ProductSchema.virtual('name').get(function (this: any) { return this.title; }).set(function (this: any, v: string) { this.title = v; });
 ProductSchema.virtual('price').get(function (this: any) { return this.pricing?.basePrice; });
-ProductSchema.virtual('isActive').get(function (this: any) { return this.status === 'active'; });
 ProductSchema.virtual('currency').get(function (this: any) { return this.pricing?.currency || 'INR'; });
 
 // Indexes

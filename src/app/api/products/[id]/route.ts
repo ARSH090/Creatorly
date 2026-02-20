@@ -25,9 +25,25 @@ export const PATCH = withAuth(async (req, user, { params }: { params: Promise<{ 
         const data = await req.json();
         await connectToDatabase();
 
+        const updateData: any = { ...data, updatedAt: new Date() };
+
+        // Map frontend fields to DB schema if present
+        if (data.name) updateData.title = data.name;
+        if (data.price !== undefined) {
+            updateData.pricing = {
+                basePrice: Number(data.price),
+                currency: data.currency || 'INR',
+                taxInclusive: false
+            };
+        }
+        if (data.isActive !== undefined) {
+            updateData.isActive = data.isActive;
+            updateData.status = data.isActive ? 'active' : 'draft';
+        }
+
         const product = await Product.findOneAndUpdate(
             { _id: id, creatorId: user._id },
-            { $set: { ...data, updatedAt: new Date() } },
+            { $set: updateData },
             { new: true, runValidators: true }
         );
 

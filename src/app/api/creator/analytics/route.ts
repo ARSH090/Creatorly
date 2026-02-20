@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { Order } from '@/lib/models/Order';
 import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
 import { Product } from '@/lib/models/Product';
+import { User } from '@/lib/models/User';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 
 async function handler(req: NextRequest, user: any, context: any) {
@@ -20,6 +21,9 @@ async function handler(req: NextRequest, user: any, context: any) {
         const startOfToday = new Date(now.setHours(0, 0, 0, 0));
         const endOfToday = new Date(now.setHours(23, 59, 59, 999));
 
+        // Get User Data for profile photo
+        const userData = await User.findById(creatorId).select('avatar displayName');
+
         // 2. Fetch Orders (Revenue)
         const ordersData = await Order.find({
             creatorId,
@@ -27,7 +31,7 @@ async function handler(req: NextRequest, user: any, context: any) {
             createdAt: { $gte: startOfToday, $lte: endOfToday }
         });
 
-        const todayRevenue = ordersData.reduce((acc, order) => acc + (order.amount || 0), 0);
+        const todayRevenue = ordersData.reduce((acc, order) => acc + (order.total || 0), 0);
 
         // 3. Fetch Total Products
         const totalProducts = await Product.countDocuments({ creatorId });
@@ -68,7 +72,7 @@ async function handler(req: NextRequest, user: any, context: any) {
             })
         ]);
 
-        const yesterdayRevenue = yesterdayOrders.reduce((acc, order) => acc + (order.amount || 0), 0);
+        const yesterdayRevenue = yesterdayOrders.reduce((acc, order) => acc + (order.total || 0), 0);
 
         // 7. Calculate Percentage Changes
         const calculateChange = (current: number, previous: number) => {
@@ -79,10 +83,18 @@ async function handler(req: NextRequest, user: any, context: any) {
         const revenueChange = calculateChange(todayRevenue, yesterdayRevenue);
         const visitorChange = calculateChange(todayVisitors, yesterdayVisitors);
 
-        // 8. engagement Score Calculation
-        const repeatRate = 0; // In production, calculate based on customer email frequency
-        const pendingPayout = todayRevenue * 0.9;
-        const engagementScore = Math.min(100, Math.round((todayRevenue / 500) * 70 + (todayVisitors / 10) * 30));
+        // 8. Engagement Score Calculation (Proprietary algorithm)
+        // Factors: Traffic growth + Revenue velocity + Repeat customers
+        const uniqueEmails = await Order.distinct('customerEmail', { creatorId });
+        const totalOrders = await Order.countDocuments({ creatorId });
+        const repeatRate = totalOrders > 0 ? (uniqueEmails.length / totalOrders) : 0;
+
+        const pendingPayout = todayRevenue * 0.95; // 5% platform fee
+        const engagementScore = Math.min(100, Math.round(
+            (todayRevenue / 1000) * 40 +
+            (todayVisitors / 50) * 30 +
+            (repeatRate * 30)
+        ));
 
 
 
@@ -106,6 +118,10 @@ async function handler(req: NextRequest, user: any, context: any) {
             repeatRate,
             recentOrders,
             engagementScore,
+            profile: {
+                avatar: userData?.avatar || user.imageUrl,
+                displayName: userData?.displayName || user.fullName
+            },
 
             usage: {
                 ai: {

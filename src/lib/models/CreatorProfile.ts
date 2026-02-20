@@ -1,5 +1,29 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
+export type ServiceType =
+    | 'whatsapp'
+    | 'instagram'
+    | 'youtube'
+    | 'email'
+    | 'booking'
+    | 'telegram'
+    | 'twitter'
+    | 'linkedin'
+    | 'tiktok'
+    | 'custom';
+
+export interface IServiceButton {
+    id: string;
+    label: string;
+    serviceType: ServiceType;
+    /** External URL — used when modalEnabled is false */
+    link?: string;
+    /** true = open lead capture modal; false = navigate to link */
+    modalEnabled: boolean;
+    isVisible: boolean;
+    order: number;
+}
+
 export interface ILink {
     id: string;
     title: string;
@@ -12,6 +36,10 @@ export interface ILink {
     scheduleStart?: Date;
     scheduleEnd?: Date;
     linkType?: string;
+    iconName?: string;
+    badgeText?: string;
+    badgeColor?: string;
+    highlightBorder?: boolean;
 }
 
 export interface ICreatorProfile extends Document {
@@ -20,6 +48,9 @@ export interface ICreatorProfile extends Document {
     logo?: string;
     banner?: string;
     description?: string;
+
+    // AutoDM Hub Service Buttons
+    serviceButtons: IServiceButton[];
 
     // Custom links (Link-in-Bio)
     links: ILink[];
@@ -34,6 +65,7 @@ export interface ICreatorProfile extends Document {
         fontFamily: string;
         borderRadius: string; // 'sm', 'md', 'lg', 'full'
         buttonStyle: 'pill' | 'square' | 'rounded';
+        backgroundImage?: string;
     };
 
     // Social Links
@@ -49,9 +81,9 @@ export interface ICreatorProfile extends Document {
     // Page Builder Metadata
     layout: Array<{
         id: string;
-        type: 'hero' | 'featured_products' | 'categories' | 'testimonials' | 'newsletter';
-        config: any;
-        order: number;
+        type: 'hero' | 'services' | 'links' | 'products' | 'newsletter' | 'featured_products' | 'categories' | 'testimonials';
+        enabled?: boolean;
+        order?: number;
     }>;
 
     // Custom Domain settings
@@ -63,6 +95,8 @@ export interface ICreatorProfile extends Document {
         newsletterEnabled: boolean;
         commentsEnabled: boolean;
         storefrontEnabled: boolean;
+        whatsappEnabled: boolean;
+        googleSheetsEnabled: boolean;
     };
 
     // Booking & Availability
@@ -108,7 +142,8 @@ const CreatorProfileSchema: Schema = new Schema({
         textColor: { type: String, default: '#ffffff' },
         fontFamily: { type: String, default: 'Inter' },
         borderRadius: { type: String, default: 'md' },
-        buttonStyle: { type: String, enum: ['pill', 'square', 'rounded'], default: 'rounded' }
+        buttonStyle: { type: String, enum: ['pill', 'square', 'rounded'], default: 'rounded' },
+        backgroundImage: String
     },
 
     socialLinks: {
@@ -119,6 +154,20 @@ const CreatorProfileSchema: Schema = new Schema({
         linkedin: String,
         website: String
     },
+
+    serviceButtons: [{
+        id: { type: String, required: true },
+        label: { type: String, required: true },
+        serviceType: {
+            type: String,
+            enum: ['whatsapp', 'instagram', 'youtube', 'email', 'booking', 'telegram', 'twitter', 'linkedin', 'tiktok', 'custom'],
+            default: 'custom'
+        },
+        link: String,
+        modalEnabled: { type: Boolean, default: true },
+        isVisible: { type: Boolean, default: true },
+        order: { type: Number, default: 0 }
+    }],
 
     links: [{
         id: { type: String, required: true },
@@ -131,13 +180,17 @@ const CreatorProfileSchema: Schema = new Schema({
         description: String,
         scheduleStart: Date,
         scheduleEnd: Date,
-        linkType: { type: String, default: 'link' }
+        linkType: { type: String, default: 'link' },
+        iconName: String,
+        badgeText: String,
+        badgeColor: String,
+        highlightBorder: { type: Boolean, default: false }
     }],
 
     layout: [{
         id: String,
-        type: { type: String, enum: ['hero', 'featured_products', 'categories', 'testimonials', 'newsletter'] },
-        config: Schema.Types.Mixed,
+        type: { type: String, enum: ['hero', 'services', 'links', 'products', 'newsletter', 'featured_products', 'categories', 'testimonials'] },
+        enabled: { type: Boolean, default: true },
         order: Number
     }],
 
@@ -154,7 +207,9 @@ const CreatorProfileSchema: Schema = new Schema({
     features: {
         newsletterEnabled: { type: Boolean, default: true },
         commentsEnabled: { type: Boolean, default: true },
-        storefrontEnabled: { type: Boolean, default: true }
+        storefrontEnabled: { type: Boolean, default: true },
+        whatsappEnabled: { type: Boolean, default: true },
+        googleSheetsEnabled: { type: Boolean, default: true }
     },
 
     availability: {

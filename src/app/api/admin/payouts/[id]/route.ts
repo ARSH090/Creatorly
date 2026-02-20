@@ -1,52 +1,56 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/admin/[...nextauth]/route';
-import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
-import { Payout } from '@/lib/models/Payout';
-import { AdminLog } from '@/lib/models/AdminLog';
+import { NextRequest, NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/db/mongodb';
+import Payout from '@/lib/models/Payout';
+import AdminLog from '@/lib/models/AdminLog';
+import { withAdminAuth } from '@/lib/auth/withAuth';
+import { checkAdminPermission } from '@/lib/middleware/adminAuth';
 
-export async function PUT(
-    req: Request,
-    { params }: { params: Promise<{ id: string }> }
-) {
+export const PUT = withAdminAuth(async (req: NextRequest, session: any, context: { params: Promise<{ id: string }> }) => {
     try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user?.role !== 'admin') {
-            return new NextResponse('Unauthorized', { status: 401 });
+        if (!checkAdminPermission('manage_payouts', session.role)) {
+            return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
         }
 
-        const { id } = await params;
-        const body = await req.json(); // { status: 'paid' | 'rejected', notes: string }
-        await dbConnect();
+        const { id } = await context.params;
+        const body = await req.json(); // { status: 'paid' | 'rejected', notes: string, transactionId?: string }
+
+        await connectToDatabase();
 
         const payout = await Payout.findById(id);
-        if (!payout) return new NextResponse('Payout not found', { status: 404 });
+        if (!payout) {
+            return NextResponse.json({ error: 'Payout not found' }, { status: 404 });
+        }
 
-        // Update Payout
         const oldStatus = payout.status;
         payout.status = body.status;
-        if (body.status === 'paid') {
+
+        if (body.status === 'paid' || body.status === 'processed') {
             payout.processedAt = new Date();
-            payout.transactionId = body.transactionReference || body.transactionId; // Optional manual reference
+            if (body.transactionId) payout.transactionId = body.transactionId;
         }
-        if (body.notes) {
-            payout.notes = body.notes; // Assuming schema has notes or we add it
-        }
+
+        if (body.notes) payout.notes = body.notes;
+        if (body.rejectionReason) payout.rejectionReason = body.rejectionReason;
 
         await payout.save();
 
         await AdminLog.create({
-            adminEmail: session.user.email,
+            adminEmail: session.email || session.user?.email,
             action: 'update_payout_status',
             targetType: 'payout',
             targetId: payout._id,
             changes: { from: oldStatus, to: body.status, notes: body.notes },
-            ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+            ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
+            userAgent: req.headers.get('user-agent') || 'unknown'
         });
 
         return NextResponse.json(payout);
 
-    } catch (error) {
-        return new NextResponse('Internal Server Error', { status: 500 });
+    } catch (error: any) {
+        console.error('Update Payout Error:', error);
+        return NextResponse.json(
+            { error: 'Failed to update payout' },
+            { status: 500 }
+        );
     }
-}
+});

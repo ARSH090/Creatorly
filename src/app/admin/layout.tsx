@@ -1,18 +1,25 @@
-﻿// @ts-nocheck
-import { getServerSession } from 'next-auth';
+﻿import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
-import { authOptions } from '@/app/api/auth/admin/[...nextauth]/route';
+import { connectToDatabase } from '@/lib/db/mongodb';
+import { User } from '@/lib/models/User';
 
 export default async function AdminLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const session = await getServerSession(authOptions);
+    const { userId } = await auth();
 
-    if (!session || session.user?.role !== 'admin') {
-        redirect('/admin/login');
+    if (!userId) {
+        redirect('/auth/login?redirect_url=/admin');
+    }
+
+    await connectToDatabase();
+    const user = await User.findOne({ clerkId: userId });
+
+    if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
+        redirect('/dashboard'); // Creators shouldn't see admin panel
     }
 
     return (

@@ -85,6 +85,7 @@
     "posthog-js": "^1.351.3",
     "pusher": "^5.3.2",
     "pusher-js": "^8.4.0",
+    "qrcode.react": "^4.2.0",
     "razorpay": "^2.9.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",

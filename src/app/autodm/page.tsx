@@ -28,8 +28,8 @@ export default function AutoDMHub() {
                 <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-500/10 blur-[120px] rounded-full" />
             </div>
 
-            <main className="max-w-md w-full relative z-10">
-                <div className="bg-zinc-900/40 backdrop-blur-3xl rounded-[2.5rem] p-10 shadow-2xl border border-white/5 relative overflow-hidden">
+            <main className="max-w-md w-full relative z-10 px-2 sm:px-0">
+                <div className="bg-zinc-900/40 backdrop-blur-3xl rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 shadow-2xl border border-white/5 relative overflow-hidden">
                     {/* Inner Glow */}
                     <div className="absolute top-0 left-1/4 right-1/4 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 

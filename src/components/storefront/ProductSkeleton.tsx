@@ -24,3 +24,47 @@ export function ProductGridSkeleton() {
         </div>
     );
 }
+
+/** Skeleton for the ServiceButtons section */
+export function ServiceButtonsSkeleton({ count = 3 }: { count?: number }) {
+    return (
+        <div className="w-full max-w-2xl mx-auto space-y-3" aria-hidden="true">
+            {Array.from({ length: count }).map((_, i) => (
+                <div
+                    key={i}
+                    className="flex items-center gap-4 px-5 py-4 rounded-2xl border border-white/5 animate-pulse"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                >
+                    <div className="w-11 h-11 rounded-xl bg-white/10 flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                        <div className="h-4 bg-white/10 rounded-full w-2/3" />
+                    </div>
+                    <div className="w-4 h-4 rounded-full bg-white/10" />
+                </div>
+            ))}
+        </div>
+    );
+}
+
+/** Skeleton for the LinksSection */
+export function LinksSectionSkeleton({ count = 4 }: { count?: number }) {
+    return (
+        <div className="w-full max-w-2xl mx-auto space-y-4" aria-hidden="true">
+            {Array.from({ length: count }).map((_, i) => (
+                <div
+                    key={i}
+                    className="flex items-center gap-4 p-4 rounded-2xl border border-white/5 animate-pulse"
+                    style={{ backgroundColor: 'rgba(255,255,255,0.03)' }}
+                >
+                    <div className="w-10 h-10 rounded-lg bg-white/10 flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                        <div className="h-3.5 bg-white/10 rounded-full w-1/2" />
+                        <div className="h-2.5 bg-white/10 rounded-full w-3/4" />
+                    </div>
+                    <div className="w-5 h-5 rounded-full bg-white/10" />
+                </div>
+            ))}
+        </div>
+    );
+}
+

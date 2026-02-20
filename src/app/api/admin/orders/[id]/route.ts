@@ -1,37 +1,28 @@
-import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/app/api/auth/admin/[...nextauth]/route';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { Order } from '@/lib/models/Order';
-import { Product } from '@/lib/models/Product';
-import { User } from '@/lib/models/User';
+import { withAdminAuth } from '@/lib/auth/withAuth';
+import { withErrorHandler } from '@/lib/utils/errorHandler';
 
-export async function GET(
-    req: Request,
+async function getHandler(
+    req: NextRequest,
+    user: any,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    try {
-        const session = await getServerSession(authOptions);
-        if (!session || session.user?.role !== 'admin') {
-            return new NextResponse('Unauthorized', { status: 401 });
-        }
+    const { id } = await params;
+    await dbConnect();
 
-        const { id } = await params;
-        await dbConnect();
+    const order = await Order.findById(id)
+        .populate('creatorId', 'displayName email')
+        .populate('userId', 'displayName email')
+        .populate('productId', 'name price')
+        .lean();
 
-        const order = await Order.findById(id)
-            .populate('creatorId', 'displayName email')
-            .populate('userId', 'displayName email')
-            .populate('productId', 'name price')
-            .lean();
-
-        if (!order) {
-            return new NextResponse('Order not found', { status: 404 });
-        }
-
-        return NextResponse.json({ order });
-
-    } catch (error) {
-        return new NextResponse('Internal Server Error', { status: 500 });
+    if (!order) {
+        return new NextResponse('Order not found', { status: 404 });
     }
+
+    return NextResponse.json({ order });
 }
+
+export const GET = withAdminAuth(withErrorHandler(getHandler));

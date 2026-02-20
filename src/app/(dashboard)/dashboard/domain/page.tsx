@@ -26,7 +26,7 @@ export default function CustomDomainPage() {
                     setDomain(data.customDomain);
                     setStatus(data.domainVerified ? 'verified' : 'idle');
                 }
-                if (data.username) setUsername(data.username);
+                if (data.profile?.username) setUsername(data.profile.username);
             })
             .catch(console.error);
     }, []);
@@ -159,8 +159,8 @@ export default function CustomDomainPage() {
 
                 {message.text && (
                     <div className={`p-4 rounded-xl text-sm font-medium flex items-start gap-2 ${message.type === 'success'
-                            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
                         }`}>
                         {message.type === 'success' ? <Check className="w-4 h-4 mt-0.5 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />}
                         {message.text}

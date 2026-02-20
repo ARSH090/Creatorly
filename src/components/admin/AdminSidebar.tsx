@@ -17,7 +17,7 @@ import {
     FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { signOut } from 'next-auth/react';
+import { useClerk } from '@clerk/nextjs';
 
 const sidebarItems = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -33,9 +33,10 @@ const sidebarItems = [
 
 export function AdminSidebar() {
     const pathname = usePathname();
+    const { signOut } = useClerk();
 
     const handleLogout = () => {
-        signOut({ callbackUrl: '/admin/login' });
+        signOut({ redirectUrl: '/admin/login' });
     };
 
     return (

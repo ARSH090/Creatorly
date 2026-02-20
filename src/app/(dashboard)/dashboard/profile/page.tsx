@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useUser } from '@clerk/nextjs';
-import { User, Mail, Shield, Save, Camera, Loader2 } from 'lucide-react';
+import { User, Mail, Shield, Save, Camera, Loader2, ExternalLink } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function ProfilePage() {
     const { user } = useUser();
@@ -325,15 +326,18 @@ export default function ProfilePage() {
             <div className="bg-zinc-900/50 rounded-3xl p-8 border border-white/5 mt-8">
                 <h3 className="text-lg font-bold text-white mb-4">Profile QR Code</h3>
                 <div className="flex items-center gap-6">
-                    <img
-                        src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(typeof window !== 'undefined' ? `${window.location.origin}/u/${formData.username || 'creator'}` : '')}`}
-                        alt="QR"
-                        className="w-56 h-56 rounded-2xl border border-white/10 bg-white/5"
-                    />
+                    <div className="p-4 bg-white rounded-2xl border border-white/10">
+                        <QRCodeSVG
+                            value={typeof window !== 'undefined' ? `${window.location.origin}/u/${formData.username || user?.username || 'creator'}` : ''}
+                            size={200}
+                            level="H"
+                            includeMargin={true}
+                        />
+                    </div>
                     <div className="space-y-2">
                         <p className="text-sm text-zinc-400">Scan to open your public profile</p>
                         <a
-                            href={`/u/${formData.username || 'creator'}`}
+                            href={`/u/${formData.username || user?.username || 'creator'}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="inline-flex items-center px-4 py-2 bg-indigo-500 rounded-xl text-white text-sm font-bold hover:bg-indigo-600"

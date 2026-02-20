@@ -4,6 +4,7 @@ import { User } from '@/lib/models/User';
 import { CreatorProfile } from '@/lib/models/CreatorProfile';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { revalidatePath } from 'next/cache';
 
 /**
  * GET /api/creator/profile
@@ -32,6 +33,8 @@ async function getHandler(req: NextRequest, user: any, context: any) {
         layout: creatorProfile.layout,
         links: creatorProfile.links,
         socialLinks: creatorProfile.socialLinks,
+        customDomain: creatorProfile.customDomain,
+        domainVerified: creatorProfile.isCustomDomainVerified,
         storefrontData: creatorProfile
     };
 }
@@ -71,13 +74,43 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
     if (layout) profileUpdates.layout = layout;
     if (links) profileUpdates.links = links;
     if (socialLinks) profileUpdates.socialLinks = socialLinks;
-    if (customDomain !== undefined) profileUpdates.customDomain = customDomain;
+
+    // Handle Domain Changes
+    if (customDomain !== undefined) {
+        const oldProfile = await CreatorProfile.findOne({ creatorId: user._id }).select('customDomain');
+
+        // 1. If domain changed or removed, clean up Redis
+        if (oldProfile?.customDomain && oldProfile.customDomain !== customDomain) {
+            try {
+                const { Redis } = await import('@upstash/redis');
+                const redis = Redis.fromEnv();
+                await redis.del(`domain:${oldProfile.customDomain}`);
+            } catch (err) {
+                console.error('Redis cleanup error:', err);
+            }
+        }
+
+        profileUpdates.customDomain = customDomain;
+        // 2. Reset verification status if changing domains
+        if (customDomain !== oldProfile?.customDomain) {
+            profileUpdates.isCustomDomainVerified = false;
+        }
+    }
 
     const updatedProfile = await CreatorProfile.findOneAndUpdate(
         { creatorId: user._id },
         { $set: profileUpdates },
         { new: true, upsert: true }
     );
+
+    // Revalidate public storefront
+    const userData = await User.findById(user._id).select('username storeSlug');
+    if (userData?.username) {
+        revalidatePath(`/u/${userData.username}`);
+    }
+    if (userData?.storeSlug) {
+        revalidatePath(`/u/${userData.storeSlug}`);
+    }
 
     return {
         success: true,
