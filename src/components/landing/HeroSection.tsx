@@ -140,7 +140,7 @@ export default function HeroSection() {
                         className="relative lg:h-[600px] flex items-center justify-center cursor-default"
                     >
                         {/* Floating Phone Mockup */}
-                        <div className="relative mx-auto w-80">
+                        <div className="relative mx-auto max-w-[280px] sm:w-80">
                             {/* Phone Frame */}
                             <div className="relative bg-zinc-900 rounded-[3rem] p-4 shadow-2xl border border-white/10">
                                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-32 h-6 bg-zinc-900 rounded-b-2xl z-20" />

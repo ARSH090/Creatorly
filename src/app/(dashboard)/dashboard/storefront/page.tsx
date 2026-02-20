@@ -96,6 +96,7 @@ export default function StorefrontBuilder() {
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'design' | 'links' | 'layout'>('design');
     const [expandedLinkIdx, setExpandedLinkIdx] = useState<number | null>(null);
+    const [showMobilePreview, setShowMobilePreview] = useState(false);
     const [uploadingThumbnailIdx, setUploadingThumbnailIdx] = useState<number | null>(null);
     const thumbnailInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -231,10 +232,10 @@ export default function StorefrontBuilder() {
 
     // ─── Render ──────────────────────────────────────────────────────────────
     return (
-        <div className="flex h-[calc(100vh-80px)] overflow-hidden -m-8">
+        <div className="flex flex-col md:flex-row h-screen md:h-[calc(100vh-80px)] overflow-hidden -m-4 md:-m-8">
 
             {/* ── Editor Sidebar ────────────────────────────── */}
-            <aside className="w-[400px] min-w-[320px] bg-[#0A0A0A] border-r border-white/5 flex flex-col flex-shrink-0">
+            <aside className={`w-full md:w-[400px] md:min-w-[320px] bg-[#0A0A0A] border-r border-white/5 flex flex-col flex-shrink-0 ${showMobilePreview ? 'hidden md:flex' : 'flex'}`}>
 
                 {/* Header */}
                 <div className="px-6 py-5 border-b border-white/5 flex items-center justify-between flex-shrink-0">
@@ -242,6 +243,13 @@ export default function StorefrontBuilder() {
                         <Monitor className="w-4 h-4 text-indigo-400" /> Storefront Editor
                     </h2>
                     <div className="flex gap-2">
+                        <button
+                            onClick={() => setShowMobilePreview(!showMobilePreview)}
+                            className="md:hidden p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+                            title="Toggle preview"
+                        >
+                            <Monitor className="w-4 h-4 text-indigo-400" />
+                        </button>
                         <button
                             onClick={() => window.open(`/u/${effectiveUsername}`, '_blank')}
                             className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
@@ -786,8 +794,16 @@ export default function StorefrontBuilder() {
             </aside>
 
             {/* ── Right: Phone Preview ──────────────────────── */}
-            <div className="flex-1 bg-[#050505] flex items-center justify-center p-8 overflow-hidden relative">
+            <div className={`flex-1 bg-[#050505] flex items-center justify-center p-4 md:p-8 overflow-hidden relative ${showMobilePreview ? 'flex' : 'hidden md:flex'}`}>
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(99,102,241,0.03)_0%,transparent_70%)]" />
+
+                {/* Mobile Preview Header (Close button) */}
+                <button
+                    onClick={() => setShowMobilePreview(false)}
+                    className="absolute top-4 right-4 z-50 p-3 bg-white/5 rounded-full md:hidden"
+                >
+                    <Plus className="w-6 h-6 rotate-45" />
+                </button>
 
                 {/* ── 2D Minimal Phone UI ──────────────────────── */}
                 <div className="relative w-[340px] h-[680px] bg-black rounded-[2.5rem] border-[6px] border-[#1A1A1A] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.5)] flex-shrink-0 overflow-hidden flex flex-col">

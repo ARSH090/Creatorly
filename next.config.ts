@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   typedRoutes: false,
+  compress: true,
+  poweredByHeader: false,
+  reactStrictMode: true,
   // Image optimization
   images: {
     remotePatterns: [

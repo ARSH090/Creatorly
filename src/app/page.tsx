@@ -3,7 +3,7 @@
 
 import LandingPage from '@/components/LandingPage';
 
-export const revalidate = 0;
+export const revalidate = 3600; // Cache for 1 hour
 
 export default function Home() {
   return <LandingPage />;

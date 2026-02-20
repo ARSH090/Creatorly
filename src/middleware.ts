@@ -96,7 +96,7 @@ export default clerkMiddleware(async (auth, req) => {
     // 5. Custom Domain Routing
     const host = req.headers.get('host') || '';
     const platformDomains = ['creatorly.in', 'www.creatorly.in', 'localhost:3000', 'creatorly-12319.vercel.app'];
-    const isCustomDomain = !platformDomains.some(d => host === d || host.endsWith('.' + d));
+    const isCustomDomain = !platformDomains.some(d => host === d || host.endsWith('.' + d)) && !host.endsWith('.vercel.app');
 
     if (isCustomDomain && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
         try {
