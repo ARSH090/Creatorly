@@ -1,9 +1,17 @@
 import crypto from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
-const ENCRYPTION_KEY = process.env.META_APP_SECRET ?
-    crypto.createHash('sha256').update(process.env.META_APP_SECRET).digest() :
-    crypto.randomBytes(32);
+const ENCRYPTION_KEY = (() => {
+    const secret = process.env.META_APP_SECRET;
+    if (!secret) {
+        if (process.env.NODE_ENV === 'production') {
+            throw new Error('CRITICAL: META_APP_SECRET is required for data encryption in production.');
+        }
+        console.warn('WARNING: META_APP_SECRET is missing. Using a temporary random key. Data will be unrecoverable after restart.');
+        return crypto.randomBytes(32);
+    }
+    return crypto.createHash('sha256').update(secret).digest();
+})();
 
 // Aliases for global standardization
 export const encryptToken = encryptTokenGCM;

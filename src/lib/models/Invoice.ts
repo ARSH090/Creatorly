@@ -40,7 +40,7 @@ const InvoiceSchema: Schema = new Schema({
     orderId: { type: Schema.Types.ObjectId, ref: 'Order', index: true },
     subscriptionId: { type: Schema.Types.ObjectId, ref: 'Subscription', index: true },
 
-    amount: { type: Number, required: true },
+    amount: { type: Number, required: true, min: 0, set: Math.round },
     currency: { type: String, default: 'INR' },
     status: {
         type: String,

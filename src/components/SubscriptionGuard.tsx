@@ -13,11 +13,10 @@ export default async function SubscriptionGuard({ children }: { children: ReactN
     }
 
     // Fetch User with Lean for performance
-    const user = await User.findOne({ clerkId: userId }).select('subscriptionStatus isSuspended role').lean();
+    const user = await User.findOne({ clerkId: userId }).select('subscriptionStatus isSuspended role onboardingComplete').lean();
 
-    if (!user) {
-        // Handle weird edge case where Clerk user exists but DB user doesn't
-        // Maybe redirect to onboarding or error
+    if (!user || user.onboardingComplete === false) {
+        // Force onboarding if not complete
         redirect('/onboarding');
     }
 

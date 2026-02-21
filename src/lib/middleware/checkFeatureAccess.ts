@@ -42,7 +42,7 @@ export async function checkFeatureAccess(
     try {
         // Fetch user with tier info
         const user = await User.findById(userId).select(
-            'subscriptionTier subscriptionStatus subscriptionEndAt isFlagged freeTierOrdersCount freeTierLeadsCount storageUsageMb'
+            'subscriptionTier subscriptionStatus subscriptionEndAt isFlagged freeTierOrdersCount freeTierLeadsCount storageUsageMb planLimits'
         );
 
         if (!user) {
@@ -74,7 +74,21 @@ export async function checkFeatureAccess(
         }
 
         // Get tier limits
-        const limits = TIER_LIMITS[tier as keyof typeof TIER_LIMITS] as Record<string, any>;
+        // 1. Check for User-specific overrides or trial limits stored in the user record
+        const userLimits = user.planLimits as any;
+
+        let limits = TIER_LIMITS[tier as keyof typeof TIER_LIMITS] as Record<string, any>;
+
+        // 2. If user has explicit planLimits (from trial setup), use those
+        if (userLimits) {
+            limits = { ...limits, ...userLimits };
+            // Map common keys if they differ (e.g. maxProducts vs products)
+            if (userLimits.maxProducts !== undefined) limits.products = userLimits.maxProducts;
+            if (userLimits.maxStorageMb !== undefined) limits.storage = userLimits.maxStorageMb;
+            if (userLimits.maxTeamMembers !== undefined) limits.teamMembers = userLimits.maxTeamMembers;
+            if (userLimits.maxAiGenerations !== undefined) limits.aiGenerations = userLimits.maxAiGenerations;
+        }
+
         if (!limits) {
             return {
                 allowed: false,

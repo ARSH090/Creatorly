@@ -23,12 +23,13 @@ export interface IUser extends Document {
     permissions?: string[];
 
     // Stan Store: Subscription & Billing
-    plan?: 'free' | 'creator' | 'creator_pro';
+    // Stan Store: Subscription & Billing
+    plan?: 'free' | 'starter' | 'pro' | 'business';
     planExpiresAt?: Date;
     stripeCustomerId?: string;
 
     // NEW: Tier Management & Subscription
-    subscriptionTier: 'free' | 'creator' | 'pro';
+    subscriptionTier: 'free' | 'starter' | 'pro' | 'business';
     subscriptionStatus: 'active' | 'trialing' | 'expired' | 'cancelled' | 'banned';
     subscriptionStartAt?: Date;
     subscriptionEndAt?: Date;
@@ -44,7 +45,15 @@ export interface IUser extends Document {
     payoutHoldReason?: string;
     payoutMethod?: {
         type: 'stripe' | 'paypal' | 'bank';
+        /**
+         * Encrypted account ID/Number (AES-256-GCM ciphertext)
+         */
         accountId?: string;
+        /**
+         * AES-GCM IV and Tag for accountId encryption
+         */
+        accountIV?: string;
+        accountTag?: string;
         email?: string;
     };
     suspensionHistory?: Array<{
@@ -101,6 +110,8 @@ export interface IUser extends Document {
     flaggedAt?: Date;
     kycStatus: 'none' | 'pending' | 'verified' | 'rejected';
     trialUsed: boolean;
+    onboardingComplete: boolean;
+    onboardingStep: number;
     planLimits?: {
         maxProducts: number;
         maxStorageMb: number;
@@ -177,7 +188,7 @@ const UserSchema: Schema = new Schema({
     },
     plan: {
         type: String,
-        enum: ['free', 'creator', 'creator_pro'],
+        enum: ['free', 'starter', 'pro', 'business'],
         default: 'free',
         index: true,
     },
@@ -209,8 +220,10 @@ const UserSchema: Schema = new Schema({
     },
     payoutHoldReason: String,
     payoutMethod: {
-        type: String,
+        type: { type: String, enum: ['stripe', 'paypal', 'bank'], default: 'bank' },
         accountId: String,
+        accountIV: String,
+        accountTag: String,
         email: String
     },
     suspensionHistory: [{
@@ -284,7 +297,7 @@ const UserSchema: Schema = new Schema({
     // Tier Management & Subscription
     subscriptionTier: {
         type: String,
-        enum: ['free', 'creator', 'pro'],
+        enum: ['free', 'starter', 'pro', 'business'],
         default: 'free',
         index: true
     },
@@ -356,6 +369,15 @@ const UserSchema: Schema = new Schema({
     trialUsed: {
         type: Boolean,
         default: false
+    },
+    onboardingComplete: {
+        type: Boolean,
+        default: false,
+        index: true
+    },
+    onboardingStep: {
+        type: Number,
+        default: 1
     }
 }, { timestamps: true });
 

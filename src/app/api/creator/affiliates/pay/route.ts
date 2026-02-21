@@ -56,11 +56,11 @@ async function handler(req: NextRequest, user: any, context: any): Promise<any> 
         success: true,
         payout,
         affiliate: {
-            totalCommission: affiliate.totalCommission,
-            paidCommission: affiliate.paidCommission,
-            pendingCommission: affiliate.totalCommission - affiliate.paidCommission
+            totalCommission: Math.round(affiliate.totalCommission),
+            paidCommission: Math.round(affiliate.paidCommission),
+            pendingCommission: Math.round(affiliate.totalCommission - affiliate.paidCommission)
         },
-        message: `Paid ₹${amount} to affiliate`
+        message: `Paid ${amount} to affiliate`
     } as any;
 }
 

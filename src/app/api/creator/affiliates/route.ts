@@ -40,9 +40,9 @@ async function handler(req: NextRequest, user: any, context: any): Promise<any> 
         const stat = stats.find((s: any) => s._id?.toString() === aff._id?.toString());
         return {
             ...aff,
-            totalSales: stat?.totalSales || 0,
-            totalRevenue: stat?.totalRevenue || 0,
-            totalCommission: stat?.totalCommission || 0
+            totalSales: Number(stat?.totalSales || 0),
+            totalRevenue: Math.round(Number(stat?.totalRevenue || 0)),
+            totalCommission: Math.round(Number(stat?.totalCommission || 0))
         };
     });
 

@@ -1,8 +1,13 @@
 import { currentUser, auth } from "@clerk/nextjs/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import User, { IUser } from "@/lib/models/User";
+import { cache } from 'react';
 
-export async function getMongoUser(): Promise<IUser | null> {
+/**
+ * Optimized user fetcher with request-level caching.
+ * Prevents multiple MongoDB lookups in the same request.
+ */
+export const getMongoUser = cache(async (): Promise<IUser | null> => {
     try {
         const { userId } = await auth();
         if (!userId) return null;
@@ -39,4 +44,4 @@ export async function getMongoUser(): Promise<IUser | null> {
         console.error("Error fetching MongoDB user:", error);
         return null;
     }
-}
+});

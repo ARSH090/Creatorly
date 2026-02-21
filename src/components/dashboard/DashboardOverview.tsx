@@ -2,9 +2,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, TrendingDown, Users, ShoppingBag, Wallet, Eye, ArrowRight, Plus, Zap, Loader2 } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, ShoppingBag, Wallet, Eye, ArrowRight, Plus, Zap, Loader2, Globe } from "lucide-react";
 import Link from 'next/link';
 import { useUser, useAuth } from '@clerk/nextjs';
+import { motion } from 'framer-motion';
 
 import { WelcomeTour } from './WelcomeTour';
 import DMSection from './DMSection';
@@ -122,6 +123,12 @@ export default function DashboardOverview() {
 
                 <div className="flex flex-col md:flex-row items-center justify-between relative z-10 gap-6">
                     <div>
+                        <div className="flex items-center gap-2 mb-4">
+                            <div className={`w-2 h-2 rounded-full ${analytics?.store?.isLive ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`} />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
+                                {analytics?.store?.isLive ? 'Store Live' : 'Store Offline'}
+                            </span>
+                        </div>
                         <h2 className="text-3xl font-bold text-white mb-2">Welcome back, {user?.firstName || 'Creator'}! 👋</h2>
                         <p className="text-zinc-300 max-w-lg">
                             Your store earned <span className="text-white font-bold">₹{analytics?.revenue?.total || 0}</span>.
@@ -134,7 +141,9 @@ export default function DashboardOverview() {
                             <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">Balance</p>
                             <p className="text-3xl font-black text-white">₹{analytics?.revenue?.total || 0}</p>
                             <div className="flex justify-end gap-2 mt-2">
-                                <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded font-bold">Active</span>
+                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${analytics?.store?.isLive ? 'bg-emerald-500/20 text-green-400' : 'bg-zinc-500/20 text-zinc-400'}`}>
+                                    {analytics?.store?.isLive ? 'Active' : 'Inactive'}
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -167,41 +176,55 @@ export default function DashboardOverview() {
             {/* Usage & Quick Actions */}
             <div className="grid lg:grid-cols-2 gap-6">
                 {/* Usage Meters */}
-                <div className="bg-[#050505] rounded-3xl p-8 border border-white/5">
-                    <h3 className="text-lg font-bold text-white mb-6">Usage Limits</h3>
-                    <div className="space-y-8">
-                        <div className="space-y-3">
+                <div className="bg-[#050505] rounded-3xl p-8 border border-white/5 space-y-8">
+                    <h3 className="text-lg font-bold text-white">Usage Limits</h3>
+
+                    {[
+                        { label: 'AI Generations', used: analytics?.usage?.ai?.used, total: analytics?.usage?.ai?.total, percentage: analytics?.usage?.ai?.percentage, color: 'from-emerald-500 to-teal-500' },
+                        { label: 'Storage', used: `${analytics?.usage?.storage?.used}MB`, total: `${analytics?.usage?.storage?.total}MB`, percentage: analytics?.usage?.storage?.percentage, color: 'from-blue-500 to-indigo-500' },
+                        { label: 'Products', used: analytics?.usage?.products?.used, total: analytics?.usage?.products?.total, percentage: analytics?.usage?.products?.percentage, color: 'from-purple-500 to-pink-500' }
+                    ].map((meter, i) => (
+                        <div key={i} className="space-y-3">
                             <div className="flex justify-between items-end">
                                 <div>
-                                    <p className="text-xs font-bold text-zinc-500 uppercase tracking-widest mb-1">AI Generations</p>
+                                    <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">{meter.label}</p>
                                     <p className="text-sm font-bold text-white">
-                                        {analytics?.ai_credits?.remaining || 0} / {analytics?.ai_credits?.total || 10}
+                                        {meter.used} / {meter.total}
                                     </p>
                                 </div>
-                                <span className="text-xs font-bold text-emerald-400">
-                                    {Math.round(((analytics?.ai_credits?.remaining || 0) / (analytics?.ai_credits?.total || 10)) * 100)}%
+                                <span className="text-xs font-bold text-zinc-400">
+                                    {meter.percentage}%
                                 </span>
                             </div>
-                            <div className="w-full h-2 bg-zinc-900 rounded-full overflow-hidden border border-white/5">
-                                <div
-                                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500"
-                                    style={{ width: `${Math.min(100, Math.round(((analytics?.ai_credits?.remaining || 0) / (analytics?.ai_credits?.total || 10)) * 100))}%` }}
+                            <div className="w-full h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${Math.min(100, meter.percentage || 0)}%` }}
+                                    className={`h-full bg-gradient-to-r ${meter.color}`}
                                 />
                             </div>
                         </div>
-                    </div>
+                    ))}
                 </div>
 
                 <div className="bg-indigo-500/5 rounded-3xl p-8 border border-indigo-500/20">
                     <h3 className="text-lg font-bold text-white mb-6">Quick Actions</h3>
                     <div className="grid grid-cols-2 gap-4">
-                        <Link href="/dashboard/projects/new" className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all text-center">
-                            <Plus className="w-5 h-5 text-white mx-auto mb-2" />
-                            <span className="text-[10px] font-bold text-white uppercase tracking-widest">New Project</span>
+                        <Link href="/dashboard/projects/new" className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all text-center group">
+                            <Plus className="w-5 h-5 text-zinc-400 mx-auto mb-2 group-hover:text-white transition-colors" />
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest group-hover:text-white transition-colors">Add Product</span>
                         </Link>
-                        <Link href="/dashboard/billing" className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 hover:bg-indigo-500/20 transition-all text-center">
-                            <Zap className="w-5 h-5 text-indigo-400 mx-auto mb-2" />
+                        <Link href="/dashboard/billing" className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 hover:bg-indigo-500/20 transition-all text-center group">
+                            <Zap className="w-5 h-5 text-indigo-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />
                             <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Upgrade Plan</span>
+                        </Link>
+                        <Link href={`/u/${analytics?.store?.username}`} target="_blank" className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 hover:bg-zinc-900 transition-all text-center group">
+                            <Eye className="w-5 h-5 text-zinc-400 mx-auto mb-2 group-hover:text-white transition-colors" />
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest group-hover:text-white transition-colors">View Store</span>
+                        </Link>
+                        <Link href="/dashboard/domain" className="p-4 bg-zinc-900/50 rounded-2xl border border-white/5 hover:bg-zinc-900 transition-all text-center group">
+                            <Globe className="w-5 h-5 text-zinc-400 mx-auto mb-2 group-hover:text-white transition-colors" />
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest group-hover:text-white transition-colors">Custom Domain</span>
                         </Link>
                     </div>
                 </div>

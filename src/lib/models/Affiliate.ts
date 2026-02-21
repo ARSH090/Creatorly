@@ -46,14 +46,20 @@ const AffiliateSchema: Schema = new Schema({
     totalEarnings: {
         type: Number,
         default: 0,
+        min: 0,
+        set: Math.round
     },
     totalCommission: {
         type: Number,
         default: 0,
+        min: 0,
+        set: Math.round
     },
     paidCommission: {
         type: Number,
         default: 0,
+        min: 0,
+        set: Math.round
     },
     referrals: {
         type: Number,

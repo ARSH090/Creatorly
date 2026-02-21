@@ -32,10 +32,7 @@ async function handler(req: NextRequest, user: any) {
 
     return {
         orders,
-        stats: {
-            ...stats,
-            totalRevenue: Math.round(stats.totalRevenue * 100) / 100
-        }
+        stats
     };
 }
 

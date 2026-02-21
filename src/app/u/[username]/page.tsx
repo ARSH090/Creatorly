@@ -22,6 +22,8 @@ import TestimonialsSection from '@/components/storefront/TestimonialsSection';
 import FAQSection from '@/components/storefront/FAQSection';
 import { applyThemeToCSSVars, getGoogleFontsUrl } from '@/utils/theme.utils';
 import type { StorefrontTheme, ServiceButton, PublicLink } from '@/types/storefront.types';
+import { shouldDowngrade } from '@/lib/utils/tier-utils';
+import { TIER_LIMITS } from '@/lib/constants/tier-limits';
 
 // ─── ISR: revalidate every 60 seconds ─────────────────────────────────────────
 export const revalidate = 60;
@@ -129,8 +131,19 @@ export default async function CreatorStorefront({
     }
 
     const profile = await CreatorProfile.findOne({ creatorId: creator._id }).lean() as any;
+
+    // ── Enforce Product Limits ──
+    let effectiveTier = creator.subscriptionTier || 'free';
+    if (shouldDowngrade(creator.subscriptionStatus, creator.subscriptionEndAt)) {
+        effectiveTier = 'free';
+    }
+
+    const tierLimits = TIER_LIMITS[effectiveTier as keyof typeof TIER_LIMITS];
+    const productLimit = creator.planLimits?.maxProducts || tierLimits?.products || 1;
+
     const products = await ProductModel.find({ creatorId: creator._id, isActive: true, status: 'active' })
         .sort({ isFeatured: -1, createdAt: -1 })
+        .limit(productLimit === Infinity ? 0 : productLimit)
         .lean() as IProduct[];
 
     // ── Purchased products (for logged-in visitor) ──

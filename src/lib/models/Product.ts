@@ -95,8 +95,15 @@ const ProductSchema: Schema = new Schema({
     shortDescription: { type: String, maxlength: 300 },
 
     pricing: {
-        basePrice: { type: Number, required: true, min: 0 },
-        salePrice: { type: Number, min: 0 },
+        /**
+         * Price in the smallest currency unit (e.g., Paise for INR).
+         * Must be an integer to avoid float precision issues.
+         */
+        basePrice: { type: Number, required: true, min: 0, set: Math.round },
+        /**
+         * Sale price in the smallest currency unit.
+         */
+        salePrice: { type: Number, min: 0, set: Math.round },
         currency: { type: String, default: 'INR' },
         taxInclusive: { type: Boolean, default: false }
     },

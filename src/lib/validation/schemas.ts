@@ -44,3 +44,21 @@ export const UserUpdateSchema = z.object({
     avatar: z.string().url().optional(),
     bio: z.string().max(500).optional()
 });
+
+// Checkout Validation
+export const CheckoutSchema = z.object({
+    cart: z.array(z.object({
+        id: z.string(),
+        quantity: z.number().int().min(1),
+        variantId: z.string().optional(),
+        variantTitle: z.string().optional(),
+        price: z.number().optional(),
+        metadata: z.record(z.string(), z.any()).optional()
+    })).min(1),
+    customer: z.object({
+        email: z.string().email(),
+        name: z.string().min(1),
+        phone: z.string().optional()
+    }),
+    couponCode: z.string().optional().nullable()
+});

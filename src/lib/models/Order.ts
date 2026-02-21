@@ -94,12 +94,12 @@ const OrderSchema: Schema = new Schema({
         country: String
     },
 
-    // Amounts
-    amount: { type: Number, required: true }, // Subtotal
-    taxAmount: { type: Number, default: 0 },
-    discountAmount: { type: Number, default: 0 },
-    tipAmount: { type: Number, default: 0 },
-    total: { type: Number, required: true }, // Final amount
+    // Amounts (stored in the smallest currency unit, e.g., Paise)
+    amount: { type: Number, required: true, min: 0, set: Math.round }, // Subtotal
+    taxAmount: { type: Number, default: 0, min: 0, set: Math.round },
+    discountAmount: { type: Number, default: 0, min: 0, set: Math.round },
+    tipAmount: { type: Number, default: 0, min: 0, set: Math.round },
+    total: { type: Number, required: true, min: 0, set: Math.round }, // Final amount
     currency: { type: String, default: 'INR' },
 
     // Payment Info

@@ -5,6 +5,7 @@ import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
 import { Product } from '@/lib/models/Product';
 import { User } from '@/lib/models/User';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
+import { calculatePlatformFee } from '@/lib/utils/tier-utils';
 
 async function handler(req: NextRequest, user: any, context: any) {
     try {
@@ -21,41 +22,37 @@ async function handler(req: NextRequest, user: any, context: any) {
         const startOfToday = new Date(now.setHours(0, 0, 0, 0));
         const endOfToday = new Date(now.setHours(23, 59, 59, 999));
 
-        // Get User Data for profile photo
-        const userData = await User.findById(creatorId).select('avatar displayName');
-
-        // 2. Fetch Orders (Revenue)
-        const ordersData = await Order.find({
-            creatorId,
-            status: 'completed',
-            createdAt: { $gte: startOfToday, $lte: endOfToday }
-        });
+        // 2. Fetch Core Stats in parallel
+        const [ordersData, totalProducts, todayVisitors] = await Promise.all([
+            Order.find({
+                creatorId,
+                status: 'completed',
+                paidAt: { $gte: startOfToday, $lte: endOfToday }
+            }),
+            Product.countDocuments({ creatorId }),
+            AnalyticsEvent.countDocuments({
+                creatorId,
+                eventType: 'page_view',
+                createdAt: { $gte: startOfToday, $lte: endOfToday }
+            })
+        ]);
 
         const todayRevenue = ordersData.reduce((acc, order) => acc + (order.total || 0), 0);
 
-        // 3. Fetch Total Products
-        const totalProducts = await Product.countDocuments({ creatorId });
-
-        // 4. Fetch Visitors (Analytics Events)
-        const todayVisitors = await AnalyticsEvent.countDocuments({
-            creatorId,
-            eventType: 'page_view',
-            createdAt: { $gte: startOfToday, $lte: endOfToday }
-        });
-
-        // 5. Fetch Recent Orders
+        // 3. Fetch Recent Orders
         const recentOrdersData = await Order.find({ creatorId })
+            .select('razorpayOrderId amount createdAt customerEmail total')
             .sort({ createdAt: -1 })
             .limit(3);
 
         const recentOrders = recentOrdersData.map(order => ({
             id: order.razorpayOrderId || order._id.toString().slice(-8).toUpperCase(),
             customerEmail: order.customerEmail || 'Anonymous',
-            amount: order.amount,
+            amount: order.total || order.amount,
             time: formatTimeAgo(order.createdAt)
         }));
 
-        // 6. Calculate Yesterday's Stats for Comparison
+        // 4. Calculate Yesterday's Stats for Comparison
         const startOfYesterday = new Date(startOfToday.getTime() - 24 * 60 * 60 * 1000);
         const endOfYesterday = new Date(startOfToday.getTime() - 1);
 
@@ -63,7 +60,7 @@ async function handler(req: NextRequest, user: any, context: any) {
             Order.find({
                 creatorId,
                 status: 'completed',
-                createdAt: { $gte: startOfYesterday, $lte: endOfYesterday }
+                paidAt: { $gte: startOfYesterday, $lte: endOfYesterday }
             }),
             AnalyticsEvent.countDocuments({
                 creatorId,
@@ -74,31 +71,34 @@ async function handler(req: NextRequest, user: any, context: any) {
 
         const yesterdayRevenue = yesterdayOrders.reduce((acc, order) => acc + (order.total || 0), 0);
 
-        // 7. Calculate Percentage Changes
+        // 5. Calculate Percentage Changes
         const calculateChange = (current: number, previous: number) => {
             if (previous === 0) return current > 0 ? 100 : 0;
-            return Math.round(((current - previous) / previous) * 100);
+            return Math.min(1000, Math.round(((current - previous) / previous) * 100)); // Cap at 1000%
         };
 
         const revenueChange = calculateChange(todayRevenue, yesterdayRevenue);
         const visitorChange = calculateChange(todayVisitors, yesterdayVisitors);
 
-        // 8. Engagement Score Calculation (Proprietary algorithm)
-        // Factors: Traffic growth + Revenue velocity + Repeat customers
-        const uniqueEmails = await Order.distinct('customerEmail', { creatorId });
-        const totalOrders = await Order.countDocuments({ creatorId });
-        const repeatRate = totalOrders > 0 ? (uniqueEmails.length / totalOrders) : 0;
+        // 6. Metrics and Engagement
+        const [uniqueEmails, totalOrdersCount] = await Promise.all([
+            Order.distinct('customerEmail', { creatorId }),
+            Order.countDocuments({ creatorId })
+        ]);
+        const repeatRate = totalOrdersCount > 0 ? (uniqueEmails.length / totalOrdersCount) : 0;
 
-        const pendingPayout = todayRevenue * 0.95; // 5% platform fee
+        const pendingPayoutResult = calculatePlatformFee(todayRevenue, user.subscriptionTier || 'free');
+        const pendingPayout = pendingPayoutResult.creatorPayout;
+
         const engagementScore = Math.min(100, Math.round(
             (todayRevenue / 1000) * 40 +
             (todayVisitors / 50) * 30 +
             (repeatRate * 30)
         ));
 
-        // 9. Calculate Bounce Rate (sessions with 1 page view)
+        // 7. Session Stats (Bounce Rate)
         const sessionStats = await AnalyticsEvent.aggregate([
-            { $match: { creatorId, eventType: 'page_view' } },
+            { $match: { creatorId, eventType: 'page_view', createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } },
             { $group: { _id: '$sessionId', count: { $sum: 1 } } },
             {
                 $group: {
@@ -113,17 +113,14 @@ async function handler(req: NextRequest, user: any, context: any) {
             ? Math.round((sessionStats[0].bouncedSessions / sessionStats[0].totalSessions) * 100)
             : 0;
 
+        // 8. Storage Usage Aggregation
+        const storageAgg = await Product.aggregate([
+            { $match: { creatorId } },
+            { $unwind: { path: '$files', preserveNullAndEmptyArrays: true } },
+            { $group: { _id: null, totalSize: { $sum: '$files.size' } } }
+        ]);
 
-
-        // 6. Calculate Storage Usage
-        const products = await Product.find({ creatorId });
-        let totalStorageBytes = 0;
-        products.forEach(p => {
-            p.files?.forEach(f => {
-                totalStorageBytes += (f.size || 0);
-            });
-        });
-        const storageUsageMb = Math.round(totalStorageBytes / (1024 * 1024));
+        const storageUsageMb = Math.round((storageAgg[0]?.totalSize || 0) / (1024 * 1024));
 
         return NextResponse.json({
             todayRevenue,
@@ -137,8 +134,8 @@ async function handler(req: NextRequest, user: any, context: any) {
             recentOrders,
             engagementScore,
             profile: {
-                avatar: userData?.avatar || user.imageUrl,
-                displayName: userData?.displayName || user.fullName
+                avatar: user.avatar || user.imageUrl,
+                displayName: user.displayName || user.fullName
             },
 
             usage: {

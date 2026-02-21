@@ -40,7 +40,7 @@ export function isBlockedEmailDomain(email: string): boolean {
  */
 export function calculatePlatformFee(
     amountPaise: number,
-    tier: 'free' | 'creator' | 'pro'
+    tier: 'free' | 'starter' | 'pro' | 'business'
 ): { grossAmount: number; platformFee: number; creatorPayout: number; feePercent: number } {
     let feePercent: number;
 
@@ -48,10 +48,13 @@ export function calculatePlatformFee(
         case 'free':
             feePercent = 10;
             break;
-        case 'creator':
-            feePercent = 2;
+        case 'starter':
+            feePercent = 5;
             break;
         case 'pro':
+            feePercent = 2;
+            break;
+        case 'business':
             feePercent = 0;
             break;
         default:
@@ -136,9 +139,9 @@ export function shouldDowngrade(
     }
 
     if (subscriptionStatus === 'active' && subscriptionEndAt) {
-        // Grace period: 24 hours after expiry
+        // Grace period: 3 days per business requirements
         const gracePeriodEnd = new Date(subscriptionEndAt);
-        gracePeriodEnd.setHours(gracePeriodEnd.getHours() + 24);
+        gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 3);
         return new Date() > gracePeriodEnd;
     }
 

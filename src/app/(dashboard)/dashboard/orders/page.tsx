@@ -2,9 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    Search, Filter, ShoppingBag, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, Eye, User, Mail, Calendar, FileText, Download, X, Save
+    Search, Filter, ShoppingBag, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, Eye, User, Mail, Calendar, FileText, Download, X, Save, Share
 } from 'lucide-react';
 import { useAuth } from '@clerk/nextjs';
+import { generateCSV, downloadCSV } from '@/lib/utils/export-utils';
 
 export default function OrdersPage() {
     const { isLoaded, isSignedIn, getToken } = useAuth();
@@ -141,6 +142,22 @@ export default function OrdersPage() {
                         <option value="failed">Failed</option>
                         <option value="refunded">Refunded</option>
                     </select>
+                    <button
+                        onClick={() => {
+                            const csv = generateCSV(orders, [
+                                { header: 'Order ID', key: '_id' },
+                                { header: 'Customer', key: 'customerEmail' },
+                                { header: 'Amount', key: 'total' },
+                                { header: 'Status', key: 'status' },
+                                { header: 'Date', key: 'createdAt' }
+                            ]);
+                            downloadCSV(csv, `orders-${new Date().toISOString().split('T')[0]}.csv`);
+                        }}
+                        className="bg-zinc-900/50 border border-white/5 rounded-2xl px-6 py-3 text-sm font-bold text-white hover:bg-white/5 transition-all flex items-center gap-2"
+                    >
+                        <Download className="w-4 h-4 text-zinc-500" />
+                        Export
+                    </button>
                 </div>
             </div>
 

@@ -24,31 +24,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     // Fetch dashboard data
     useEffect(() => {
         const fetchDashboardData = async () => {
-            if (!user) return; // Wait for user
+            if (!user) return;
             try {
-                // Get Clerk token
-                const token = await getToken();
-                if (!token) return;
-
-                const res = await fetch('/api/creator/analytics', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
+                const res = await fetch('/api/v1/dashboard/summary');
                 const data = await res.json();
 
                 if (data.error) throw new Error(data.error);
 
                 setStats({
-                    productsCount: data.totalProducts,
-                    pendingOrders: 0,
-                    pendingPayout: (data.pendingPayout || 0).toLocaleString('en-IN'),
-                    todayRevenue: (data.todayRevenue || 0).toLocaleString('en-IN'),
-                    todayVisitors: data.todayVisitors,
-                    profile: data.profile
+                    todayRevenue: (data.revenue?.today || 0).toLocaleString('en-IN'),
+                    todayVisitors: data.leads?.new_today || 0,
+                    isLive: data.store?.isLive,
+                    username: data.store?.username,
+                    subscription: data.subscription,
+                    profile: {
+                        displayName: user.fullName,
+                        avatar: user.imageUrl
+                    }
                 });
-
-                setNotifications([]); // No unread notifications by default for launch
             } catch (error) {
                 console.error('Failed to fetch dashboard data:', error);
             }
@@ -58,18 +51,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }, [user]);
 
     const navigation = [
-        { name: 'Overview', icon: LayoutDashboard, href: '/dashboard', badge: null },
+        { name: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
         { name: 'My Profile', icon: User, href: '/dashboard/profile' },
         { name: 'Storefront', icon: Sparkles, href: '/dashboard/storefront' },
-        { name: 'Custom Domain', icon: Globe, href: '/dashboard/domain' },
+        { name: 'Custom Domain', icon: Globe, href: '/dashboard/domain', featureCode: 'customDomain' },
         { name: 'Billing', icon: CreditCard, href: '/dashboard/billing' },
-        { name: 'Projects', icon: Folder, href: '/dashboard/projects', badge: stats?.productsCount },
-        { name: 'Orders', icon: ShoppingCart, href: '/dashboard/orders', badge: stats?.pendingOrders },
-        { name: 'Analytics', icon: TrendingUp, href: '/dashboard/analytics' },
-        { name: 'Leads', icon: Users, href: '/dashboard/leads' },
-        { name: 'Marketing', icon: Mail, href: '/dashboard/email/campaigns' },
-        { name: 'AutoDM Hub', icon: Zap, href: '/autodm' },
-        { name: 'Team', icon: Users, href: '/dashboard/team' },
+        { name: 'Projects', icon: Folder, href: '/dashboard/projects' },
+        { name: 'Orders', icon: ShoppingCart, href: '/dashboard/orders' },
+        { name: 'Analytics', icon: TrendingUp, href: '/dashboard/analytics', featureCode: 'analytics' },
+        { name: 'Marketing', icon: Mail, href: '/dashboard/email', featureCode: 'marketing' },
+        { name: 'AutoDM Hub', icon: Zap, href: '/dashboard/automation', featureCode: 'automation' },
+        { name: 'Team', icon: Users, href: '/dashboard/team', featureCode: 'teamMembers' },
         { name: 'Settings', icon: Settings, href: '/dashboard/settings' },
         { name: 'Support', icon: LifeBuoy, href: '/dashboard/support' },
     ];
@@ -104,8 +96,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             {/* Quick Stats - Desktop Only */}
                             <div className="hidden md:flex items-center gap-6 ml-8 pl-8 border-l border-white/5">
                                 <div className="flex items-center gap-2">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">Store Live</span>
+                                    <div className={`w-2 h-2 rounded-full ${stats?.isLive ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`} />
+                                    <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">
+                                        {stats?.isLive ? 'Store Live' : 'Store Offline'}
+                                    </span>
                                 </div>
 
                                 {stats && (
@@ -163,20 +157,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
             </header>
 
+            {/* Trial Banner */}
+            {stats?.subscription?.status === 'trialing' && (
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-2.5 px-4 flex items-center justify-between shadow-lg shadow-indigo-500/10">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white/20 p-1.5 rounded-lg">
+                            <Zap className="w-3.5 h-3.5 text-white fill-white" />
+                        </div>
+                        <p className="text-[11px] font-black text-white uppercase tracking-widest italic">
+                            Trial active: {Math.max(0, Math.ceil((new Date(stats.subscription.expiresAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))} days remaining
+                        </p>
+                    </div>
+                    <Link href="/dashboard/billing" className="bg-white text-indigo-600 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-white/90 transition-all shadow-md">
+                        Upgrade Now
+                    </Link>
+                </div>
+            )}
+
             <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
                 {/* Sidebar - Desktop */}
                 <aside className="hidden lg:flex w-64 flex-col border-r border-white/5 bg-[#050505] overflow-y-auto">
                     <nav className="p-4 space-y-1 flex-1">
                         {navigation.map((item) => {
                             const isActive = pathname === item.href;
+                            const isLocked = item.featureCode && stats?.subscription && (
+                                (item.featureCode === 'customDomain' && !stats.subscription.tier?.includes('business')) ||
+                                (item.featureCode === 'teamMembers' && stats.subscription.tier === 'free')
+                            );
+
                             return (
                                 <Link
                                     key={item.name}
-                                    href={item.href}
+                                    href={isLocked ? '/dashboard/billing' : item.href}
                                     className={`flex items-center justify-between p-3 rounded-xl transition-all group ${isActive
                                         ? 'bg-indigo-500/10 text-white border border-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.1)]'
                                         : 'text-zinc-500 hover:text-white hover:bg-white/5'
-                                        }`}
+                                        } ${isLocked ? 'opacity-60 grayscale-[0.5]' : ''}`}
                                 >
                                     <div className="flex items-center gap-3">
                                         <item.icon className={`w-5 h-5 ${isActive ? 'text-indigo-400' : 'text-zinc-600 group-hover:text-zinc-400'}`} />
@@ -184,14 +200,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                     </div>
 
                                     <div className="flex items-center gap-2">
-                                        {item.badge && (
-                                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded-md ${isActive
-                                                ? 'bg-indigo-500 text-white'
-                                                : 'bg-zinc-800 text-zinc-400 group-hover:bg-zinc-700'
-                                                }`}>
-                                                {item.badge}
-                                            </span>
-                                        )}
+                                        {isLocked && <Zap className="w-3 h-3 text-indigo-500" />}
                                     </div>
                                 </Link>
                             );

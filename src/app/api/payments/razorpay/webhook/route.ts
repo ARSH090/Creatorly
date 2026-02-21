@@ -381,44 +381,63 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ status: 'failure_logged' });
         }
 
-        // 9. Subscription Authenticated (Active) - TIER UPGRADE
-        if (eventType === 'subscription.authenticated') {
+        // 9. Subscription Activated/Authenticated - TIER UPGRADE
+        if (eventType === 'subscription.activated' || eventType === 'subscription.authenticated' || eventType === 'subscription.resumed') {
             const subId = payload.subscription.entity.id;
             const sub = await Subscription.findOne({ razorpaySubscriptionId: subId });
+            const userEntity = sub ? await User.findById(sub.userId) : null;
 
-            if (sub) {
+            if (sub && userEntity) {
                 sub.status = 'active';
-                sub.startDate = new Date();
+                sub.startDate = sub.startDate || new Date();
                 await sub.save();
 
                 // TIER UPGRADE LOGIC (Platform Plans Only)
-                // Distinct from Creator Membership Products (which have a productId)
                 if (sub.planId) {
                     const { Plan } = await import('@/lib/models/Plan');
                     const platformPlan = await Plan.findById(sub.planId);
 
                     if (platformPlan) {
-                        const tier = platformPlan.tier || (platformPlan.name.toLowerCase().includes('pro') ? 'pro' : 'creator');
+                        const tier = platformPlan.tier || 'starter';
                         await User.findByIdAndUpdate(sub.userId, {
                             subscriptionTier: tier,
                             subscriptionStatus: 'active',
-                            subscriptionStartAt: new Date(),
+                            subscriptionStartAt: sub.startDate,
                             subscriptionEndAt: sub.endDate,
-                            plan: tier // Support for legacy plan field
+                            plan: tier
                         });
-                        log.info(`Subscription ${subId} authenticated - Platform TIER upgraded to ${tier}`);
+                        log.info(`Subscription ${subId} active - Platform TIER upgraded to ${tier}`);
                     }
-                } else if (sub.productId) {
-                    // This is a creator-level product membership
-                    // No platform-tier upgrade, just mark subscription as active
-                    log.info(`Membership Product authenticated for sub ${subId} - Product ID: ${sub.productId}`);
-
-                    // Optional: Link to User model's activeSubscriptions if we start tracking multiple
                 }
             } else {
-                log.warn(`Subscription ${subId} not found for authentication`);
+                log.warn(`Subscription ${subId} or user not found for activation`);
             }
             return NextResponse.json({ status: 'subscription_activated' });
+        }
+
+        // 9.5 Subscription Pending/Paused
+        if (eventType === 'subscription.pending' || eventType === 'subscription.paused') {
+            const subId = payload.subscription.entity.id;
+            await Subscription.findOneAndUpdate(
+                { razorpaySubscriptionId: subId },
+                { status: eventType === 'subscription.pending' ? 'pending' : 'trialing' }
+            );
+            return NextResponse.json({ status: 'subscription_state_updated' });
+        }
+
+        // 9.6 Subscription Halted (Payment Failed after retries)
+        if (eventType === 'subscription.halted') {
+            const subId = payload.subscription.entity.id;
+            const sub = await Subscription.findOne({ razorpaySubscriptionId: subId });
+            if (sub && sub.planId) {
+                await Subscription.findByIdAndUpdate(sub._id, { status: 'halted' });
+                await User.findByIdAndUpdate(sub.userId, {
+                    subscriptionTier: 'free',
+                    subscriptionStatus: 'expired' // Effectively expired due to non-payment
+                });
+                log.warn(`Subscription ${subId} HALTED - User downgraded to FREE`);
+            }
+            return NextResponse.json({ status: 'subscription_halted' });
         }
 
         // 10. Subscription Charged (Renewal or First Payment)

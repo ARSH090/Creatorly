@@ -18,12 +18,16 @@ export interface IPlan extends Document {
     maxApiCalls: number;
     rateLimitPerMin: number;
 
-    // Feature Flags
     hasAnalytics: boolean;
     hasPrioritySupport: boolean;
     hasCustomDomain: boolean;
     hasTeamCollaboration: boolean;
     hasWebhooks: boolean;
+    features: Array<{
+        name: string;
+        included: boolean;
+        value?: string;
+    }>;
 
     // Metadata
     isActive: boolean;
@@ -170,6 +174,11 @@ const PlanSchema: Schema = new Schema({
             message: 'Free tier cannot have webhooks.'
         }
     },
+    features: [{
+        name: { type: String, required: true },
+        included: { type: Boolean, default: true },
+        value: { type: String }
+    }],
 
     isActive: { type: Boolean, default: true, index: true },
     isVisible: { type: Boolean, default: true, index: true },

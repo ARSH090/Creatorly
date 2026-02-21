@@ -8,6 +8,7 @@ import { Invoice } from '@/lib/models/Invoice';
 import { WebhookEventLog } from '@/lib/models/WebhookEventLog';
 import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
+import { Plan } from '@/lib/models/Plan';
 
 export async function POST(req: NextRequest) {
     try {
@@ -53,16 +54,26 @@ export async function POST(req: NextRequest) {
                 const subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
 
                 if (subscription) {
+                    const plan = await Plan.findById(subscription.planId);
+
                     subscription.status = 'active';
                     subscription.razorpayCustomerId = subData.customer_id;
                     subscription.startDate = new Date(subData.start_at * 1000);
                     subscription.endDate = new Date(subData.end_at * 1000);
                     await subscription.save();
 
-                    await User.findByIdAndUpdate(subscription.userId, {
-                        subscriptionStatus: 'active',
-                        subscriptionTier: 'pro'
-                    });
+                    const updateData: any = {
+                        subscriptionStatus: 'active'
+                    };
+
+                    if (plan) {
+                        updateData.subscriptionTier = plan.tier;
+                        // For non-trials, or when trial activates, ensure limits are set
+                        updateData.planLimits = plan.limits;
+                    }
+
+                    await User.findByIdAndUpdate(subscription.userId, updateData);
+                    console.log(`[RAZORPAY WEBHOOK] Subscription activated for user ${subscription.userId}. Tier: ${plan?.tier || 'unknown'}`);
                 }
                 break;
             }
@@ -99,10 +110,27 @@ export async function POST(req: NextRequest) {
                         issuedAt: new Date()
                     });
 
-                    await User.findByIdAndUpdate(subscription.userId, {
-                        subscriptionStatus: 'active',
-                        subscriptionEndAt: subscription.endDate
-                    });
+                    const user = await User.findById(subscription.userId);
+                    if (user) {
+                        const updateData: any = {
+                            subscriptionStatus: 'active',
+                            subscriptionEndAt: subscription.endDate
+                        };
+
+                        // If converting from trial, unlock full limits
+                        if (user.subscriptionStatus === 'trialing' || !user.planLimits) {
+                            const planId = subscription.planId || user.activeSubscription?.planId;
+                            const plan = await Plan.findById(planId);
+                            if (plan) {
+                                updateData.planLimits = plan.limits; // Provision full limits
+                                updateData.subscriptionTier = plan.tier;
+                                updateData.trialUsed = true;
+                                console.log(`[RAZORPAY WEBHOOK] Trial converted to paid for user ${user._id}. Tier: ${plan.tier}`);
+                            }
+                        }
+
+                        await User.findByIdAndUpdate(subscription.userId, updateData);
+                    }
                 }
                 break;
             }

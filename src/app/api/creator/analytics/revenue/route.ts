@@ -56,7 +56,7 @@ async function handler(req: NextRequest, user: any) {
             $project: {
                 _id: 0,
                 date: '$_id',
-                revenue: { $round: ['$revenue', 2] },
+                revenue: 1,
                 orders: 1
             }
         }

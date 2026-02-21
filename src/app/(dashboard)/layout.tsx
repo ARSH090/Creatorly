@@ -1,5 +1,5 @@
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import SubscriptionGuard from '@/components/SubscriptionGuard';
 
 export default function DashboardRootLayout({
     children,
@@ -7,8 +7,8 @@ export default function DashboardRootLayout({
     children: React.ReactNode;
 }) {
     return (
-        <ProtectedRoute>
+        <SubscriptionGuard>
             <DashboardLayout>{children}</DashboardLayout>
-        </ProtectedRoute>
+        </SubscriptionGuard>
     );
 }

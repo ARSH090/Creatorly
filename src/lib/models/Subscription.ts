@@ -12,10 +12,11 @@ export interface ISubscription extends Document {
     finalPrice: number;
 
     billingPeriod: 'monthly' | 'yearly';
+    cycle?: 'monthly' | 'yearly'; // Unified terminology
     startDate: Date;
     endDate: Date;
     trialEndsAt?: Date;
-    status: 'active' | 'canceled' | 'expired' | 'past_due' | 'pending' | 'trialing';
+    status: 'created' | 'authenticated' | 'active' | 'pending' | 'halted' | 'canceled' | 'completed' | 'expired' | 'trialing';
     autoRenew: boolean;
     cancelAtPeriodEnd: boolean;
     autopayEnabled: boolean;
@@ -66,6 +67,10 @@ const SubscriptionSchema: Schema = new Schema({
         enum: ['monthly', 'yearly'],
         required: true
     },
+    cycle: {
+        type: String,
+        enum: ['monthly', 'yearly']
+    },
     startDate: { type: Date, default: Date.now },
     endDate: {
         type: Date,
@@ -79,8 +84,8 @@ const SubscriptionSchema: Schema = new Schema({
     },
     status: {
         type: String,
-        enum: ['active', 'canceled', 'expired', 'past_due', 'pending', 'trialing'],
-        default: 'active',
+        enum: ['created', 'authenticated', 'active', 'pending', 'halted', 'canceled', 'completed', 'expired', 'trialing'],
+        default: 'pending',
         index: true
     },
     autoRenew: { type: Boolean, default: true },

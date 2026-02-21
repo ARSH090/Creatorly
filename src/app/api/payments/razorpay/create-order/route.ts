@@ -9,16 +9,23 @@ import Coupon from '@/lib/models/Coupon';
 
 import { Affiliate } from '@/lib/models/Affiliate';
 
+import { CheckoutSchema } from '@/lib/validation/schemas';
+
 export async function POST(req: NextRequest) {
     try {
         await connectToDatabase();
-        const { cart, customer, couponCode } = await req.json();
+        const body = await req.json();
 
-        // ... existing cart validation ...
-
-        if (!cart || cart.length === 0) {
-            return NextResponse.json({ error: 'Cart is empty' }, { status: 400 });
+        // Validate request body
+        const validation = CheckoutSchema.safeParse(body);
+        if (!validation.success) {
+            return NextResponse.json({
+                error: 'Validation failed',
+                details: validation.error.issues
+            }, { status: 400 });
         }
+
+        const { cart, customer, couponCode } = validation.data;
 
         // 1. Calculate Total & Validate Items
         const user = await getCurrentUser();

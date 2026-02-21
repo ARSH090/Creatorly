@@ -39,6 +39,50 @@ async function getHandler(req: NextRequest, user: any, context: any) {
     };
 }
 
+import { z } from 'zod';
+
+const profileUpdateSchema = z.object({
+    displayName: z.string().min(1).max(50).optional(),
+    bio: z.string().max(500).optional(),
+    avatar: z.string().url().optional().or(z.literal('')),
+    storeSlug: z.string().regex(/^[a-z0-9-]+$/).min(3).max(30).optional(),
+    theme: z.object({
+        primaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).optional(),
+        secondaryColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).optional(),
+        accentColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).optional(),
+        backgroundColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).optional(),
+        textColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).optional(),
+        fontFamily: z.string().optional(),
+        borderRadius: z.string().optional(),
+        buttonStyle: z.enum(['pill', 'square', 'rounded']).optional(),
+    }).optional(),
+    layout: z.array(z.object({
+        id: z.string(),
+        type: z.string(),
+        enabled: z.boolean().optional(),
+        order: z.number().optional()
+    })).optional(),
+    links: z.array(z.object({
+        id: z.string(),
+        title: z.string(),
+        url: z.string().url(),
+        thumbnail: z.string().url().optional().or(z.literal('')),
+        isActive: z.boolean().optional(),
+        order: z.number().optional()
+    })).optional(),
+    socialLinks: z.object({
+        instagram: z.string().optional(),
+        twitter: z.string().optional(),
+        youtube: z.string().optional(),
+        tiktok: z.string().optional(),
+        linkedin: z.string().optional(),
+        website: z.string().url().optional().or(z.literal('')),
+    }).optional(),
+    customDomain: z.string().regex(/^[a-z0-9.-]+\.[a-z]{2,}$/).optional().or(z.literal('')),
+    testimonials: z.array(z.any()).optional(),
+    faqs: z.array(z.any()).optional()
+});
+
 /**
  * PATCH /api/creator/profile
  * Update creator profile and storefront
@@ -47,11 +91,18 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
     const body = await req.json();
+
+    // Validate request body
+    const validation = profileUpdateSchema.safeParse(body);
+    if (!validation.success) {
+        throw new Error(`Validation Error: ${validation.error.issues[0].message} at ${validation.error.issues[0].path.join('.')}`);
+    }
+
     const {
         displayName, bio, avatar, storeSlug,
         theme, layout, links, socialLinks, customDomain,
         testimonials, faqs
-    } = body;
+    } = validation.data;
 
     const userUpdates: any = {};
     if (displayName) userUpdates.displayName = displayName;

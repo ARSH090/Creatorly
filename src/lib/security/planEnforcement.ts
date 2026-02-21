@@ -22,9 +22,9 @@ export async function checkAutomationEligibility(user: IUser): Promise<{ allowed
     // 3. Define Limits by Tier
     const limits = {
         [PlanTier.FREE]: 0,
-        [PlanTier.BASIC]: 5,
-        [PlanTier.PRO]: 50,
-        [PlanTier.ENTERPRISE]: 1000
+        [PlanTier.STARTER]: 10,
+        [PlanTier.PRO]: 100,
+        [PlanTier.BUSINESS]: Infinity
     };
 
     const maxRules = limits[tier as PlanTier] || 0;

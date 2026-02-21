@@ -1,8 +1,8 @@
 export enum PlanTier {
     FREE = 'free',
-    BASIC = 'basic',
+    STARTER = 'starter',
     PRO = 'pro',
-    ENTERPRISE = 'enterprise'
+    BUSINESS = 'business'
 }
 
 export enum BillingPeriod {

@@ -1,12 +1,14 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-// Define protected routes
 const isProtectedRoute = createRouteMatcher([
     '/dashboard(.*)',
     '/admin(.*)',
     '/onboarding(.*)',
-    '/api/user(.*)'
+    '/api/user(.*)',
+    '/api/creator(.*)',
+    '/api/payments(.*)',
+    '/api/admin(.*)'
 ]);
 
 // Define auth routes (to redirect if logged in)
@@ -98,7 +100,7 @@ export default clerkMiddleware(async (auth, req) => {
         'admin', 'dashboard', 'api', 'auth', 'onboarding', 'u', 'cart',
         'checkout', 'pricing', 'setup', 'explore', 'login', 'account',
         'subscribe', 'pricing', 'sso-callback', 'robots.txt', 'sitemap.xml',
-        'favicon.ico', 'icon.png', 'apple-icon.png', 'privacy', 'terms'
+        'favicon.ico', 'icon.png', 'apple-icon.png', 'privacy', 'terms', 'onboarding'
     ];
 
     const firstSegment = pathname.split('/')[1];

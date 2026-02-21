@@ -21,11 +21,13 @@
 - ✅ Corrected UTM and Referrer tracking pipelines
 - ✅ Fixed conversion funnel aggregation logic
 - ✅ Implemented MRR and period-over-period growth metrics
+- ✅ Added Bounce Rate and advanced session diagnostics
 - ✅ Created Lead Export functionality (CSV)
 
 ### Phase 15: Email Marketing & Automation
 - ✅ Implemented email sequence engine (processor & worker)
 - ✅ Added abandoned cart sequence triggers
+- ✅ Implemented Variable Interpolation ({{name}}) and Broadcast Campaigns
 - ✅ Integrated Resend webhooks for email analytics
 - ✅ Optimized global background job polling
 

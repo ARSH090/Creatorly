@@ -38,17 +38,22 @@ export async function GET(req: NextRequest) {
         // 2. Calculate if missing
         if (!revenueData) {
             // Calculate Revenue
-            // Today
-            const todayStart = startOfDay(new Date());
-            const monthStart = subDays(new Date(), 30);
+            const now = new Date();
+            const todayStart = startOfDay(now);
+            const thirtyDaysAgo = subDays(now, 30);
+            const sixtyDaysAgo = subDays(now, 60);
 
-            const [revenueToday, revenueMonth, revenueLifetime] = await Promise.all([
+            const [revenueToday, revenueMonth, revenuePrevMonth, revenueLifetime] = await Promise.all([
                 Order.aggregate([
                     { $match: { creatorId: user._id, status: 'completed', createdAt: { $gte: todayStart } } },
                     { $group: { _id: null, total: { $sum: '$amount' } } }
                 ]),
                 Order.aggregate([
-                    { $match: { creatorId: user._id, status: 'completed', createdAt: { $gte: monthStart } } },
+                    { $match: { creatorId: user._id, status: 'completed', createdAt: { $gte: thirtyDaysAgo } } },
+                    { $group: { _id: null, total: { $sum: '$amount' } } }
+                ]),
+                Order.aggregate([
+                    { $match: { creatorId: user._id, status: 'completed', createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } } },
                     { $group: { _id: null, total: { $sum: '$amount' } } }
                 ]),
                 Order.aggregate([
@@ -57,10 +62,21 @@ export async function GET(req: NextRequest) {
                 ])
             ]);
 
+            const currentMonthTotal = revenueMonth[0]?.total || 0;
+            const prevMonthTotal = revenuePrevMonth[0]?.total || 0;
+
+            let trend = 0;
+            if (prevMonthTotal > 0) {
+                trend = Math.round(((currentMonthTotal - prevMonthTotal) / prevMonthTotal) * 100);
+            } else if (currentMonthTotal > 0) {
+                trend = 100;
+            }
+
             revenueData = {
                 today: revenueToday[0]?.total || 0,
-                month: revenueMonth[0]?.total || 0,
-                lifetime: revenueLifetime[0]?.total || 0
+                month: currentMonthTotal,
+                lifetime: revenueLifetime[0]?.total || 0,
+                trend: trend
             };
 
             // Cache it (60 seconds)
@@ -76,13 +92,29 @@ export async function GET(req: NextRequest) {
 
         if (!leadsData) {
             // Calculate Leads
-            const totalLeads = await Lead.countDocuments({ creatorId: user._id });
-            const todayLeads = await Lead.countDocuments({ creatorId: user._id, createdAt: { $gte: startOfDay(new Date()) } });
+            const now = new Date();
+            const thirtyDaysAgo = subDays(now, 30);
+            const sixtyDaysAgo = subDays(now, 60);
+
+            const [totalLeads, todayLeads, monthLeads, prevMonthLeads] = await Promise.all([
+                Lead.countDocuments({ creatorId: user._id }),
+                Lead.countDocuments({ creatorId: user._id, createdAt: { $gte: startOfDay(now) } }),
+                Lead.countDocuments({ creatorId: user._id, createdAt: { $gte: thirtyDaysAgo } }),
+                Lead.countDocuments({ creatorId: user._id, createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo } })
+            ]);
+
+            let trend = 0;
+            if (prevMonthLeads > 0) {
+                trend = Math.round(((monthLeads - prevMonthLeads) / prevMonthLeads) * 100);
+            } else if (monthLeads > 0) {
+                trend = 100;
+            }
 
             leadsData = {
                 total: totalLeads,
                 new_today: todayLeads,
-                converted: 0 // Logic for conversion needed (e.g. leads that have matching email in Orders)
+                trend: trend,
+                converted: 0 // Placeholder
             };
 
             await DashboardMetricCache.findOneAndUpdate(
@@ -95,18 +127,57 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        // AI Credits - usually real-time from User model or separate ledger
-        // Assuming stored on User or Subscription model
-        const aiCredits = {
-            remaining: user.aiCredits || 0, // Assuming field exists
-            consumed: 0 // Need usage log for this
+        // Fetch Creator Profile for Store Status
+        const CreatorProfile = (await import('@/lib/models/CreatorProfile')).default;
+        const profile = await CreatorProfile.findOne({ creatorId: user._id });
+
+        // Storage & Usage Limits
+        const limits = user.planLimits || {
+            maxProducts: 3,
+            maxStorageMb: 100,
+            maxAiGenerations: 10
+        };
+
+        const Product = (await import('@/lib/models/Product')).default;
+        const productCount = await Product.countDocuments({ creatorId: user._id });
+
+        const usage = {
+            ai: {
+                used: user.aiUsageCount || 0,
+                total: limits.maxAiGenerations,
+                percentage: Math.round(((user.aiUsageCount || 0) / limits.maxAiGenerations) * 100)
+            },
+            storage: {
+                used: user.storageUsageMb || 0,
+                total: limits.maxStorageMb,
+                percentage: Math.round(((user.storageUsageMb || 0) / limits.maxStorageMb) * 100)
+            },
+            products: {
+                used: productCount,
+                total: limits.maxProducts,
+                percentage: Math.round((productCount / limits.maxProducts) * 100)
+            }
         };
 
         return NextResponse.json({
             revenue: revenueData,
             leads: leadsData,
-            ai_credits: aiCredits,
-            performance: { trend: 'stable' } // Placeholder
+            ai_credits: {
+                remaining: Math.max(0, limits.maxAiGenerations - (user.aiUsageCount || 0)),
+                total: limits.maxAiGenerations
+            },
+            usage,
+            store: {
+                isLive: profile?.features?.storefrontEnabled && user.status === 'active',
+                status: (profile?.features?.storefrontEnabled && user.status === 'active') ? 'Live' : 'Offline',
+                username: user.username
+            },
+            subscription: {
+                status: user.subscriptionStatus,
+                tier: user.subscriptionTier,
+                expiresAt: user.subscriptionEndAt
+            },
+            performance: { trend: 'stable' }
         });
 
     } catch (error: any) {

@@ -5,21 +5,21 @@ import { PlanTier } from '../lib/models/plan.types';
 describe('Subscription Logic Validation', () => {
     it('should prevent converting free plan to paid when subscribers exist', async () => {
         const oldPlan = { tier: PlanTier.FREE, monthlyPrice: 0 };
-        const newPlan = { tier: PlanTier.BASIC, monthlyPrice: 199 };
+        const newPlan = { tier: PlanTier.STARTER, monthlyPrice: 199 };
 
         await expect(validatePriceChange(oldPlan, newPlan, 1)).rejects.toThrow('Cannot convert free plan to paid');
     });
 
     it('should prevent price increase > 10% when active subscribers exist', async () => {
-        const oldPlan = { tier: PlanTier.BASIC, monthlyPrice: 100 };
-        const newPlan = { tier: PlanTier.BASIC, monthlyPrice: 111 }; // 11% increase
+        const oldPlan = { tier: PlanTier.STARTER, monthlyPrice: 100 };
+        const newPlan = { tier: PlanTier.STARTER, monthlyPrice: 111 }; // 11% increase
 
         await expect(validatePriceChange(oldPlan, newPlan, 5)).rejects.toThrow('Price increase limited to 10%');
     });
 
     it('should allow price increase <= 10% when active subscribers exist', async () => {
-        const oldPlan = { tier: PlanTier.BASIC, monthlyPrice: 100 };
-        const newPlan = { tier: PlanTier.BASIC, monthlyPrice: 110 }; // 10% increase
+        const oldPlan = { tier: PlanTier.STARTER, monthlyPrice: 100 };
+        const newPlan = { tier: PlanTier.STARTER, monthlyPrice: 110 }; // 10% increase
 
         await expect(validatePriceChange(oldPlan, newPlan, 5)).resolves.not.toThrow();
     });
