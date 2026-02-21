@@ -96,6 +96,23 @@ async function handler(req: NextRequest, user: any, context: any) {
             (repeatRate * 30)
         ));
 
+        // 9. Calculate Bounce Rate (sessions with 1 page view)
+        const sessionStats = await AnalyticsEvent.aggregate([
+            { $match: { creatorId, eventType: 'page_view' } },
+            { $group: { _id: '$sessionId', count: { $sum: 1 } } },
+            {
+                $group: {
+                    _id: null,
+                    totalSessions: { $sum: 1 },
+                    bouncedSessions: { $sum: { $cond: [{ $eq: ['$count', 1] }, 1, 0] } }
+                }
+            }
+        ]);
+
+        const bounceRate = sessionStats[0]?.totalSessions > 0
+            ? Math.round((sessionStats[0].bouncedSessions / sessionStats[0].totalSessions) * 100)
+            : 0;
+
 
 
         // 6. Calculate Storage Usage
@@ -115,6 +132,7 @@ async function handler(req: NextRequest, user: any, context: any) {
             pendingPayout,
             revenueChange,
             visitorChange,
+            bounceRate,
             repeatRate,
             recentOrders,
             engagementScore,

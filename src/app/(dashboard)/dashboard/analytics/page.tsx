@@ -6,7 +6,7 @@ import {
     ArrowUpRight, ArrowDownRight, Globe,
     Download, Package, UserPlus, MessageCircle,
     Layers, Rocket, Filter, PieChart, Activity,
-    ShoppingBag
+    ShoppingBag, Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@clerk/nextjs';
@@ -135,7 +135,7 @@ export default function AnalyticsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 <QuickStatCard label="Total Revenue" value={`₹${stats?.todayRevenue?.toLocaleString() || '0'}`} icon={DollarSign} trend="+12%" />
                                 <QuickStatCard label="Platform Views" value={stats?.todayVisitors?.toLocaleString() || '0'} icon={Globe} trend="+5%" />
-                                <QuickStatCard label="Lead Growth" value={leadData?.leads?.growth30d?.toString() || '0'} icon={UserPlus} trend="+18%" />
+                                <QuickStatCard label="Bounce Rate" value={`${stats?.bounceRate || 0}%`} icon={Zap} trend="-2%" color="rose" />
                                 <QuickStatCard label="Conv. Rate" value={`${funnelData?.rates?.overall || 0}%`} icon={Activity} trend="+2%" color="indigo" />
                             </div>
 

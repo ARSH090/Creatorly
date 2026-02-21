@@ -36,6 +36,8 @@ export async function processQueueJob(jobId: string) {
             await handleDMDelivery(job);
         } else if (job.type === 'email_sequence_step') {
             await handleEmailSequenceStep(job);
+        } else if (job.type === 'email_broadcast') {
+            await handleEmailBroadcast(job);
         } else if (job.type === 'booking_cleanup') {
             await handleBookingCleanup(job);
         }
@@ -140,22 +142,37 @@ async function handleEmailSequenceStep(job: IQueueJob) {
     const { sendEmail } = await import('@/lib/services/email');
     const { default: EmailSequence } = await import('@/lib/models/EmailSequence');
     const { default: SequenceEnrollment } = await import('@/lib/models/SequenceEnrollment');
+    const { default: Lead } = await import('@/lib/models/Lead');
 
-    // 1. Send the email via Resend
+    const sequence = await EmailSequence.findById(sequenceId);
+    if (!sequence) return;
+
+    // 1. Variable Interpolation
+    let interpolatedContent = content;
+    let interpolatedSubject = subject;
+
+    const lead = await Lead.findOne({ email, creatorId: sequence.creatorId });
+    const name = lead?.name || 'there';
+
+    interpolatedContent = interpolatedContent.replace(/{{name}}/g, name);
+    interpolatedSubject = interpolatedSubject.replace(/{{name}}/g, name);
+
+    // 2. Add Unsubscribe Link
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in';
+    const unsubscribeUrl = `${appUrl}/api/marketing/unsubscribe?email=${encodeURIComponent(email)}&cid=${sequence.creatorId.toString()}`;
+
+    // 3. Send the email via Resend
     const emailResult = await sendEmail({
         to: email,
-        subject,
-        html: content
+        subject: interpolatedSubject,
+        html: interpolatedContent + `<br/><br/><small style="color: #666;">Don't want these emails? <a href="${unsubscribeUrl}">Unsubscribe</a></small>`
     });
 
     if (!emailResult.success) {
         throw new Error(`Email delivery failed: ${emailResult.error}`);
     }
 
-    // 2. Schedule next step if it exists
-    const sequence = await EmailSequence.findById(sequenceId);
-    if (!sequence) return;
-
+    // 4. Schedule next step if it exists
     const nextStepIndex = stepIndex + 1;
     const nextStep = sequence.steps.find((s: any) => s.sequenceOrder === nextStepIndex);
 
@@ -215,5 +232,50 @@ async function handleBookingCleanup(job: IQueueJob) {
         status: 'pending',
         nextRunAt: new Date(Date.now() + 60 * 60000) // 1 hour from now
     });
+}
+
+async function handleEmailBroadcast(job: IQueueJob) {
+    const { campaignId } = (job as any).payload;
+    const { sendMarketingEmail } = await import('@/lib/services/email');
+    const { default: EmailCampaign } = await import('@/lib/models/EmailCampaign');
+    const { default: User } = await import('@/lib/models/User');
+
+    const campaign = await EmailCampaign.findById(campaignId);
+    if (!campaign) throw new Error('Campaign not found');
+
+    const creator = await User.findById(campaign.creatorId);
+    const creatorName = creator?.displayName || creator?.username || 'Creator';
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in';
+
+    let successCount = 0;
+    let failCount = 0;
+
+    // Process recipients
+    for (const recipientEmail of campaign.recipients) {
+        try {
+            const unsubscribeUrl = `${appUrl}/api/marketing/unsubscribe?email=${encodeURIComponent(recipientEmail)}&cid=${campaign.creatorId.toString()}`;
+
+            // Basic interpolation for broadcast too
+            const content = campaign.content.replace(/{{name}}/g, 'there');
+
+            await sendMarketingEmail(
+                recipientEmail,
+                campaign.subject,
+                content,
+                creatorName,
+                unsubscribeUrl
+            );
+            successCount++;
+        } catch (err) {
+            console.error(`Failed to send broadcast to ${recipientEmail}:`, err);
+            failCount++;
+        }
+    }
+
+    campaign.status = 'sent';
+    campaign.sentAt = new Date();
+    campaign.stats.sent = successCount;
+    await campaign.save();
 }
 

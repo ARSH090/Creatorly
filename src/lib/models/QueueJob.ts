@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IQueueJob extends Document {
-    type: 'dm_delivery' | 'email_sequence_step' | 'booking_cleanup';
+    type: 'dm_delivery' | 'email_sequence_step' | 'email_broadcast' | 'booking_cleanup';
     payload: {
         // DM Payload
         recipientId?: string;

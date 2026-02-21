@@ -111,6 +111,23 @@ export async function getDashboardSummary(creatorId: string) {
 
     const conversionRate = totalVisits > 0 ? (totalOrders / totalVisits) * 100 : 0;
 
+    // Bounce Rate Calculation (Approximate: sessions with only 1 page view)
+    const sessionStats = await AnalyticsEvent.aggregate([
+        { $match: { creatorId: objectId, eventType: 'page_view' } },
+        { $group: { _id: '$sessionId', count: { $sum: 1 } } },
+        {
+            $group: {
+                _id: null,
+                totalSessions: { $sum: 1 },
+                bouncedSessions: { $sum: { $cond: [{ $eq: ['$count', 1] }, 1, 0] } }
+            }
+        }
+    ]);
+
+    const bounceRate = sessionStats[0]?.totalSessions > 0
+        ? (sessionStats[0].bouncedSessions / sessionStats[0].totalSessions) * 100
+        : 0;
+
     // Average order value
     const avgOrderValue = revenue30d[0]?.count > 0
         ? revenue30d[0].total / revenue30d[0].count
@@ -150,6 +167,7 @@ export async function getDashboardSummary(creatorId: string) {
         activeSubscribers,
         mrr: activeSubscriptions[0]?.mrr || 0,
         conversionRate: Math.round(conversionRate * 100) / 100,
+        bounceRate: Math.round(bounceRate * 100) / 100,
         avgOrderValue: Math.round(avgOrderValue * 100) / 100,
         totalOrders
     };
