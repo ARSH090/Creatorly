@@ -42,6 +42,8 @@ async function getHandler(req: NextRequest) {
   });
 }
 
+import { syncRazorpayOffer } from '@/lib/payments/razorpay';
+
 async function postHandler(req: NextRequest, user: any) {
   const body = await req.json();
   await dbConnect();
@@ -56,9 +58,29 @@ async function postHandler(req: NextRequest, user: any) {
     return new NextResponse('Coupon code already exists', { status: 400 });
   }
 
+  // Sync with Razorpay
+  let razorpayOfferId = undefined;
+  try {
+    const rpOffer = await syncRazorpayOffer({
+      name: body.description || body.code,
+      code: body.code,
+      description: body.description,
+      type: body.discountType,
+      value: body.discountValue,
+      maxAmount: body.maxDiscountAmount,
+      validUntil: body.validUntil ? new Date(body.validUntil) : undefined
+    });
+    razorpayOfferId = rpOffer.id;
+  } catch (error: any) {
+    console.error('Razorpay offer sync failed:', error);
+    // Continue for now, or fail? Plan API fails, so let's fail here too for consistency.
+    return NextResponse.json({ error: 'Failed to sync coupon with payment gateway', details: error.message }, { status: 502 });
+  }
+
   const coupon = await Coupon.create({
     ...body,
     creatorId: user._id, // Admin created
+    razorpayOfferId,
     usageCount: 0
   });
 
@@ -67,7 +89,7 @@ async function postHandler(req: NextRequest, user: any) {
     action: 'create_coupon',
     targetType: 'coupon',
     targetId: coupon._id,
-    changes: body,
+    changes: { ...body, razorpayOfferId },
     ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
   });
 

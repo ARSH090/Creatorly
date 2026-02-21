@@ -30,8 +30,6 @@ export async function enrollInSequence(
         const nextStepDueAt = new Date(Date.now() + (firstStep.delayHours || 0) * 60 * 60 * 1000);
 
         // 3. Create or update enrollment
-        // We use findOneAndUpdate with status: 'active' to ensure we don't double-enroll 
-        // if they are already in the middle of this specific sequence.
         const enrollment = await SequenceEnrollment.findOneAndUpdate(
             { email, sequenceId: sequence._id, status: 'active' },
             {
@@ -43,12 +41,28 @@ export async function enrollInSequence(
             { upsert: true, new: true, setDefaultsOnInsert: true }
         );
 
-        // 4. Update stats on the sequence
+        // 4. Create the first QueueJob for this sequence
+        const { QueueJob } = await import('../models/QueueJob');
+        await QueueJob.create({
+            type: 'email_sequence_step',
+            payload: {
+                sequenceId: sequence._id.toString(),
+                enrollmentId: enrollment._id.toString(),
+                email,
+                subject: firstStep.subject,
+                content: firstStep.content,
+                stepIndex: 0
+            },
+            nextRunAt: nextStepDueAt,
+            status: 'pending'
+        });
+
+        // 5. Update stats on the sequence
         await EmailSequence.findByIdAndUpdate(sequence._id, {
             $inc: { 'stats.enrollments': 1 }
         });
 
-        console.log(`[Marketing] Enrolled ${email} in sequence "${sequence.name}"`);
+        console.log(`[Marketing] Enrolled ${email} in sequence "${sequence.name}" and scheduled first step.`);
         return { success: true, enrollmentId: enrollment._id };
 
     } catch (error) {

@@ -17,6 +17,18 @@
 - ✅ All API routes (summary, widgets, notifications, activity)
 - ✅ Admin dashboard route
 
+### Phase 14: Comprehensive Analytics System
+- ✅ Corrected UTM and Referrer tracking pipelines
+- ✅ Fixed conversion funnel aggregation logic
+- ✅ Implemented MRR and period-over-period growth metrics
+- ✅ Created Lead Export functionality (CSV)
+
+### Phase 15: Email Marketing & Automation
+- ✅ Implemented email sequence engine (processor & worker)
+- ✅ Added abandoned cart sequence triggers
+- ✅ Integrated Resend webhooks for email analytics
+- ✅ Optimized global background job polling
+
 ### Domain System
 - ✅ DNS utilities (src/lib/utils/dns.ts) - Updated with real implementation
 - ✅ Domain service (src/lib/services/domainService.ts)

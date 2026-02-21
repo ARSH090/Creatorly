@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'react-hot-toast';
-import { Loader2, Plus, Edit } from 'lucide-react';
+import { Loader2, Plus, Edit, Zap } from 'lucide-react';
 
 interface AutomationRuleModalProps {
     rule?: any;
@@ -27,14 +27,28 @@ export function AutomationRuleModal({ rule, onSuccess, trigger }: AutomationRule
     const [response, setResponse] = useState('');
     const [isActive, setIsActive] = useState(true);
 
+    // New Fields
+    const [followRequired, setFollowRequired] = useState(false);
+    const [cooldownHours, setCooldownHours] = useState(24);
+    const [attachmentType, setAttachmentType] = useState('none');
+    const [attachmentId, setAttachmentId] = useState('');
+
     useEffect(() => {
         if (rule) {
-            setPlatform(rule.platform);
-            setTriggerType(rule.trigger);
+            setPlatform(rule.platform || 'instagram');
+            // Support both trigger and triggerType from backend
+            const t = rule.triggerType || rule.trigger || 'keyword';
+            setTriggerType(t === 'dm' && rule.keywords?.length > 0 ? 'keyword' : t);
             setKeywords(rule.keywords ? rule.keywords.join(', ') : '');
-            setAction(rule.action);
-            setResponse(rule.response);
+            setAction(rule.action || 'auto_reply');
+            setResponse(rule.replyText || rule.response || '');
             setIsActive(rule.isActive);
+
+            // New fields
+            setFollowRequired(rule.followRequired || false);
+            setCooldownHours(rule.cooldownHours || 24);
+            setAttachmentType(rule.attachmentType || 'none');
+            setAttachmentId(rule.attachmentId || '');
         } else {
             // Reset for new rule
             setPlatform('instagram');
@@ -43,6 +57,10 @@ export function AutomationRuleModal({ rule, onSuccess, trigger }: AutomationRule
             setAction('auto_reply');
             setResponse('');
             setIsActive(true);
+            setFollowRequired(false);
+            setCooldownHours(24);
+            setAttachmentType('none');
+            setAttachmentId('');
         }
     }, [rule, open]);
 
@@ -59,7 +77,11 @@ export function AutomationRuleModal({ rule, onSuccess, trigger }: AutomationRule
                 keywords: keywordList,
                 action,
                 response,
-                isActive
+                isActive,
+                followRequired,
+                cooldownHours,
+                attachmentType,
+                attachmentId
             };
 
             const url = rule
@@ -141,35 +163,68 @@ export function AutomationRuleModal({ rule, onSuccess, trigger }: AutomationRule
                         >
                             <option value="keyword">Keyword Mention</option>
                             <option value="dm">Direct Message (DM)</option>
-                            <option value="comment">Components on Post</option>
-                            <option value="mention">Story Mention</option>
+                            <option value="comment">Comments on Post</option>
+                            <option value="story_reply">Story Reply</option>
+                            <option value="new_follow">New Follower</option>
                         </select>
                     </div>
 
-                    {triggerType === 'keyword' && (
-                        <div className="space-y-2">
-                            <Label htmlFor="keywords">Keywords (comma separated)</Label>
-                            <Input
-                                id="keywords"
-                                value={keywords}
-                                onChange={(e) => setKeywords(e.target.value)}
-                                placeholder="sale, discount, help"
+                    <div className="p-4 bg-indigo-50/50 rounded-lg space-y-4 border border-indigo-100">
+                        <Label className="text-indigo-900 font-bold flex items-center gap-2">
+                            <Zap className="h-4 w-4" /> Growth Automation (Follow First)
+                        </Label>
+                        <div className="flex items-center space-x-2">
+                            <input
+                                type="checkbox"
+                                id="followRequired"
+                                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600"
+                                checked={followRequired}
+                                onChange={(e) => setFollowRequired(e.target.checked)}
                             />
+                            <Label htmlFor="followRequired" className="text-xs">Require user to follow you before receiving reply</Label>
                         </div>
-                    )}
+                        {followRequired && (
+                            <div className="space-y-1">
+                                <Label htmlFor="cooldown" className="text-[10px] uppercase font-bold text-indigo-600">Retry Cooldown (Hours)</Label>
+                                <Input
+                                    id="cooldown"
+                                    type="number"
+                                    value={cooldownHours}
+                                    onChange={(e) => setCooldownHours(parseInt(e.target.value))}
+                                    className="h-8"
+                                />
+                            </div>
+                        )}
+                    </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="action">Action</Label>
-                        <select
-                            id="action"
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            value={action}
-                            onChange={(e) => setAction(e.target.value)}
-                        >
-                            <option value="auto_reply">Auto Reply (DM)</option>
-                            <option value="send_link">Send Link</option>
-                            <option value="tag">Tag User</option>
-                        </select>
+                    <div className="space-y-4 border-t pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="attachmentType">Reply With Attachment</Label>
+                            <select
+                                id="attachmentType"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                value={attachmentType}
+                                onChange={(e) => setAttachmentType(e.target.value)}
+                            >
+                                <option value="none">None (Text Only)</option>
+                                <option value="product">Product Link</option>
+                                <option value="pdf">PDF Guide</option>
+                                <option value="booking">Booking Link</option>
+                                <option value="custom">Custom Link</option>
+                            </select>
+                        </div>
+
+                        {attachmentType !== 'none' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="attachmentId">Destination {attachmentType === 'product' ? 'Product ID' : 'URL'}</Label>
+                                <Input
+                                    id="attachmentId"
+                                    value={attachmentId}
+                                    onChange={(e) => setAttachmentId(e.target.value)}
+                                    placeholder={attachmentType === 'product' ? 'mongo_id_of_product' : 'https://...'}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     <div className="space-y-2">
@@ -181,6 +236,7 @@ export function AutomationRuleModal({ rule, onSuccess, trigger }: AutomationRule
                             placeholder="Hey! Thanks for your message. Here is the link..."
                             rows={4}
                         />
+                        <p className="text-[10px] text-muted-foreground italic">Use {"{{name}}"} for personalization.</p>
                     </div>
 
                     <div className="flex justify-end pt-4">

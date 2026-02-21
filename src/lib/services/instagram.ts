@@ -88,6 +88,31 @@ export class InstagramService {
     }
 
     /**
+     * Check if an Instagram user follows the business account
+     * NOTE: Requires 'instagram_manage_comments' or 'instagram_manage_messages' and potentially 
+     * specific relationship permissions depending on the account type.
+     */
+    static async isFollowing(igUserId: string, targetRecipientId: string, accessToken: string): Promise<boolean> {
+        try {
+            // Check relationship status
+            const response = await axios.get(
+                `${GRAPH_BASE_URL}/${VERSION}/${igUserId}/ins_relationships`,
+                {
+                    params: {
+                        access_token: accessToken,
+                        user_id: targetRecipientId
+                    }
+                }
+            );
+            return response.data?.data?.[0]?.following_status === 'following';
+        } catch (error) {
+            console.error('[InstagramService] Follow check failed:', error);
+            // Default to true to avoid blocking users if the check fails (fail-open)
+            return true;
+        }
+    }
+
+    /**
      * Get Instagram user ID from username
      */
     static async getInstagramUserId(username: string, accessToken: string, igUserId: string): Promise<string | null> {

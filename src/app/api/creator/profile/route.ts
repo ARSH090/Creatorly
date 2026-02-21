@@ -49,7 +49,8 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
     const body = await req.json();
     const {
         displayName, bio, avatar, storeSlug,
-        theme, layout, links, socialLinks, customDomain
+        theme, layout, links, socialLinks, customDomain,
+        testimonials, faqs
     } = body;
 
     const userUpdates: any = {};
@@ -74,6 +75,8 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
     if (layout) profileUpdates.layout = layout;
     if (links) profileUpdates.links = links;
     if (socialLinks) profileUpdates.socialLinks = socialLinks;
+    if (testimonials) profileUpdates.testimonials = testimonials;
+    if (faqs) profileUpdates.faqs = faqs;
 
     // Handle Domain Changes
     if (customDomain !== undefined) {
@@ -84,7 +87,15 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
             try {
                 const { Redis } = await import('@upstash/redis');
                 const redis = Redis.fromEnv();
+
+                // Remove the domain mapping so it's not misrouted
                 await redis.del(`domain:${oldProfile.customDomain}`);
+
+                // Also clear profile cache since routing might depend on it
+                const userData = await User.findById(user._id).select('username');
+                if (userData?.username) {
+                    await redis.del(`username:${userData.username}`);
+                }
             } catch (err) {
                 console.error('Redis cleanup error:', err);
             }

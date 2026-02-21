@@ -10,6 +10,12 @@ export interface IAnalyticsEvent extends Document {
     userAgent?: string;
     referrer?: string;
     path: string;
+    sessionId?: string;
+    utm_source?: string;
+    utm_medium?: string;
+    utm_campaign?: string;
+    utm_content?: string;
+    utm_term?: string;
     metadata?: Record<string, any>;
     createdAt: Date;
 }
@@ -40,6 +46,12 @@ const AnalyticsEventSchema: Schema = new Schema({
     userAgent: String,
     referrer: String,
     path: String,
+    sessionId: { type: String, index: true },
+    utm_source: { type: String, index: true },
+    utm_medium: { type: String, index: true },
+    utm_campaign: { type: String, index: true },
+    utm_content: { type: String, index: true },
+    utm_term: { type: String, index: true },
     metadata: Schema.Types.Mixed,
     createdAt: {
         type: Date,

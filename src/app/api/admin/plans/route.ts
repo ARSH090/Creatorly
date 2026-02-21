@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Plan from '@/lib/models/Plan';
 import { withAdminAuth } from '@/lib/auth/withAuth';
+import { syncRazorpayPlan } from '@/lib/payments/razorpay';
 
 export const GET = withAdminAuth(async (req, user, context) => {
     try {
@@ -27,12 +28,51 @@ export const POST = withAdminAuth(async (req, user, context) => {
         await connectToDatabase();
         const body = await req.json();
 
-        // Basic required field validation before Mongoose kicks in
+        // Basic required field validation
         if (!body.name || !body.tier || !body.billingPeriod) {
             return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
         }
 
-        const plan = await Plan.create(body);
+        // 1. Sync with Razorpay if not free
+        let razorpayMonthlyPlanId = undefined;
+        let razorpayYearlyPlanId = undefined;
+
+        if (body.tier !== 'free') {
+            try {
+                // Create Monthly Plan in Razorpay
+                const monthlyRp = await syncRazorpayPlan({
+                    name: body.name,
+                    description: body.description,
+                    amount: body.monthlyPrice,
+                    interval: 'monthly'
+                });
+                razorpayMonthlyPlanId = monthlyRp.id;
+
+                // Create Yearly Plan in Razorpay
+                const yearlyRp = await syncRazorpayPlan({
+                    name: body.name,
+                    description: body.description,
+                    amount: body.yearlyPrice,
+                    interval: 'yearly'
+                });
+                razorpayYearlyPlanId = yearlyRp.id;
+            } catch (syncError: any) {
+                console.error('Razorpay sync failed:', syncError);
+                return NextResponse.json({
+                    error: 'Failed to sync with payment gateway',
+                    details: syncError.message
+                }, { status: 502 });
+            }
+        }
+
+        // 2. Create in DB with sync IDs
+        const plan = await Plan.create({
+            ...body,
+            razorpayMonthlyPlanId,
+            razorpayYearlyPlanId,
+            razorpayPlanId: razorpayMonthlyPlanId // Legacy compatibility
+        });
+
         return NextResponse.json({ success: true, plan }, { status: 201 });
     } catch (error: any) {
         console.error('Plan creation error:', error);

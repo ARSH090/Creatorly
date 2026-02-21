@@ -67,7 +67,23 @@ const SECTIONS = [
     { id: 'links', name: 'Custom Links' },
     { id: 'products', name: 'Product Grid' },
     { id: 'newsletter', name: 'Newsletter' },
+    { id: 'testimonials', name: 'Testimonials' },
+    { id: 'faq', name: 'FAQ' },
 ];
+
+const newTestimonial = () => ({
+    id: Math.random().toString(36).substr(2, 9),
+    name: 'Customer Name',
+    role: 'Product Designer',
+    content: 'This product changed my life! Highly recommended.',
+    avatar: '',
+});
+
+const newFAQ = () => ({
+    id: Math.random().toString(36).substr(2, 9),
+    question: 'How does it work?',
+    answer: 'It works by integrating directly with your workflow...',
+});
 
 const BADGE_COLORS = [
     '#6366f1', '#a855f7', '#ec4899', '#f59e0b',
@@ -94,8 +110,10 @@ const newLink = (order: number) => ({
 export default function StorefrontBuilder() {
     const { user, email, displayName, photoURL } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'design' | 'links' | 'layout'>('design');
+    const [activeTab, setActiveTab] = useState<'design' | 'links' | 'layout' | 'testimonials' | 'faq'>('design');
     const [expandedLinkIdx, setExpandedLinkIdx] = useState<number | null>(null);
+    const [expandedTestimonialIdx, setExpandedTestimonialIdx] = useState<number | null>(null);
+    const [expandedFAQIdx, setExpandedFAQIdx] = useState<number | null>(null);
     const [showMobilePreview, setShowMobilePreview] = useState(false);
     const [uploadingThumbnailIdx, setUploadingThumbnailIdx] = useState<number | null>(null);
     const thumbnailInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -120,6 +138,8 @@ export default function StorefrontBuilder() {
     ]);
 
     const [links, setLinks] = useState<any[]>([]);
+    const [testimonials, setTestimonials] = useState<any[]>([]);
+    const [faqs, setFaqs] = useState<any[]>([]);
     const [storeSlug, setStoreSlug] = useState<string>('');
 
     // ── Fetch saved data ──
@@ -140,6 +160,8 @@ export default function StorefrontBuilder() {
                     ...newLink(l.order ?? 0),
                     ...l,
                 })));
+                if (data.storefrontData?.testimonials) setTestimonials(data.storefrontData.testimonials);
+                if (data.storefrontData?.faqs) setFaqs(data.storefrontData.faqs);
             } catch (err) {
                 console.error('fetchProfile', err);
             }
@@ -217,7 +239,7 @@ export default function StorefrontBuilder() {
             const res = await fetch('/api/creator/profile', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ theme, layout, links }),
+                body: JSON.stringify({ theme, layout, links, testimonials, faqs }),
             });
             if (!res.ok) throw new Error('Save failed');
             toast.success('Storefront saved!');
@@ -269,8 +291,8 @@ export default function StorefrontBuilder() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-white/5 flex-shrink-0 bg-black/20">
-                    {(['design', 'links', 'layout'] as const).map(tab => (
+                <div className="flex border-b border-white/5 flex-shrink-0 bg-black/20 overflow-x-auto scrollbar-hide">
+                    {(['design', 'links', 'layout', 'testimonials', 'faq'] as const).map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -279,7 +301,7 @@ export default function StorefrontBuilder() {
                                 : 'text-zinc-600 hover:text-zinc-400'
                                 }`}
                         >
-                            <span className="relative z-10">{tab}</span>
+                            <span className="relative z-10 whitespace-nowrap">{tab === 'faq' ? 'FAQ' : tab}</span>
                             {activeTab === tab && (
                                 <motion.div
                                     layoutId="activeTabIndicator"
@@ -739,6 +761,161 @@ export default function StorefrontBuilder() {
                         </div>
                     )}
 
+                    {/* ══ TESTIMONIALS TAB ══════════════════════════════════ */}
+                    {activeTab === 'testimonials' && (
+                        <div className="p-6 space-y-5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Testimonials</h3>
+                                    <p className="text-[10px] text-zinc-700 mt-0.5">{testimonials.length} testimonial{testimonials.length !== 1 ? 's' : ''}</p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const t = newTestimonial();
+                                        setTestimonials(prev => [...prev, t]);
+                                        setExpandedTestimonialIdx(testimonials.length);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500 rounded-xl hover:bg-indigo-600 transition-colors text-xs font-bold text-white"
+                                >
+                                    <Plus className="w-3.5 h-3.5" /> Add New
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                {testimonials.map((t, idx) => (
+                                    <div key={t.id} className="border border-white/10 bg-zinc-900/60 rounded-2xl overflow-hidden">
+                                        <div className="p-4 flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center overflow-hidden">
+                                                {t.avatar ? <img src={t.avatar} alt="" className="w-full h-full object-cover" /> : <Star className="w-4 h-4 text-indigo-400" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-bold truncate">{t.name || 'Anonymous'}</p>
+                                                <p className="text-[10px] text-zinc-500 truncate">{t.role || 'Customer'}</p>
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => setExpandedTestimonialIdx(expandedTestimonialIdx === idx ? null : idx)} className="p-1.5 hover:bg-white/10 rounded-lg text-zinc-500">
+                                                    {expandedTestimonialIdx === idx ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
+                                                </button>
+                                                <button onClick={() => setTestimonials(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 hover:bg-rose-500/10 text-zinc-600 hover:text-rose-400">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <AnimatePresence>
+                                            {expandedTestimonialIdx === idx && (
+                                                <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden border-t border-white/5 bg-black/20 p-4 space-y-4">
+                                                    <div className="grid grid-cols-2 gap-3">
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Name</label>
+                                                            <input
+                                                                value={t.name}
+                                                                onChange={e => setTestimonials(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))}
+                                                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Role / Company</label>
+                                                            <input
+                                                                value={t.role}
+                                                                onChange={e => setTestimonials(prev => prev.map((item, i) => i === idx ? { ...item, role: e.target.value } : item))}
+                                                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Content</label>
+                                                        <textarea
+                                                            value={t.content}
+                                                            onChange={e => setTestimonials(prev => prev.map((item, i) => i === idx ? { ...item, content: e.target.value } : item))}
+                                                            rows={3}
+                                                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white resize-none focus:outline-none"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Avatar URL</label>
+                                                        <input
+                                                            value={t.avatar}
+                                                            onChange={e => setTestimonials(prev => prev.map((item, i) => i === idx ? { ...item, avatar: e.target.value } : item))}
+                                                            placeholder="https://..."
+                                                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                                                        />
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ══ FAQ TAB ═══════════════════════════════════════════ */}
+                    {activeTab === 'faq' && (
+                        <div className="p-6 space-y-5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Frequently Asked Questions</h3>
+                                    <p className="text-[10px] text-zinc-700 mt-0.5">{faqs.length} question{faqs.length !== 1 ? 's' : ''}</p>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        const f = newFAQ();
+                                        setFaqs(prev => [...prev, f]);
+                                        setExpandedFAQIdx(faqs.length);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500 rounded-xl hover:bg-indigo-600 transition-colors text-xs font-bold text-white"
+                                >
+                                    <Plus className="w-3.5 h-3.5" /> Add FAQ
+                                </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                {faqs.map((f, idx) => (
+                                    <div key={f.id} className="border border-white/10 bg-zinc-900/60 rounded-2xl overflow-hidden">
+                                        <div className="p-4 flex items-center justify-between gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-sm font-bold truncate">{f.question || 'Untitled Question'}</p>
+                                            </div>
+                                            <div className="flex gap-1">
+                                                <button onClick={() => setExpandedFAQIdx(expandedFAQIdx === idx ? null : idx)} className="p-1.5 hover:bg-white/10 rounded-lg text-zinc-500">
+                                                    {expandedFAQIdx === idx ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
+                                                </button>
+                                                <button onClick={() => setFaqs(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 hover:bg-rose-500/10 text-zinc-600 hover:text-rose-400">
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <AnimatePresence>
+                                            {expandedFAQIdx === idx && (
+                                                <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden border-t border-white/5 bg-black/20 p-4 space-y-4">
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Question</label>
+                                                        <input
+                                                            value={f.question}
+                                                            onChange={e => setFaqs(prev => prev.map((item, i) => i === idx ? { ...item, question: e.target.value } : item))}
+                                                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
+                                                        />
+                                                    </div>
+                                                    <div className="space-y-1">
+                                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Answer</label>
+                                                        <textarea
+                                                            value={f.answer}
+                                                            onChange={e => setFaqs(prev => prev.map((item, i) => i === idx ? { ...item, answer: e.target.value } : item))}
+                                                            rows={3}
+                                                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white resize-none focus:outline-none"
+                                                        />
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* ══ LAYOUT TAB ════════════════════════════════════════ */}
                     {activeTab === 'layout' && (
                         <div className="p-6 space-y-6">
@@ -765,7 +942,9 @@ export default function StorefrontBuilder() {
                                                     {item.id === 'hero' ? 'Profile picture and bio' :
                                                         item.id === 'services' ? 'Action buttons' :
                                                             item.id === 'links' ? 'Custom link list' :
-                                                                item.id === 'products' ? 'Featured products' : 'Email subscription'}
+                                                                item.id === 'products' ? 'Featured products' :
+                                                                    item.id === 'newsletter' ? 'Email subscription' :
+                                                                        item.id === 'testimonials' ? 'Social proof' : 'Questions & Answers'}
                                                 </span>
                                             </div>
                                         </div>
@@ -958,6 +1137,48 @@ export default function StorefrontBuilder() {
                                                         your@email.com
                                                     </div>
                                                     <div className="bg-indigo-500 rounded-lg px-3 py-1.5 text-[9px] font-bold">Join</div>
+                                                </div>
+                                            </div>
+                                        );
+                                    case 'testimonials':
+                                        return (
+                                            <div key="testimonials" className="space-y-4">
+                                                <div className="flex items-center gap-3">
+                                                    <h2 className="text-[10px] font-black uppercase tracking-widest opacity-30">What people say</h2>
+                                                    <div className="h-px flex-1 bg-white/5" />
+                                                </div>
+                                                <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
+                                                    {(testimonials.length > 0 ? testimonials : [newTestimonial()]).map((t, i) => (
+                                                        <div key={i} className="min-w-[240px] p-4 bg-white/5 border border-white/10 rounded-2xl space-y-3">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center overflow-hidden">
+                                                                    {t.avatar ? <img src={t.avatar} alt="" className="w-full h-full object-cover" /> : <Star className="w-3 h-3 text-indigo-400" />}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-[10px] font-bold">{t.name}</p>
+                                                                    <p className="text-[8px] opacity-40">{t.role}</p>
+                                                                </div>
+                                                            </div>
+                                                            <p className="text-[10px] italic leading-relaxed opacity-70">"{t.content}"</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    case 'faq':
+                                        return (
+                                            <div key="faq" className="space-y-4">
+                                                <div className="flex items-center gap-3">
+                                                    <h2 className="text-[10px] font-black uppercase tracking-widest opacity-30">FAQ</h2>
+                                                    <div className="h-px flex-1 bg-white/5" />
+                                                </div>
+                                                <div className="space-y-2">
+                                                    {(faqs.length > 0 ? faqs : [newFAQ()]).map((f, i) => (
+                                                        <div key={i} className="p-3 bg-white/5 border border-white/10 rounded-xl space-y-1">
+                                                            <p className="text-[10px] font-bold">{f.question}</p>
+                                                            <p className="text-[9px] opacity-60 leading-relaxed">{f.answer}</p>
+                                                        </div>
+                                                    ))}
                                                 </div>
                                             </div>
                                         );

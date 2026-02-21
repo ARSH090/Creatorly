@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
-import { AdminLog } from '@/lib/models/AdminLog';
 import { withAdminAuth } from '@/lib/auth/withAuth';
+import { recordAdminAction } from '@/lib/utils/auditLogger';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 
 async function postHandler(req: NextRequest, user: any) {
@@ -35,13 +35,18 @@ async function postHandler(req: NextRequest, user: any) {
         return new NextResponse('Invalid action', { status: 400 });
     }
 
-    // Log the bulk action
-    await AdminLog.create({
+    // Log the bulk action using consolidated utility
+    await recordAdminAction({
         adminEmail: user.email,
         action: `bulk_${action}`,
         targetType: 'system',
-        changes: { userIds, modifiedCount: result.modifiedCount },
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+        targetId: 'multiple',
+        changes: {
+            userIds,
+            modifiedCount: result.modifiedCount,
+            action
+        },
+        req
     });
 
     return NextResponse.json({

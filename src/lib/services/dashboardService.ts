@@ -1,11 +1,12 @@
-import { connectToDatabase } from '@/lib/db/mongodb';
 import { DashboardWidget, IDashboardWidget, getDefaultWidgets } from '@/lib/models/DashboardWidget';
 import { DashboardMetricCache } from '@/lib/models/DashboardMetricCache';
 import { DashboardActivityLog } from '@/lib/models/DashboardActivityLog';
 import { Notification } from '@/lib/models/Notification';
 import { Order } from '@/lib/models/Order';
+import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent';
 import Lead from '@/lib/models/Lead';
 import mongoose from 'mongoose';
+import { connectToDatabase } from '@/lib/db/mongodb';
 
 /**
  * Get dashboard summary with key metrics
@@ -17,7 +18,9 @@ export async function getDashboardSummary(creatorId: string) {
 
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const fourteenDaysAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
 
     // Revenue in last 24 hours
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
@@ -32,7 +35,7 @@ export async function getDashboardSummary(creatorId: string) {
         {
             $group: {
                 _id: null,
-                total: { $sum: '$amount' }
+                total: { $sum: '$total' }
             }
         }
     ]);
@@ -49,8 +52,25 @@ export async function getDashboardSummary(creatorId: string) {
         {
             $group: {
                 _id: null,
-                total: { $sum: '$amount' },
+                total: { $sum: '$total' },
                 count: { $sum: 1 }
+            }
+        }
+    ]);
+
+    // Revenue in previous 30 days (for comparison)
+    const prevRevenue30d = await Order.aggregate([
+        {
+            $match: {
+                creatorId: objectId,
+                status: 'completed',
+                createdAt: { $gte: sixtyDaysAgo, $lt: thirtyDaysAgo }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                total: { $sum: '$total' }
             }
         }
     ]);
@@ -64,6 +84,12 @@ export async function getDashboardSummary(creatorId: string) {
         createdAt: { $gte: sevenDaysAgo }
     });
 
+    // Prev leads in last 7 days (for comparison)
+    const prevLeads7d = await Lead.countDocuments({
+        creatorId: objectId,
+        createdAt: { $gte: fourteenDaysAgo, $lt: sevenDaysAgo }
+    });
+
     // Active subscribers count
     const activeSubscribers = await Order.countDocuments({
         creatorId: objectId,
@@ -72,24 +98,57 @@ export async function getDashboardSummary(creatorId: string) {
         currentPeriodEnd: { $gte: now }
     });
 
-    // Conversion rate
+    // Conversion rate (Store visits to Orders)
+    const totalVisits = await AnalyticsEvent.countDocuments({
+        creatorId: objectId,
+        eventType: 'page_view'
+    });
+
     const totalOrders = await Order.countDocuments({
         creatorId: objectId,
         status: 'completed'
     });
-    const conversionRate = totalLeads > 0 ? (totalOrders / totalLeads) * 100 : 0;
+
+    const conversionRate = totalVisits > 0 ? (totalOrders / totalVisits) * 100 : 0;
 
     // Average order value
     const avgOrderValue = revenue30d[0]?.count > 0
         ? revenue30d[0].total / revenue30d[0].count
         : 0;
 
+    // MRR calculation (Simplified: sum of monthly equivalents of active subscriptions)
+    const activeSubscriptions = await Order.aggregate([
+        {
+            $match: {
+                creatorId: objectId,
+                status: 'completed',
+                isSubscription: true,
+                currentPeriodEnd: { $gte: now }
+            }
+        },
+        {
+            $group: {
+                _id: null,
+                mrr: { $sum: '$total' } // Assuming monthly billing for MRR simplicity
+            }
+        }
+    ]);
+
+    const rev30d = revenue30d[0]?.total || 0;
+    const prevRev30d = prevRevenue30d[0]?.total || 0;
+    const revGrowth = prevRev30d > 0 ? ((rev30d - prevRev30d) / prevRev30d) * 100 : 100;
+
+    const leadsGrowth = prevLeads7d > 0 ? ((newLeads7d - prevLeads7d) / prevLeads7d) * 100 : 100;
+
     return {
         revenue24h: revenue24h[0]?.total || 0,
-        revenue30d: revenue30d[0]?.total || 0,
+        revenue30d: rev30d,
+        revenueGrowth: Math.round(revGrowth * 100) / 100,
         totalLeads,
         newLeads7d,
+        leadsGrowth: Math.round(leadsGrowth * 100) / 100,
         activeSubscribers,
+        mrr: activeSubscriptions[0]?.mrr || 0,
         conversionRate: Math.round(conversionRate * 100) / 100,
         avgOrderValue: Math.round(avgOrderValue * 100) / 100,
         totalOrders

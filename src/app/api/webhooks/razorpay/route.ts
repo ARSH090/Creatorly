@@ -1,9 +1,11 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { Subscription } from '@/lib/models/Subscription';
 import { User } from '@/lib/models/User';
-import { PlatformSettings } from '@/lib/models/PlatformSettings';
-import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
+import { Payment } from '@/lib/models/Payment';
+import { Invoice } from '@/lib/models/Invoice';
+import { WebhookEventLog } from '@/lib/models/WebhookEventLog';
 import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
 
@@ -13,23 +15,15 @@ export async function POST(req: NextRequest) {
         const signature = req.headers.get('x-razorpay-signature');
 
         if (!signature) {
-            return NextResponse.json({ error: 'Missing signature' }, { status: 400 });
+            return NextResponse.json({ error: 'Protocol violation: Missing signature' }, { status: 400 });
         }
 
-        // Connect to DB to get secret if not in env (or use env as primary)
         await dbConnect();
 
-        let secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+        const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
         if (!secret) {
-            const settings = await PlatformSettings.findOne();
-            if (settings?.razorpayWebhookSecret) {
-                secret = settings.razorpayWebhookSecret;
-            }
-        }
-
-        if (!secret) {
-            console.error('Razorpay Webhook Secret not configured');
-            return NextResponse.json({ error: 'Configuration error' }, { status: 500 });
+            console.error('CRITICAL: Razorpay Webhook Secret not configured');
+            return NextResponse.json({ error: 'System configuration error' }, { status: 500 });
         }
 
         const expectedSignature = crypto
@@ -38,162 +32,145 @@ export async function POST(req: NextRequest) {
             .digest('hex');
 
         if (expectedSignature !== signature) {
-            return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+            return NextResponse.json({ error: 'Unauthorized: Invalid protocol signature' }, { status: 401 });
         }
 
         const event = JSON.parse(body);
         const payload = event.payload;
 
-        console.log('Razorpay Webhook Event:', event.event);
+        // 1. Idempotency Check
+        const existingEvent = await WebhookEventLog.findOne({ eventId: event.id });
+        if (existingEvent) {
+            return NextResponse.json({ status: 'already_processed' });
+        }
 
-        if (event.event === 'subscription.activated') {
-            const subData = payload.subscription.entity;
-            // subData.id, subData.customer_id, subData.start_at, subData.end_at, subData.status
+        console.log(`[RAZORPAY WEBHOOK] Processing: ${event.event}`);
 
-            // Find the subscription by ID
-            let subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
+        // 2. Event Dispatcher
+        switch (event.event) {
+            case 'subscription.activated': {
+                const subData = payload.subscription.entity;
+                const subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
 
-            if (!subscription) {
-                // If detailed logic needed for creating from webhook (unlikely if flow is strict)
-                // We should log this.
-                console.warn(`Subscription not found for activated event: ${subData.id}`);
-                // Try to find by customer? No, potentially ambiguous.
-                // It might be 'pending' with that ID.
-            } else {
-                // Update status
-                // Razorpay status can be 'active' even in trial. checks `start_at` vs `charge_at`.
+                if (subscription) {
+                    subscription.status = 'active';
+                    subscription.razorpayCustomerId = subData.customer_id;
+                    subscription.startDate = new Date(subData.start_at * 1000);
+                    subscription.endDate = new Date(subData.end_at * 1000);
+                    await subscription.save();
 
-                // If trial is active
-                const isTrial = subData.start_at && subData.start_at > (Date.now() / 1000); // Rough check? 
-                // Better: check our own logic or `trial_end` from razorpay if available, but razorpay subscription entity doesn't always have simple 'trial' flag.
-                // We trust our DB 'trialEndsAt' if we set it.
-                // But we should sync.
-
-                // We'll set status to 'active' or 'trialing'.
-                // If created with trial, it's trialing.
-
-                subscription.status = subscription.trialEndsAt && subscription.trialEndsAt > new Date() ? 'trialing' : 'active';
-                subscription.razorpayCustomerId = subData.customer_id;
-                subscription.startDate = new Date(subData.start_at * 1000);
-                subscription.endDate = new Date(subData.end_at * 1000); // This is usually current cycle end
-                subscription.autoRenew = true;
-                subscription.autopayEnabled = true; // Activated means mandate is active
-
-                await subscription.save();
-
-                // Update User
-                await User.findByIdAndUpdate(subscription.userId, {
-                    subscriptionStatus: subscription.status,
-                    subscriptionTier: subscription.planId ? 'creator_pro' : 'creator', // Derive from plan? Or just 'pro'
-                    trialUsed: true,
-                    razorpaySubscriptionId: subData.id,
-                    activeSubscription: subscription._id,
-                    plan: 'creator' // or 'creator_pro' based on price?
-                });
-            }
-
-        } else if (event.event === 'subscription.charged') {
-            const subData = payload.subscription.entity;
-            const paymentData = payload.payment.entity;
-
-            // Extend subscription
-            const subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
-            if (subscription) {
-                subscription.status = 'active'; // No longer trialing if charged
-                subscription.endDate = new Date(subData.end_at * 1000);
-                subscription.lastPaymentId = paymentData.id;
-                subscription.renewalCount += 1;
-                subscription.trialEndsAt = undefined; // Clear trial if charged
-                await subscription.save();
-
-                await User.findByIdAndUpdate(subscription.userId, {
-                    subscriptionStatus: 'active',
-                    subscriptionEndAt: subscription.endDate
-                });
-            }
-
-        } else if (event.event === 'payment.captured') {
-            const payment = payload.payment.entity;
-            const razorpayOrderId = payment.order_id;
-
-            // Find Order
-            // Find Order
-            // const { Order } = await import('@/lib/models/Order'); // Redundant
-            // Note: We need to define Order model import if not already at top, but let's assume valid import or add it.
-            // Actually Order import is missing in original file, I should add it or use dynamic.
-
-            const order = await Order.findOne({ razorpayOrderId });
-
-            if (order && order.status !== 'completed') {
-                order.status = 'completed';
-                order.paymentStatus = 'paid'; // Also update paymentStatus
-                order.razorpayPaymentId = payment.id;
-                order.paidAt = new Date();
-                await order.save();
-
-                // Send Confirmation Email
-                try {
-                    const { sendPaymentConfirmationEmail } = await import('@/lib/services/email');
-                    await sendPaymentConfirmationEmail(
-                        order.customerEmail,
-                        order.razorpayOrderId ?? 'N/A',
-                        order.amount,
-                        order.items.map((i: any) => ({ name: i.name, quantity: i.quantity, price: i.price }))
-                    );
-                } catch (emailErr) {
-                    console.error('Failed to send payment confirmation email:', emailErr);
+                    await User.findByIdAndUpdate(subscription.userId, {
+                        subscriptionStatus: 'active',
+                        subscriptionTier: 'pro'
+                    });
                 }
-
-                // Inventory Decrement Logic
-                for (const item of order.items) {
-                    const product = await Product.findById(item.productId);
-                    if (product) {
-                        // 1. Decrement Variant Stock
-                        if (item.variantId && product.hasVariants && product.variants) {
-                            const variantIndex = product.variants.findIndex((v: any) => v.id === item.variantId);
-                            if (variantIndex > -1) {
-                                const variant = product.variants[variantIndex];
-                                if (variant.stock !== null && variant.stock !== undefined) {
-                                    // Mongoose array update
-                                    (product.variants[variantIndex] as any).stock = Math.max(0, variant.stock - item.quantity);
-                                }
-                            }
-                        }
-                        // 2. Decrement Main Product Stock
-                        else if (product.stock !== null && product.stock !== undefined) {
-                            product.stock = Math.max(0, product.stock - item.quantity);
-                            // If stock hits 0, maybe mark as out of stock?
-                            // if (product.stock === 0) product.isActive = false; // Optional
-                        }
-
-                        // Increment sales count?
-                        // product.salesCount = (product.salesCount || 0) + item.quantity;
-
-                        await product.save();
-                    }
-                }
+                break;
             }
 
-        } else if (['subscription.halted', 'subscription.cancelled', 'subscription.paused', 'subscription.completed'].includes(event.event)) {
-            const subData = payload.subscription.entity;
-            const subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
-            if (subscription) {
-                subscription.status = event.event === 'subscription.cancelled' ? 'canceled' : 'past_due'; // halted/paused -> past_due usually
-                if (event.event === 'subscription.completed') subscription.status = 'expired';
+            case 'subscription.charged': {
+                const subData = payload.subscription.entity;
+                const paymentData = payload.payment.entity;
+                const subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
 
-                subscription.autoRenew = false;
-                await subscription.save();
+                if (subscription) {
+                    // Update Subscription
+                    subscription.status = 'active';
+                    subscription.endDate = new Date(subData.end_at * 1000);
+                    subscription.lastPaymentId = paymentData.id;
+                    subscription.renewalCount += 1;
+                    await subscription.save();
 
-                await User.findByIdAndUpdate(subscription.userId, {
-                    subscriptionStatus: subscription.status
-                });
+                    // Record Payment
+                    const payment = await Payment.create({
+                        userId: subscription.userId,
+                        subscriptionId: subscription._id,
+                        razorpayPaymentId: paymentData.id,
+                        amount: paymentData.amount, // in paise
+                        status: 'captured',
+                        currency: paymentData.currency
+                    });
+
+                    // Generate Invoice
+                    await Invoice.create({
+                        userId: subscription.userId,
+                        subscriptionId: subscription._id,
+                        invoiceNumber: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                        amount: paymentData.amount / 100,
+                        issuedAt: new Date()
+                    });
+
+                    await User.findByIdAndUpdate(subscription.userId, {
+                        subscriptionStatus: 'active',
+                        subscriptionEndAt: subscription.endDate
+                    });
+                }
+                break;
+            }
+
+            case 'payment.captured': {
+                const payment = payload.payment.entity;
+                const razorpayOrderId = payment.order_id;
+                const order = await Order.findOne({ razorpayOrderId });
+
+                if (order && order.status !== 'completed') {
+                    order.status = 'completed';
+                    order.paymentStatus = 'paid';
+                    order.razorpayPaymentId = payment.id;
+                    order.paidAt = new Date();
+                    await order.save();
+                }
+                break;
+            }
+
+            case 'subscription.cancelled':
+            case 'subscription.expired': {
+                const subData = payload.subscription.entity;
+                const subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
+                if (subscription) {
+                    subscription.status = event.event === 'subscription.cancelled' ? 'canceled' : 'expired';
+                    subscription.autoRenew = false;
+                    await subscription.save();
+
+                    await User.findByIdAndUpdate(subscription.userId, {
+                        subscriptionStatus: subscription.status
+                    });
+                }
+                break;
+            }
+
+            case 'subscription.paused':
+            case 'subscription.halted': {
+                const subData = payload.subscription.entity;
+                const subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
+                if (subscription) {
+                    subscription.status = 'past_due';
+                    await subscription.save();
+
+                    await User.findByIdAndUpdate(subscription.userId, {
+                        subscriptionStatus: 'past_due'
+                    });
+                }
+                break;
             }
         }
 
+        // 3. Log Event for Idempotency
+        await WebhookEventLog.create({
+            platform: 'razorpay',
+            eventId: event.id,
+            eventType: event.event,
+            payloadHash: crypto.createHash('sha256').update(body).digest('hex'),
+            payload: event,
+            status: 'processed',
+            processed: true,
+            processedAt: new Date()
+        });
+
         return NextResponse.json({ status: 'ok' });
+
     } catch (error: any) {
-        console.error('Webhook Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        console.error('CRITICAL Webhook Process Failure:', error);
+        return NextResponse.json({ error: 'Protocol Execution Error' }, { status: 500 });
     }
 }
 

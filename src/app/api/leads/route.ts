@@ -3,12 +3,34 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Lead from '@/lib/models/Lead';
 import Referral from '@/lib/models/Referral';
 import { leadSchema } from '@/lib/validation/leadSchema';
-import { WhatsAppService } from '@/lib/services/whatsapp';
+import { buildWhatsAppMessage, generateWhatsAppDeepLink, enqueueWhatsAppAutoSend } from '@/lib/services/whatsapp';
 import { appendLeadToSheet } from '@/lib/services/googleSheets';
+import { checkRateLimit } from '@/middleware/rateLimit';
 import { z } from 'zod';
 
 export async function POST(request: NextRequest) {
     try {
+        // 0. Rate Limiting
+        const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+        const { success, remaining, reset } = await checkRateLimit(request, ip, {
+            limit: 5, // 5 leads per window
+            window: 60 // 1 minute window
+        });
+
+        if (!success) {
+            return NextResponse.json(
+                { success: false, message: 'Too many requests. Please try again later.' },
+                {
+                    status: 429,
+                    headers: {
+                        'X-RateLimit-Limit': '5',
+                        'X-RateLimit-Remaining': remaining.toString(),
+                        'X-RateLimit-Reset': reset.toString()
+                    }
+                }
+            );
+        }
+
         // Parse request body
         const body = await request.json();
 
@@ -53,13 +75,13 @@ export async function POST(request: NextRequest) {
         }).catch(err => console.error('Sheet append failed (already logged):', err));
 
         // Build dynamic message
-        const message = WhatsAppService.buildMessage(
+        const message = buildWhatsAppMessage(
             validatedData.name,
             validatedData.interest
         );
 
         // Generate deep link (for manual send)
-        const deepLink = WhatsAppService.generateDeepLink(
+        const deepLink = generateWhatsAppDeepLink(
             validatedData.phone,
             message
         );
@@ -69,7 +91,7 @@ export async function POST(request: NextRequest) {
         if (autoSendEnabled) {
             // lead._id is an ObjectId in Mongoose, it has a toString() method.
             const leadId = String(lead._id);
-            await WhatsAppService.enqueueAutoSend({
+            await enqueueWhatsAppAutoSend({
                 leadId,
                 name: validatedData.name,
                 phone: validatedData.phone,

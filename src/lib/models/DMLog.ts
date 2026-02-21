@@ -22,6 +22,8 @@ export interface IDMLog extends Document {
     attemptCount: number;
     errorCode?: string;
     deliveryStatus: DeliveryStatus;
+    attachmentType?: 'product' | 'pdf' | 'booking' | 'custom';
+    attachmentId?: string;
     errorDetails?: string;
     metadata?: Record<string, any>;
     createdAt: Date;
@@ -50,6 +52,8 @@ const DMLogSchema: Schema = new Schema({
     attemptCount: { type: Number, default: 1 },
     errorCode: String,
     deliveryStatus: { type: String, enum: ['sent', 'delivered', 'read', 'failed', 'pending'], default: 'pending' },
+    attachmentType: { type: String, enum: ['product', 'pdf', 'booking', 'custom'] },
+    attachmentId: { type: String },
     errorDetails: String,
     metadata: { type: Schema.Types.Mixed, default: {} }
 }, { timestamps: true });

@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IQueueJob extends Document {
-    type: 'dm_delivery' | 'email_sequence_step';
+    type: 'dm_delivery' | 'email_sequence_step' | 'booking_cleanup';
     payload: {
         // DM Payload
         recipientId?: string;
@@ -9,11 +9,14 @@ export interface IQueueJob extends Document {
         accessToken?: string;
         creatorId: string;
         ruleId?: string; // DM rule
-        source?: 'dm' | 'comment';
+        source?: 'dm' | 'comment' | 'story_reply' | 'new_follow';
+        platform?: 'instagram' | 'whatsapp';
 
         // Email Payload
         sequenceId?: string;
+        enrollmentId?: string;
         stepId?: string; // Index or ID
+        stepIndex?: number;
         subscriberId?: string; // or subscriber email
         email?: string;
         subject?: string;

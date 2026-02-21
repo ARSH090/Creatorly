@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useSignUp, useSignIn } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ShieldAlert, CheckCircle, Smartphone } from 'lucide-react';
+import { ShieldAlert, CheckCircle, Smartphone, User as UserIcon, Mail, Shield, ChevronRight, Loader2 } from 'lucide-react';
 
 function RegisterFormContent() {
     const { isLoaded, signUp, setActive } = useSignUp();
@@ -12,8 +12,10 @@ function RegisterFormContent() {
 
     // UI State
     const [formData, setFormData] = useState({
+        username: '',
         displayName: '',
         email: '',
+        phone: '',
         password: '',
     });
     const [error, setError] = useState('');
@@ -21,7 +23,47 @@ function RegisterFormContent() {
     const [pendingVerification, setPendingVerification] = useState(false);
     const [verificationCode, setVerificationCode] = useState('');
 
+    // Username Check State
+    const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
+    const [usernameMessage, setUsernameMessage] = useState('');
+
     const router = useRouter();
+
+    // Debounced username check
+    useEffect(() => {
+        if (!formData.username) {
+            setUsernameStatus('idle');
+            setUsernameMessage('');
+            return;
+        }
+
+        if (formData.username.length < 3) {
+            setUsernameStatus('invalid');
+            setUsernameMessage('At least 3 characters');
+            return;
+        }
+
+        const checkUsername = async () => {
+            setUsernameStatus('checking');
+            try {
+                const res = await fetch(`/api/auth/check-username?username=${formData.username}`);
+                const data = await res.json();
+                if (data.available) {
+                    setUsernameStatus('available');
+                    setUsernameMessage('Available');
+                } else {
+                    setUsernameStatus('taken');
+                    setUsernameMessage(data.error || 'Already taken');
+                }
+            } catch (err) {
+                console.error('Check username error:', err);
+                setUsernameStatus('idle');
+            }
+        };
+
+        const timer = setTimeout(checkUsername, 500);
+        return () => clearTimeout(timer);
+    }, [formData.username]);
 
     const handleGoogleSignUp = async () => {
         if (!isLoaded) return;
@@ -63,6 +105,17 @@ function RegisterFormContent() {
             return;
         }
 
+        if (usernameStatus === 'taken') {
+            setError('This username is already taken');
+            setLoading(false);
+            return;
+        }
+        if (usernameStatus === 'invalid' || formData.username.length < 3) {
+            setError('Please choose a valid username');
+            setLoading(false);
+            return;
+        }
+
         try {
             // 1. Create Sign Up Attempt
             await signUp.create({
@@ -70,7 +123,12 @@ function RegisterFormContent() {
                 password: formData.password,
                 firstName: formData.displayName.split(' ')[0],
                 lastName: formData.displayName.split(' ').slice(1).join(' '),
+                unsafeMetadata: {
+                    username: formData.username,
+                    source: 'registration_flow'
+                }
             });
+            // Note: Phone number logic can be added later as requested
 
             // 2. Prepare Verification
             await signUp.prepareVerification({
@@ -194,9 +252,11 @@ function RegisterFormContent() {
 
     return (
         <div className="space-y-6">
-            <div className="mb-10">
-                <h2 className="text-3xl font-medium tracking-tight text-white mb-2">Get Started</h2>
-                <p className="text-zinc-500 text-sm">Create your professional creator ID in minutes.</p>
+            <div className="mb-10 text-center">
+                <h2 className="text-3xl font-black text-white mb-2 italic">
+                    Hey @{formData.username || 'Username'} 👋
+                </h2>
+                <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest">Let's monetize your following!</p>
             </div>
 
             <div id="clerk-captcha" /> {/* Explicit CAPTCHA mount point */}
@@ -233,55 +293,116 @@ function RegisterFormContent() {
                 </div>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Identity</label>
-                    <input
-                        type="text"
-                        required
-                        autoComplete="name"
-                        className="w-full px-5 py-4 bg-white/3 border border-white/8 rounded-4xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
-                        placeholder="Full Name"
-                        value={formData.displayName}
-                        onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                        disabled={loading}
-                    />
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-zinc-600 font-bold text-sm">
+                            @ <span className="ml-2 text-zinc-400">creatorly.in/</span>
+                        </div>
+                        <input
+                            type="text"
+                            required
+                            className={`w-full pl-36 pr-12 py-4 bg-white/3 border-2 rounded-2xl outline-none transition-all font-bold text-white placeholder-zinc-700 ${usernameStatus === 'available' ? 'border-emerald-500/50 focus:border-emerald-500' :
+                                usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'border-rose-500/50 focus:border-rose-500' :
+                                    'border-indigo-500/30 focus:border-indigo-500'
+                                }`}
+                            placeholder="username"
+                            value={formData.username}
+                            onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
+                            disabled={loading}
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
+                            {usernameStatus === 'checking' && <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />}
+                            {usernameStatus === 'available' && <CheckCircle className="w-5 h-5 text-emerald-500" />}
+                            {(usernameStatus === 'taken' || usernameStatus === 'invalid') && <ShieldAlert className="w-5 h-5 text-rose-500" />}
+                        </div>
+                    </div>
+                    {usernameMessage && (
+                        <p className={`text-[10px] font-black uppercase tracking-widest ml-1 ${usernameStatus === 'available' ? 'text-emerald-500' : 'text-rose-500'
+                            }`}>
+                            {usernameMessage}
+                        </p>
+                    )}
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Email Address</label>
-                    <input
-                        type="email"
-                        required
-                        autoComplete="email"
-                        className="w-full px-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
-                        placeholder="user@example.com"
-                        value={formData.email}
-                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                        disabled={loading}
-                    />
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-zinc-500">
+                            <UserIcon size={18} />
+                        </div>
+                        <input
+                            type="text"
+                            required
+                            autoComplete="name"
+                            className="w-full pl-12 pr-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
+                            placeholder="Full Name"
+                            value={formData.displayName}
+                            onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
+                            disabled={loading}
+                        />
+                    </div>
                 </div>
 
                 <div className="space-y-2">
-                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">Security</label>
-                    <input
-                        type="password"
-                        required
-                        autoComplete="new-password"
-                        className="w-full px-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
-                        placeholder="••••••••"
-                        value={formData.password}
-                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                        disabled={loading}
-                    />
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-zinc-500">
+                            <Mail size={18} />
+                        </div>
+                        <input
+                            type="email"
+                            required
+                            autoComplete="email"
+                            className="w-full pl-12 pr-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
+                            placeholder="Email"
+                            value={formData.email}
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            disabled={loading}
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <div className="flex gap-2">
+                        <div className="flex items-center gap-2 px-4 bg-white/3 border border-white/8 rounded-2xl text-white">
+                            <span className="text-lg">🇮🇳</span>
+                            <span className="text-sm font-bold text-zinc-500">+91</span>
+                            <ChevronRight size={14} className="rotate-90 text-zinc-600" />
+                        </div>
+                        <input
+                            type="tel"
+                            className="flex-1 px-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
+                            placeholder="Phone Number"
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
+                            disabled={loading}
+                        />
+                    </div>
+                </div>
+
+                <div className="space-y-2">
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-zinc-500">
+                            <Shield size={18} />
+                        </div>
+                        <input
+                            type="password"
+                            required
+                            autoComplete="new-password"
+                            className="w-full pl-12 pr-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
+                            placeholder="Password"
+                            value={formData.password}
+                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            disabled={loading}
+                        />
+                    </div>
                 </div>
 
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-4 bg-white/5 border border-white/10 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-white/10 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full py-4 bg-indigo-600 text-white rounded-3xl font-black text-xs uppercase tracking-[0.2em] hover:bg-indigo-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-indigo-500/20"
                 >
-                    {loading ? 'Initializing...' : 'Create Account'}
+                    {loading ? 'Initializing...' : 'Next'}
                 </button>
 
                 <p className="text-[10px] text-zinc-500 text-center font-bold uppercase tracking-wider">

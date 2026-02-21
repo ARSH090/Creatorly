@@ -4,7 +4,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Lead from '@/lib/models/Lead';
 import { instagramQueue, whatsappQueue } from '@/lib/queue';
 import { InstagramService } from '@/lib/services/instagram';
-import { WhatsAppService } from '@/lib/services/whatsapp';
+import { generateWhatsAppDeepLink } from '@/lib/services/whatsapp';
 
 interface DMSendRequest {
     leadId: string;
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
         // Handle based on provider
         if (provider === 'whatsapp') {
             // WhatsApp placeholder - return coming soon
-            const deepLink = WhatsAppService.generateDeepLink(
+            const deepLink = generateWhatsAppDeepLink(
                 lead.phone || '',
                 dmMessage
             );

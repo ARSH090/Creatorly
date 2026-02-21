@@ -17,7 +17,7 @@ export async function POST() {
             return NextResponse.json({ error: 'No email found' }, { status: 400 });
         }
 
-        // Check if user exists
+        // Check if user exists by clerkId or email
         let user = await User.findOne({
             $or: [
                 { clerkId: clerkUser.id },
@@ -25,34 +25,42 @@ export async function POST() {
             ]
         });
 
-        if (!user) {
-            // Generate base username
-            let baseUsername = (clerkUser.username || email.split('@')[0]).toLowerCase().replace(/[^a-z0-9]/g, '');
-            let username = baseUsername;
+        // Get metadata for custom values
+        const unsafeMetadata = (clerkUser.unsafeMetadata as any) || {};
+        const publicMetadata = (clerkUser.publicMetadata as any) || {};
 
-            // Simple retry logic for unique username
+        const userUpdate = {
+            clerkId: clerkUser.id,
+            email: email,
+            displayName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || user?.displayName || email.split('@')[0],
+            username: unsafeMetadata.username || clerkUser.username || user?.username || email.split('@')[0],
+            avatar: clerkUser.imageUrl,
+            role: publicMetadata.role || user?.role || 'creator',
+            emailVerified: true
+        };
+
+        if (user) {
+            // Update/Link existing user
+            await User.findByIdAndUpdate(user._id, { $set: userUpdate });
+            console.log(`✅ Synced existing MongoDB user: ${user.username} (${email})`);
+        } else {
+            // Double check username availability if it's new
+            let finalUsername = userUpdate.username.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+            let baseUsername = finalUsername;
             let counter = 1;
-            while (await User.exists({ username })) {
-                username = `${baseUsername}${counter}`;
+
+            while (await User.exists({ username: finalUsername })) {
+                finalUsername = `${baseUsername}${counter}`;
                 counter++;
             }
 
             user = await User.create({
-                clerkId: clerkUser.id,
-                email: email,
-                username: username,
-                displayName: `${clerkUser.firstName || ''} ${clerkUser.lastName || ''}`.trim() || baseUsername,
-                avatar: clerkUser.imageUrl,
-                role: 'user',
-                emailVerified: true
+                ...userUpdate,
+                username: finalUsername,
+                subscriptionTier: 'free',
             });
 
-            console.log(`✅ Created new MongoDB user: ${username} (${email})`);
-        } else if (!user.clerkId) {
-            // Link existing user
-            user.clerkId = clerkUser.id;
-            await user.save();
-            console.log(`🔗 Linked Clerk ID to existing MongoDB user: ${email}`);
+            console.log(`✅ Created new MongoDB user via sync: ${finalUsername} (${email})`);
         }
 
         return NextResponse.json({ success: true, user: { id: user._id, role: user.role } });

@@ -1,22 +1,19 @@
 # Creatorly Deployment Guide
 
-This guide details the step-by-step process for deploying **Creatorly** to a production environment using Vercel, MongoDB Atlas, AWS, Razorpay, and Firebase.
+This guide details the step-by-step process for deploying **Creatorly** to a production environment using Vercel, MongoDB Atlas, AWS, Razorpay, and Clerk.
 
 ## 1. Environment Variables (Vercel)
 Ensure the following variables are configured in your Vercel project settings:
 
-### 🌐 Core Web
+### 🌐 Core Web & Auth (Clerk)
 - `NEXT_PUBLIC_APP_URL`: Your production URL (e.g., `https://creatorly.app`).
-- `NODE_ENV`: `production`.
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`: From Clerk Dashboard.
+- `CLERK_SECRET_KEY`: From Clerk Dashboard.
+- `CLERK_WEBHOOK_SECRET`: Required for MongoDB synchronization.
 
-### 🍃 Database (MongoDB Atlas)
+### 🍃 Database & Cache
 - `MONGODB_URI`: Connection string to your production cluster.
-- `MONGODB_DB`: Database name (e.g., `creatorly_prod`).
-
-### 🔑 Authentication (Firebase)
-- `FIREBASE_PROJECT_ID`: Your Firebase Project ID.
-- `FIREBASE_CLIENT_EMAIL`: Service Account Email.
-- `FIREBASE_PRIVATE_KEY`: Service Account Private Key (ensure standard PEM format).
+- `REDIS_URL`: Upstash Redis connection string (required for BullMQ).
 
 ### 💳 Payments (Razorpay)
 - `RAZORPAY_KEY_ID`: Your **Live** Key ID.
@@ -29,40 +26,27 @@ Ensure the following variables are configured in your Vercel project settings:
 - `AWS_REGION`: e.g., `ap-south-1` (Mumbai).
 - `AWS_S3_BUCKET_NAME`: Name of your production S3 bucket.
 
-### 🪵 Logging & Monitoring
-- `SENTRY_DSN`: Your Sentry project DSN.
-- `LOG_LEVEL`: Set to `info` for production.
-
 ## 2. Infrastructure Setup
 
 ### MongoDB Atlas
-1. Create a production cluster (M10+ recommended for dedicated throughput).
-2. Configure Network Access: Whitelist Vercel IP ranges or allow access from `0.0.0.0/0` (with strong DB password).
-3. Ensure automated daily backups are enabled.
+1. Create a production cluster (M10+ recommended).
+2. Configure Network Access: Whitelist Vercel IP ranges or allow access from `0.0.0.0/0`.
+3. Enable automated daily backups.
 
-### AWS S3 Settings
-1. Create a bucket with **Block all public access** enabled.
-2. Configure CORS to allow your production domain:
-```json
-[
-  {
-    "AllowedOrigins": ["https://yourdomain.com"],
-    "AllowedMethods": ["GET", "PUT", "POST"],
-    "AllowedHeaders": ["*"]
-  }
-]
-```
+### Upstash Redis (For Queues)
+1. Create a Global Redis database on Upstash.
+2. Copy the `REDIS_URL` to your environment variables.
+3. **Important**: Ensure `maxRetriesPerRequest` is set to `null` in the connection (handled in `src/lib/queue.ts`).
 
-### Razorpay Webhooks
-1. In the Razorpay Dashboard, add the webhook URL: `https://yourdomain.com/api/payments/razorpay/webhook`.
-2. Select these events:
-   - `payment.captured`
-   - `payment.failed`
-   - `subscription.charged`
-   - `refund.created`
+### Background Worker Deployment
+The background worker (`worker.ts`) requires a persistent Node.js environment (Vercel is serverless and cannot run persistent BullMQ workers).
+1. **Platform**: Deploy to Railway, Render, or DigitalOcean App Platform.
+2. **Build Command**: `npm install`
+3. **Start Command**: `npm run worker`
+4. **Environment**: Ensure all variables from Section 1 (especially `REDIS_URL` and `MONGODB_URI`) are present on the worker instance.
 
 ## 3. Verification
 After deployment, run the following verification steps:
 1. Hit `GET /api/health` to confirm DB connectivity.
-2. Perform a test purchase using a real live card (refund it immediately after).
+2. Access `/admin/queues` to verify BullMQ connectivity.
 3. Check Sentry dashboard for any initialization errors.

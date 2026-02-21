@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React from 'react'; // useState and useCallback are no longer needed
 import type { ServiceButton, StorefrontTheme } from '@/types/storefront.types';
 import ServiceButtons from '@/components/storefront/ServiceButtons';
 import LeadCaptureModal from '@/components/storefront/LeadCaptureModal';
+// Assuming useLeadStore is imported by LeadCaptureModal or ServiceButtons internally,
+// or if StorefrontInteractive itself needed it, it would be imported here.
+// Based on the instruction, the state is removed from *this* component.
 
 interface StorefrontInteractiveProps {
     serviceButtons: ServiceButton[];
@@ -21,19 +24,8 @@ export default function StorefrontInteractive({
     theme,
     creatorUsername,
 }: StorefrontInteractiveProps) {
-    const [activeButton, setActiveButton] = useState<ServiceButton | null>(null);
-    const [modalOpen, setModalOpen] = useState(false);
-
-    const handleOpenModal = useCallback((button: ServiceButton) => {
-        setActiveButton(button);
-        setModalOpen(true);
-    }, []);
-
-    const handleCloseModal = useCallback(() => {
-        setModalOpen(false);
-        // Let animation finish before clearing button data
-        setTimeout(() => setActiveButton(null), 350);
-    }, []);
+    // Local modal state (activeButton, modalOpen, handleOpenModal, handleCloseModal)
+    // has been removed as per instruction to use useLeadStore.
 
     return (
         <>
@@ -41,14 +33,13 @@ export default function StorefrontInteractive({
                 buttons={serviceButtons}
                 theme={theme}
                 creatorUsername={creatorUsername}
-                onOpenModal={handleOpenModal}
+            // onOpenModal prop is removed as ServiceButtons will now use useLeadStore internally
             />
             <LeadCaptureModal
-                open={modalOpen}
-                button={activeButton}
+                // open and button props are now managed by useLeadStore internally
+                // onClose prop is also managed by useLeadStore internally
                 creatorUsername={creatorUsername}
                 theme={theme}
-                onClose={handleCloseModal}
             />
         </>
     );

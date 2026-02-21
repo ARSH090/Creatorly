@@ -9,7 +9,10 @@ export enum MatchType {
 
 export enum AutomationTriggerType {
     COMMENT = 'comment',
-    DIRECT_MESSAGE = 'dm'
+    DIRECT_MESSAGE = 'dm',
+    STORY_REPLY = 'story_reply',
+    NEW_FOLLOW = 'new_follow',
+    BROADCAST = 'broadcast'
 }
 
 export interface IAutoReplyRule extends Document {
@@ -20,6 +23,12 @@ export interface IAutoReplyRule extends Document {
     keywords: string[]; // Support multiple keywords
     replyText: string;
     isActive: boolean;
+    // New Fields
+    followRequired: boolean;
+    cooldownHours: number;
+    attachmentType: 'none' | 'product' | 'pdf' | 'booking' | 'custom';
+    attachmentId?: string; // ID of the product, file, or booking link
+
     priority: number;
     loopPreventionId: string; // MD5 of reply text or custom ID
     metadata?: Record<string, any>;
@@ -33,6 +42,14 @@ const AutoReplyRuleSchema: Schema = new Schema({
     keywords: [{ type: String, lowercase: true, trim: true }],
     replyText: { type: String, required: true },
     isActive: { type: Boolean, default: true },
+    followRequired: { type: Boolean, default: false },
+    cooldownHours: { type: Number, default: 24 },
+    attachmentType: {
+        type: String,
+        enum: ['none', 'product', 'pdf', 'booking', 'custom'],
+        default: 'none'
+    },
+    attachmentId: { type: String },
     priority: { type: Number, default: 0, index: true },
     loopPreventionId: { type: String, required: true, index: true },
     metadata: { type: Schema.Types.Mixed, default: {} }

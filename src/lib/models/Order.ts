@@ -61,6 +61,7 @@ export interface IOrder extends Document {
         refundId?: string;
     };
     deviceFingerprint?: string;
+    internalNotes?: string;
     metadata?: Record<string, any>;
     createdAt: Date;
     updatedAt: Date;
@@ -152,6 +153,7 @@ const OrderSchema: Schema = new Schema({
     },
 
     deviceFingerprint: { type: String, index: true },
+    internalNotes: { type: String },
     metadata: { type: Schema.Types.Mixed, default: {} },
     subscriptionId: { type: Schema.Types.ObjectId, ref: 'Subscription' },
     deletedAt: { type: Date, index: true }
@@ -162,7 +164,6 @@ const OrderSchema: Schema = new Schema({
 OrderSchema.index({ creatorId: 1, status: 1, createdAt: -1 });
 OrderSchema.index({ customerEmail: 1, createdAt: -1 });
 OrderSchema.index({ "items.productId": 1 });
-OrderSchema.index({ status: 1 });
 
 const Order: Model<IOrder> = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
 export { Order };

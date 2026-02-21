@@ -147,6 +147,7 @@ export async function initializeCustomDomain(creatorId: string, domain: string):
         domain: normalizedDomain,
         status: 'pending',
         verificationToken,
+        username: (await User.findById(creatorId).select('username'))?.username,
         dnsRecords: [
             {
                 type: 'TXT',
@@ -346,4 +347,47 @@ export function getDomainVerificationInstructions(domain: string, token: string)
 export async function invalidateDomainCache(domain: string): Promise<void> {
     const normalizedDomain = domain.toLowerCase();
     await deleteCachedValue(`${CACHE_KEYS.DOMAIN_TO_USERNAME}${normalizedDomain}`);
+}
+
+/**
+ * Sync username changes with custom domains and Redis cache
+ * @param creatorId - The creator's user ID
+ * @param newUsername - The new username
+ * @param oldUsername - Optional old username to clean up cache
+ */
+export async function syncUsernameWithDomains(
+    creatorId: string,
+    newUsername: string,
+    oldUsername?: string
+): Promise<void> {
+    await connectToDatabase();
+
+    // 1. Update all domain records for this creator
+    await CustomDomain.updateMany(
+        { creatorId },
+        { $set: { username: newUsername } }
+    );
+
+    // 2. Sync verified domains to Redis
+    const verifiedDomains = await CustomDomain.find({
+        creatorId,
+        status: 'verified'
+    }).lean();
+
+    try {
+        const { Redis } = await import('@upstash/redis');
+        const redis = Redis.fromEnv();
+
+        // Update domain -> username mappings
+        for (const record of verifiedDomains) {
+            await redis.set(`${CACHE_KEYS.DOMAIN_TO_USERNAME}${record.domain}`, newUsername);
+        }
+
+        // Clean up old username profile cache
+        if (oldUsername && oldUsername !== newUsername) {
+            await redis.del(`${CACHE_KEYS.USERNAME_TO_PROFILE}${oldUsername.toLowerCase()}`);
+        }
+    } catch (err) {
+        console.error('Redis sync error in syncUsernameWithDomains:', err);
+    }
 }

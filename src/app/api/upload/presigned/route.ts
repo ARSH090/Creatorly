@@ -32,11 +32,13 @@ export const POST = withAuth(async (req, user) => {
         }
 
         // Generate a clean, unique key
-        const cleanName = filename.split('.')[0].replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
-        const key = `${type || 'general'}/${user._id}/${crypto.randomUUID()}-${cleanName}.${ext}`;
+        const { sanitizeKey } = await import('@/lib/storage/s3');
+        const cleanName = sanitizeKey(filename);
+        const fileExtension = ext || 'bin';
+        const key = `${type || 'general'}/${user._id}/${Date.now()}-${crypto.randomUUID()}.${fileExtension}`;
 
-        const { getPublicUrl } = await import('@/lib/storage/s3');
-        const uploadUrl = await getPresignedUploadUrl(key, contentType);
+        const { getPublicUrl, getPresignedUploadUrl } = await import('@/lib/storage/s3');
+        const uploadUrl = await getPresignedUploadUrl(key, contentType, 300); // 5 min expiry
 
         return NextResponse.json({
             uploadUrl,

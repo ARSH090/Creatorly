@@ -26,6 +26,18 @@ export interface IPlatformSettings extends Document {
     monthly: { price: number; razorpayPlanId?: string; active: boolean };
     yearly: { price: number; razorpayPlanId?: string; active: boolean };
   };
+  featureToggles: {
+    aiEnabled: boolean;
+    bookingEnabled: boolean;
+    affiliateEnabled: boolean;
+    automationEnabled: boolean;
+  };
+  announcementBanner: {
+    enabled: boolean;
+    text: string;
+    link?: string;
+    type: 'info' | 'warning' | 'sale';
+  };
   emailConfig: {
     from: string;
     replyTo: string;
@@ -119,6 +131,18 @@ const PlatformSettingsSchema = new Schema<IPlatformSettings>(
         razorpayPlanId: String,
         active: { type: Boolean, default: true }
       }
+    },
+    featureToggles: {
+      aiEnabled: { type: Boolean, default: true },
+      bookingEnabled: { type: Boolean, default: true },
+      affiliateEnabled: { type: Boolean, default: false },
+      automationEnabled: { type: Boolean, default: true }
+    },
+    announcementBanner: {
+      enabled: { type: Boolean, default: false },
+      text: String,
+      link: String,
+      type: { type: String, enum: ['info', 'warning', 'sale'], default: 'info' }
     },
     emailConfig: {
       from: {

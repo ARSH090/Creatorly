@@ -37,12 +37,12 @@ export default clerkMiddleware(async (auth, req) => {
     }
 
     // 3. Admin & Subscription Protection
-    // Note: Deep validation (role, status) is handled in Layouts and API wrappers
-    // to maintain Edge Runtime compatibility.
     if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
         const { sessionClaims } = await auth();
-        // If we sync role to Clerk metadata, we can check it here:
-        // if (sessionClaims?.metadata?.role !== 'admin') return redirect('/dashboard');
+        const role = (sessionClaims?.metadata as any)?.role;
+        if (role !== 'admin' && role !== 'super-admin') {
+            return NextResponse.redirect(new URL('/dashboard', req.url));
+        }
     }
 
     // Initialize response
@@ -93,7 +93,28 @@ export default clerkMiddleware(async (auth, req) => {
     response.headers.set('Cross-Origin-Opener-Policy', 'unsafe-none');
     response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
 
-    // 5. Custom Domain Routing
+    // 5. Root-level Storefront Routing (/[username] → /u/[username])
+    const reservedPaths = [
+        'admin', 'dashboard', 'api', 'auth', 'onboarding', 'u', 'cart',
+        'checkout', 'pricing', 'setup', 'explore', 'login', 'account',
+        'subscribe', 'pricing', 'sso-callback', 'robots.txt', 'sitemap.xml',
+        'favicon.ico', 'icon.png', 'apple-icon.png', 'privacy', 'terms'
+    ];
+
+    const firstSegment = pathname.split('/')[1];
+
+    if (
+        firstSegment &&
+        !reservedPaths.includes(firstSegment) &&
+        !pathname.startsWith('/_next') &&
+        !pathname.includes('.') // Skip static files
+    ) {
+        const url = req.nextUrl.clone();
+        url.pathname = `/u/${pathname.substring(1)}`;
+        return NextResponse.rewrite(url);
+    }
+
+    // 6. Custom Domain Routing (Existing)
     const host = req.headers.get('host') || '';
     const platformDomains = ['creatorly.in', 'www.creatorly.in', 'localhost:3000', 'creatorly-12319.vercel.app'];
     const isCustomDomain = !platformDomains.some(d => host === d || host.endsWith('.' + d)) && !host.endsWith('.vercel.app');
@@ -116,7 +137,7 @@ export default clerkMiddleware(async (auth, req) => {
     }
 
     // 6. Rate Limiting (Standardized)
-    if (pathname.startsWith('/api/auth') || pathname.startsWith('/api/user')) {
+    if (pathname.startsWith('/api/auth') || pathname.startsWith('/api/user') || pathname.startsWith('/api/ai')) {
         // ... existing rate limit code ...
         try {
             const { checkRateLimit } = await import('@/middleware/rateLimit');

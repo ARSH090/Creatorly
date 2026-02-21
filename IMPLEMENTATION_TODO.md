@@ -22,25 +22,25 @@
 ## 2. Dashboard System (TODO_DASHBOARD.md)
 
 ### Phase 1: Database Models
-- [ ] Create src/lib/models/DashboardMetricCache.ts
-- [ ] Create src/lib/models/AICredit.ts
-- [ ] Update src/lib/models/Notification.ts
-- [ ] Create src/lib/models/DashboardActivityLog.ts
+- [x] Create src/lib/models/DashboardMetricCache.ts
+- [x] Create src/lib/models/AICredit.ts
+- [x] Update src/lib/models/Notification.ts
+- [x] Create src/lib/models/DashboardActivityLog.ts
 
 ### Phase 2: Dashboard Service
-- [ ] Create src/lib/services/dashboardService.ts
-- [ ] Create src/lib/services/metricCalculator.ts
+- [x] Create src/lib/services/dashboardService.ts
+- [x] Create src/lib/services/metricCalculator.ts
 
 ### Phase 3: API Routes
-- [ ] Create src/app/api/dashboard/summary/route.ts
-- [ ] Create src/app/api/dashboard/widgets/route.ts
-- [ ] Create src/app/api/dashboard/notifications/route.ts
-- [ ] Create src/app/api/dashboard/notifications/[id]/read/route.ts
-- [ ] Create src/app/api/dashboard/notifications/read-all/route.ts
-- [ ] Create src/app/api/dashboard/activity/route.ts
+- [x] Create src/app/api/dashboard/summary/route.ts
+- [x] Create src/app/api/dashboard/widgets/route.ts
+- [x] Create src/app/api/dashboard/notifications/route.ts
+- [x] Create src/app/api/dashboard/notifications/[id]/read/route.ts
+- [x] Create src/app/api/dashboard/notifications/read-all/route.ts
+- [x] Create src/app/api/dashboard/activity/route.ts
 
 ### Phase 4: Admin Routes
-- [ ] Create src/app/api/admin/dashboard/[creatorId]/route.ts
+- [x] Create src/app/api/admin/dashboard/[creatorId]/route.ts
 
 ## 3. Domain System (TODO_DOMAIN_IMPLEMENTATION.md)
 

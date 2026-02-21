@@ -9,41 +9,112 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
 async function getHandler(req: NextRequest) {
     await dbConnect();
 
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
     // Parallelize queries for performance
     const [
         totalUsers,
         activeCreators,
         totalProducts,
-        revenueStats
+        revenueStats,
+        dailyRevenue,
+        topCreators,
+        topProducts
     ] = await Promise.all([
         User.countDocuments({}),
         User.countDocuments({ role: 'creator' }),
-        Product.countDocuments({ status: { $ne: 'archived' } }), // Exclude archived
+        Product.countDocuments({ status: { $ne: 'archived' } }),
         Order.aggregate([
-            { $match: { status: 'paid' } },
-            { $group: { _id: null, total: { $sum: '$total' } } }
+            { $match: { status: 'completed' } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]),
+        Order.aggregate([
+            { $match: { status: 'completed', createdAt: { $gte: sevenDaysAgo } } },
+            {
+                $group: {
+                    _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                    total: { $sum: "$amount" }
+                }
+            },
+            { $sort: { _id: 1 } }
+        ]),
+        Order.aggregate([
+            { $match: { status: 'completed' } },
+            {
+                $group: {
+                    _id: '$creatorId',
+                    totalEarned: { $sum: '$amount' },
+                    orderCount: { $sum: 1 }
+                }
+            },
+            { $sort: { totalEarned: -1 } },
+            { $limit: 5 },
+            {
+                $lookup: {
+                    from: 'users',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'creator'
+                }
+            },
+            { $unwind: '$creator' },
+            {
+                $project: {
+                    name: '$creator.displayName',
+                    email: '$creator.email',
+                    totalEarned: 1,
+                    orderCount: 1
+                }
+            }
+        ]),
+        Order.aggregate([
+            { $match: { status: 'completed' } },
+            {
+                $group: {
+                    _id: '$productId',
+                    totalRevenue: { $sum: '$amount' },
+                    salesCount: { $sum: 1 }
+                }
+            },
+            { $sort: { totalRevenue: -1 } },
+            { $limit: 5 },
+            {
+                $lookup: {
+                    from: 'products',
+                    localField: '_id',
+                    foreignField: '_id',
+                    as: 'product'
+                }
+            },
+            { $unwind: '$product' },
+            {
+                $project: {
+                    name: '$product.name',
+                    totalRevenue: 1,
+                    salesCount: 1
+                }
+            }
         ])
     ]);
 
     const totalRevenue = revenueStats[0]?.total || 0;
 
-    // Mock growth data for now (or implement real aggregation)
-    const recentRevenue = [
-        { date: 'Mon', value: 1200 },
-        { date: 'Tue', value: 2100 },
-        { date: 'Wed', value: 800 },
-        { date: 'Thu', value: 1600 },
-        { date: 'Fri', value: 2400 },
-        { date: 'Sat', value: 3200 },
-        { date: 'Sun', value: 4800 },
-    ];
+    // Format daily revenue for frontend
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const formattedDaily = dailyRevenue.map(d => ({
+        date: days[new Date(d._id).getDay()],
+        value: d.total
+    }));
 
     return NextResponse.json({
         totalUsers,
         activeCreators,
         totalProducts,
         totalRevenue,
-        recentRevenue
+        recentRevenue: formattedDaily,
+        topCreators,
+        topProducts
     });
 }
 

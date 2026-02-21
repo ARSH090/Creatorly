@@ -30,7 +30,7 @@ export async function sendEmail(options: EmailOptions) {
 }
 
 export async function sendVerificationEmail(email: string, token: string) {
-  const verificationUrl = `${process.env.NEXTAUTH_URL}/auth/verify-email?token=${token}`;
+  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/auth/verify-email?token=${token}`;
 
   const html = `
     <!DOCTYPE html>
@@ -68,7 +68,7 @@ export async function sendVerificationEmail(email: string, token: string) {
 }
 
 export async function sendPasswordResetEmail(email: string, token: string) {
-  const resetUrl = `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${token}`;
+  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/auth/reset-password?token=${token}`;
 
   const html = `
     <!DOCTYPE html>
@@ -149,7 +149,7 @@ export async function sendWelcomeEmail(email: string, displayName: string = 'the
             <p style="color: #888; font-size: 14px; margin: 4px 0 0;">Secure payments with low platform fees</p>
           </div>
 
-          <a href="${process.env.NEXTAUTH_URL || 'https://creatorly.in'}/dashboard" class="button">SET UP MY STORE</a>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/dashboard" class="button">SET UP MY STORE</a>
 
           <p style="font-size: 12px; color: #666; text-align: center; margin-top: 30px;">
             Need help getting started? Reply to this email anytime.
@@ -216,7 +216,7 @@ export async function sendPaymentConfirmationEmail(
             </div>
           </div>
 
-          <a href="${process.env.NEXTAUTH_URL}/account/downloads" class="button">Access My Library</a>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/account/downloads" class="button">Access My Library</a>
 
           <div class="footer">
             &copy; 2026 CREATORLY • SHIPPED WITH ANTI-GRAVITY TECH
@@ -274,7 +274,7 @@ export async function sendDownloadInstructionsEmail(
              `).join('')}
           </div>
 
-          <a href="${process.env.NEXTAUTH_URL}/account/downloads" class="button">Access My Library</a>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/account/downloads" class="button">Access My Library</a>
 
           <p style="font-size: 12px; color: #666; text-align: center; margin-top: 24px;">
             Link valid for 24 hours. Need help? Reply to this email.
@@ -335,7 +335,7 @@ export async function sendPaymentFailureEmail(email: string, orderId: string) {
       <p>We're sorry, but your payment for order <strong>#${orderId.slice(-6)}</strong> could not be processed.</p>
       <p>This could be due to insufficient funds, an expired card, or a temporary issue with your bank.</p>
       <div style="margin: 30px 0;">
-        <a href="${process.env.NEXTAUTH_URL}/checkout/retry?orderId=${orderId}" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">Retry Payment</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/checkout/retry?orderId=${orderId}" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">Retry Payment</a>
       </div>
       <p style="font-size: 12px; color: #666;">If you have any questions, please contact our support team.</p>
     </div>
@@ -356,7 +356,7 @@ export async function sendUsageWarningEmail(email: string, resource: string, per
       <p>You have used <strong>${percentage}%</strong> of your monthly ${resource} allowance.</p>
       <p>${isLimit ? 'You have reached your limit. Please upgrade to continue using this service.' : 'You are approaching your limit. Consider upgrading to avoid any interruptions.'}</p>
       <div style="margin: 30px 0;">
-        <a href="${process.env.NEXTAUTH_URL}/billing" style="display: inline-block; padding: 12px 24px; background: #6366f1; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">Upgrade Plan</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/billing" style="display: inline-block; padding: 12px 24px; background: #6366f1; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">Upgrade Plan</a>
       </div>
     </div>
   `;
@@ -390,7 +390,7 @@ export async function sendAffiliateNotificationEmail(
       <p style="font-size: 14px; color: #6b7280;">Order Reference: #${orderId.slice(-6)}</p>
       
       <div style="margin: 30px 0;">
-        <a href="${process.env.NEXTAUTH_URL}/dashboard/affiliates" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">View Dashboard</a>
+        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/dashboard/affiliates" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">View Dashboard</a>
       </div>
     </div>
   `;
@@ -443,5 +443,77 @@ export async function sendMarketingEmail(
     to,
     subject,
     html,
+  });
+}
+
+export async function sendBookingConfirmationEmail(
+  email: string,
+  bookingDetails: {
+    productName: string;
+    date: string;
+    time: string;
+    duration: number;
+  }
+) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Inter', -apple-system, sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
+          .card { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border-radius: 20px; padding: 32px; text-align: center; margin-bottom: 30px; }
+          .header { font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 8px; }
+          .details { background: #111; border-radius: 16px; padding: 24px; border: 1px solid #222; }
+          .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; }
+          .label { color: #666; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
+          .value { color: #fff; font-size: 14px; font-weight: 700; }
+          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.1em; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="card">
+            <div style="font-size: 48px; margin-bottom: 16px;">📅</div>
+            <div class="header">SESSION CONFIRMED</div>
+            <p style="opacity: 0.8; font-size: 14px;">Get ready to level up your game.</p>
+          </div>
+
+          <div class="details">
+            <div class="detail-row">
+              <span class="label">Session Type</span>
+              <span class="value">${bookingDetails.productName}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Date</span>
+              <span class="value">${bookingDetails.date}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Time</span>
+              <span class="value">${bookingDetails.time}</span>
+            </div>
+            <div class="detail-row">
+              <span class="label">Duration</span>
+              <span class="value">${bookingDetails.duration} minutes</span>
+            </div>
+          </div>
+
+          <p style="color: #888; font-size: 12px; text-align: center; margin-top: 30px; line-height: 1.6;">
+            The creator will reach out to you with the meeting link before the session starts. 
+            You can also view your bookings in your account dashboard.
+          </p>
+
+          <div class="footer">
+            &copy; 2026 CREATORLY • CLOCKWORK PRECISION
+          </div>
+        </div>
+      </body>
+    </html>
+    `;
+
+  return sendEmail({
+    to: email,
+    subject: `Confirmed: Your session for ${bookingDetails.productName}`,
+    html
   });
 }

@@ -19,25 +19,25 @@ async function handler(req: NextRequest, user: any) {
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - days);
 
-    // Get daily clicks and purchases
-    const clicks = await AnalyticsEvent.aggregate([
+    // Get daily visitors and purchases
+    const visitors = await AnalyticsEvent.aggregate([
         {
             $match: {
                 creatorId: user._id,
-                eventType: { $in: ['product_view', 'add_to_cart'] },
-                timestamp: { $gte: startDate }
+                eventType: 'page_view',
+                createdAt: { $gte: startDate }
             }
         },
         {
             $group: {
-                _id: '$day',
-                uniqueIPs: { $addToSet: '$ip' }
+                _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
+                uniqueIPs: { $addToSet: "$ip" }
             }
         },
         {
             $project: {
-                date: '$_id',
-                clicks: { $size: '$uniqueIPs' }
+                date: "$_id",
+                visitors: { $size: "$uniqueIPs" }
             }
         },
         {
@@ -71,24 +71,27 @@ async function handler(req: NextRequest, user: any) {
     ]);
 
     // Merge data
-    const conversionData = clicks.map(c => {
-        const p = purchases.find(p => p.date === c.date);
+    const allDates = Array.from(new Set([
+        ...visitors.map(v => v.date),
+        ...purchases.map(p => p.date)
+    ])).sort();
+
+    const conversionData = allDates.map(date => {
+        const v = visitors.find(v => v.date === date);
+        const p = purchases.find(p => p.date === date);
+
+        const visitorCount = v ? v.visitors : 0;
         const purchaseCount = p ? p.purchases : 0;
-        const conversionRate = c.clicks > 0 ? (purchaseCount / c.clicks) * 100 : 0;
+        const conversionRate = visitorCount > 0 ? (purchaseCount / visitorCount) * 100 : 0;
 
         return {
-            date: c.date,
-            clicks: c.clicks,
+            date,
+            visitors: visitorCount,
             purchases: purchaseCount,
             sales: purchaseCount,
             conversionRate: Math.round(conversionRate * 100) / 100
         };
     });
-
-    // Calculate average
-    const totalClicks = conversionData.reduce((sum, d) => sum + d.clicks, 0);
-    const totalPurchases = conversionData.reduce((sum, d) => sum + d.purchases, 0);
-    const avgConversion = totalClicks > 0 ? (totalPurchases / totalClicks) * 100 : 0;
 
     return conversionData;
 }

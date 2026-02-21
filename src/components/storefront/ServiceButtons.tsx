@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import type { ServiceButton, StorefrontTheme } from '@/types/storefront.types';
 import { getBorderRadiusClass, primaryWithOpacity } from '@/utils/theme.utils';
+import { useLeadStore } from '@/lib/store/useLeadStore';
 
 // ─── Icon Map ─────────────────────────────────────────────────────────────────
 
@@ -48,7 +49,6 @@ interface ServiceButtonsProps {
     buttons: ServiceButton[];
     theme: StorefrontTheme;
     creatorUsername: string;
-    onOpenModal: (button: ServiceButton) => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -57,8 +57,9 @@ export default function ServiceButtons({
     buttons,
     theme,
     creatorUsername,
-    onOpenModal,
 }: ServiceButtonsProps) {
+    const { openLeadModal } = useLeadStore();
+
     const visibleButtons = useMemo(
         () =>
             buttons
@@ -75,7 +76,11 @@ export default function ServiceButtons({
     const handleClick = useCallback(
         (button: ServiceButton) => {
             if (button.modalEnabled) {
-                onOpenModal(button);
+                openLeadModal({
+                    id: button.id,
+                    label: button.label,
+                    type: 'service'
+                });
             } else if (button.link) {
                 window.open(button.link, '_blank', 'noopener,noreferrer');
             }
@@ -90,7 +95,7 @@ export default function ServiceButtons({
                 }),
             }).catch(() => { /* ignore */ });
         },
-        [onOpenModal, creatorUsername]
+        [openLeadModal, creatorUsername]
     );
 
     if (visibleButtons.length === 0) {

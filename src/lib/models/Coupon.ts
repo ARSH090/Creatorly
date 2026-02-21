@@ -22,6 +22,7 @@ export interface ICoupon extends Document {
     validUntil?: Date;
 
     status: 'active' | 'inactive' | 'expired';
+    razorpayOfferId?: string;
 
     createdBy?: string; // Admin email
     createdAt: Date;
@@ -95,6 +96,8 @@ const couponSchema = new Schema<ICoupon>({
         enum: ['active', 'inactive', 'expired'],
         default: 'active'
     },
+
+    razorpayOfferId: { type: String, sparse: true },
 
     createdBy: String,
     createdAt: {

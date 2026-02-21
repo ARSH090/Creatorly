@@ -68,24 +68,63 @@ export async function POST(req: NextRequest) {
 
             await connectToDatabase();
 
+            const publicMetadata = evt.data.public_metadata || {};
+            const unsafeMetadata = evt.data.unsafe_metadata || {};
+
+            // 1. Try to find user by clerkId or primary email
+            let user = await User.findOne({
+                $or: [
+                    { clerkId: id },
+                    { email: primaryEmail }
+                ]
+            });
+
             const userUpdate = {
                 clerkId: id,
                 email: primaryEmail,
                 displayName: displayName,
-                username: username || primaryEmail?.split('@')[0] || id,
+                username: unsafeMetadata.username || username || user?.username || primaryEmail?.split('@')[0] || id,
                 avatar: image_url,
-                role: 'creator', // Default role for new signups
-                emailVerified: true, // Verification is handled by Clerk
+                role: publicMetadata.role || user?.role || 'creator',
+                subscriptionTier: publicMetadata.subscriptionTier || user?.subscriptionTier || 'free',
+                emailVerified: true,
             };
 
-            await User.findOneAndUpdate(
-                { clerkId: id },
-                { $set: userUpdate },
-                { upsert: true, new: true }
-            );
+            if (user) {
+                // Update existing user
+                const oldUsername = user.username;
+                await User.findByIdAndUpdate(user._id, { $set: userUpdate });
+                console.log(`[Clerk Webhook] User ${id} updated in MongoDB`);
 
-            console.log(`[Clerk Webhook] User ${id} synchronized with MongoDB`);
+                // If username changed, sync domains
+                if (oldUsername && oldUsername !== userUpdate.username) {
+                    try {
+                        const { syncUsernameWithDomains } = await import('@/lib/services/domainService');
+                        await syncUsernameWithDomains(user._id.toString(), userUpdate.username, oldUsername);
+                    } catch (syncErr) {
+                        console.error('[Clerk Webhook] Domain sync failed:', syncErr);
+                    }
+                }
+            } else {
+                // Create new user (handling potential concurrent creation race)
+                try {
+                    await User.create(userUpdate);
+                    console.log(`[Clerk Webhook] New User ${id} created in MongoDB`);
+                } catch (err: any) {
+                    if (err.code === 11000) {
+                        // Collision happened, try update one last time
+                        await User.findOneAndUpdate(
+                            { $or: [{ clerkId: id }, { email: primaryEmail }] },
+                            { $set: userUpdate }
+                        );
+                        console.log(`[Clerk Webhook] Handled race condition for user ${id}`);
+                    } else {
+                        throw err;
+                    }
+                }
+            }
 
+            // Send welcome email for new creators
             if (eventType === 'user.created' && primaryEmail) {
                 try {
                     await sendWelcomeEmail(primaryEmail, first_name || 'there');

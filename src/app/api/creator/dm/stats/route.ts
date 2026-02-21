@@ -64,8 +64,8 @@ async function handler(req: NextRequest, user: any, context: any) {
 
     // Calculate success rate
     const totalAttempted = dmSent + dmFailed;
-    const successRate = totalAttempted > 0 
-        ? Math.round((dmSent / totalAttempted) * 100) 
+    const successRate = totalAttempted > 0
+        ? Math.round((dmSent / totalAttempted) * 100)
         : 0;
 
     // DM by provider
@@ -116,6 +116,7 @@ async function handler(req: NextRequest, user: any, context: any) {
     return {
         summary: {
             totalLeads,
+            totalDMs: leadsWithDM, // Sync with frontend expectation
             leadsWithDM,
             dmSent,
             dmFailed,

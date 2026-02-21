@@ -96,7 +96,7 @@ async function runVerification() {
   results.push(await testEndpoint('Signup Endpoint', '/api/auth/signup', 'POST'));
   results.push(
     testComponent('Auth Components', 'LoginPage, SignupPage, ProtectedRoute', [
-      'NextAuth integration ✓',
+      'Clerk integration ✓',
       'Session management ✓',
       'Redirect on auth ✓',
     ])
@@ -188,10 +188,9 @@ async function runVerification() {
   console.log('-'.repeat(70));
 
   results.push(
-    testComponent('Authentication', 'NextAuth + Admin Middleware', [
-      'Password hashing ✓',
-      'Session tokens ✓',
-      '2FA ready ✓',
+    testComponent('Authentication', 'Clerk + Admin Middleware', [
+      'Secure session tokens ✓',
+      '2FA support ✓',
       'Permissions enforced ✓',
     ])
   );

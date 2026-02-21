@@ -34,6 +34,14 @@ export const POST = withAuth(async (req, user) => {
             return NextResponse.json({ error: 'User not found' }, { status: 404 });
         }
 
+        // Sync with custom domains and Redis
+        try {
+            const { syncUsernameWithDomains } = await import('@/lib/services/domainService');
+            await syncUsernameWithDomains(user._id, updatedUser.username, user.username);
+        } catch (syncErr) {
+            console.error('Failed to sync username with domains:', syncErr);
+        }
+
         return NextResponse.json({
             success: true,
             username: updatedUser.username

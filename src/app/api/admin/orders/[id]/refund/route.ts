@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { Order } from '@/lib/models/Order';
-import { AdminLog } from '@/lib/models/AdminLog';
+import { recordAdminAction } from '@/lib/utils/auditLogger';
 import { razorpay } from '@/lib/payments/razorpay';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
@@ -17,7 +17,7 @@ async function postHandler(
     const order = await Order.findById(id);
     if (!order) return new NextResponse('Order not found', { status: 404 });
 
-    if ((order.status as any) !== 'completed') {
+    if (!['completed', 'success'].includes(order.status)) {
         return new NextResponse('Order is not eligible for refund', { status: 400 });
     }
 
@@ -44,13 +44,18 @@ async function postHandler(
     order.refundedAt = new Date();
     await order.save();
 
-    // Log Admin Action
-    await AdminLog.create({
+    // Log the refund action using consolidated utility
+    await recordAdminAction({
         adminEmail: user.email,
         action: 'refund_order',
         targetType: 'order',
-        targetId: order._id,
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+        targetId: order._id.toString(),
+        changes: {
+            paymentId,
+            amount: order.total,
+            status: 'refunded'
+        },
+        req
     });
 
     return NextResponse.json({ message: 'Order refunded successfully' });

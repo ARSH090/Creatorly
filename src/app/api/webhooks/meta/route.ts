@@ -7,8 +7,10 @@ import { AutoReplyRule, AutomationTriggerType, MatchType } from '@/lib/models/Au
 import { DMLog } from '@/lib/models/DMLog';
 import { decryptTokenGCM } from '@/lib/security/encryption';
 import { MetaGraphService } from '@/lib/services/meta';
+import { InstagramService } from '@/lib/services/instagram';
 import { metaRateLimiter } from '@/lib/security/ratelimit';
 import { QueueJob } from '@/lib/models/QueueJob';
+import { PendingFollowRequest } from '@/lib/models/PendingFollowRequest';
 
 /**
  * GET Handler for Webhook Verification
@@ -49,10 +51,16 @@ export async function POST(req: NextRequest) {
         }
 
         // Log Raw Event
+        const startTime = Date.now();
+        const payloadHash = crypto.createHash('md5').update(rawBody).digest('hex');
         const eventLog = await WebhookEventLog.create({
             eventId,
+            platform: 'instagram',
+            eventType: body.entry?.[0]?.changes?.[0]?.field || body.entry?.[0]?.messaging?.[0] ? 'messaging' : 'unknown',
+            payloadHash,
             payload: body,
-            receivedAt: new Date()
+            receivedAt: new Date(),
+            status: 'pending'
         });
 
         // 3. Process Entries (Parallel execution to prevent timeout)
@@ -71,9 +79,9 @@ export async function POST(req: NextRequest) {
             }
 
             const decryptedToken = decryptTokenGCM(
-                account.pageAccessToken,
-                account.tokenIV,
-                account.tokenTag
+                account.pageAccessToken!,
+                account.tokenIV!,
+                account.tokenTag!
             );
 
             if (entry.messaging) {
@@ -84,6 +92,8 @@ export async function POST(req: NextRequest) {
                 for (const change of entry.changes) {
                     if (change.field === 'feed') {
                         tasks.push(handleCommentEvent(change.value, account.userId.toString(), igId, decryptedToken));
+                    } else if (change.field === 'followed_by') {
+                        tasks.push(handleFollowEvent(change.value, account.userId.toString(), igId, decryptedToken));
                     }
                 }
             }
@@ -94,12 +104,15 @@ export async function POST(req: NextRequest) {
             await Promise.allSettled(tasks);
         }
 
-
-        // Mark as processed
+        // Update Event Log with Performance Metrics
+        const endTime = Date.now();
+        eventLog.status = 'processed';
         eventLog.processed = true;
+        eventLog.processedAt = new Date();
+        eventLog.processingTime = endTime - startTime;
         await eventLog.save();
 
-        return NextResponse.json({ status: 'ok' });
+        return NextResponse.json({ status: 'success' });
     } catch (error) {
         console.error('Webhook Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
@@ -146,15 +159,18 @@ async function handleMessageEvent(event: any, creatorId: string, accessToken: st
 
     const rules = await AutoReplyRule.find({
         creatorId,
-        triggerType: AutomationTriggerType.DIRECT_MESSAGE,
         isActive: true
     }).sort({ priority: -1 });
 
+    // Check for Story Reply specifically or DM
+    const isStoryReply = !!event.message?.reply_to;
+    const triggerType = isStoryReply ? AutomationTriggerType.STORY_REPLY : AutomationTriggerType.DIRECT_MESSAGE;
+
     for (const rule of rules) {
-        if (isMatch(text, rule)) {
+        if (rule.triggerType === triggerType && isMatch(text, rule)) {
             // Check 24-Hour Rule: Interaction must be recent
             if (isWithin24Hours(event.timestamp)) {
-                await executeAutomation(rule, senderId, accessToken, creatorId, 'dm');
+                await processRuleExecution(rule, senderId, accessToken, creatorId, isStoryReply ? 'story_reply' : 'dm');
                 break;
             }
         }
@@ -183,10 +199,104 @@ async function handleCommentEvent(value: any, creatorId: string, igId: string, a
 
     for (const rule of rules) {
         if (isMatch(text, rule)) {
-            await executeAutomation(rule, senderId, accessToken, creatorId, 'comment');
+            await processRuleExecution(rule, senderId, accessToken, creatorId, 'comment');
             break;
         }
     }
+}
+
+/**
+ * Handler for Follow Events
+ */
+async function handleFollowEvent(value: any, creatorId: string, igId: string, accessToken: string) {
+    const followerId = value.id;
+    if (!followerId) return;
+
+    console.log(`[Instagram Webhook] New follow detected: ${followerId} for creator ${creatorId}`);
+
+    // 1. Check for Pending Follow Requests
+    const pendingRequests = await PendingFollowRequest.find({
+        creatorId,
+        recipientId: followerId,
+        status: 'waiting',
+        expiresAt: { $gt: new Date() }
+    });
+
+    for (const request of pendingRequests) {
+        // Delivery logic for pending request
+        await executeAutomationRaw({
+            text: request.messageText,
+            recipientId: followerId,
+            accessToken,
+            creatorId,
+            ruleId: request.ruleId.toString(),
+            source: 'new_follow'
+        });
+
+        request.status = 'completed';
+        await request.save();
+    }
+
+    // 2. Trigger "New Follower" Automation Rules if active
+    const followRules = await AutoReplyRule.find({
+        creatorId,
+        triggerType: AutomationTriggerType.NEW_FOLLOW,
+        isActive: true
+    });
+
+    for (const rule of followRules) {
+        await processRuleExecution(rule, followerId, accessToken, creatorId, 'new_follow');
+    }
+}
+
+/**
+ * Higher-level Rule Execution with 'Follow First' middleware
+ */
+async function processRuleExecution(rule: any, recipientId: string, accessToken: string, creatorId: string, source: any) {
+    // 1. Check Follow Requirement
+    if (rule.followRequired) {
+        const isFollowing = await InstagramService.isFollowing(rule.creatorId.toString(), recipientId, accessToken);
+
+        if (!isFollowing) {
+            // Check if we've already asked them to follow in the last 24h
+            const existingPending = await PendingFollowRequest.findOne({
+                creatorId,
+                recipientId,
+                ruleId: rule._id,
+                status: 'waiting'
+            });
+
+            if (!existingPending) {
+                // Send "Follow First" DM
+                const followFirstMsg = `Hey! Follow me first, then drop your comment again (or just wait a sec) and I'll send you the link instantly! 🔥`;
+
+                await executeAutomationRaw({
+                    text: followFirstMsg,
+                    recipientId,
+                    accessToken,
+                    creatorId,
+                    ruleId: rule._id,
+                    source
+                });
+
+                // Store in Pending list
+                await PendingFollowRequest.create({
+                    creatorId,
+                    platform: 'instagram',
+                    recipientId,
+                    ruleId: rule._id,
+                    requestedType: rule.attachmentType || 'custom',
+                    requestedId: rule.attachmentId,
+                    messageText: rule.replyText,
+                    expiresAt: new Date(Date.now() + (rule.cooldownHours || 24) * 60 * 60 * 1000)
+                });
+            }
+            return;
+        }
+    }
+
+    // 2. Direct Execution
+    await executeAutomation(rule, recipientId, accessToken, creatorId, source);
 }
 
 /**
@@ -239,41 +349,53 @@ function isMatch(text: string, rule: any): boolean {
 /**
  * Final Automation Execution (Queued)
  */
-async function executeAutomation(rule: any, recipientId: string, accessToken: string, creatorId: string, source: 'dm' | 'comment') {
+async function executeAutomation(rule: any, recipientId: string, accessToken: string, creatorId: string, source: 'dm' | 'comment' | 'story_reply' | 'new_follow') {
+    await executeAutomationRaw({
+        recipientId,
+        text: rule.replyText,
+        accessToken,
+        creatorId,
+        ruleId: rule._id,
+        source
+    });
+}
+
+/**
+ * Raw Automation Execution (Queued)
+ */
+async function executeAutomationRaw(params: {
+    recipientId: string;
+    text: string;
+    accessToken: string;
+    creatorId: string;
+    ruleId?: string;
+    source: string;
+}) {
     try {
         // Persist job to MongoDB Queue for reliable delivery
         await QueueJob.create({
             type: 'dm_delivery',
-            payload: {
-                recipientId,
-                text: rule.replyText,
-                accessToken,
-                creatorId,
-                ruleId: rule._id,
-                source
-            },
+            payload: params,
             status: 'pending',
             nextRunAt: new Date() // ready immediately
         });
 
-        // Optional: Trigger worker immediately for lower latency
-        // In Vercel, this is "fire and forget". We don't await the result to keep webhook fast.
+        // Trigger worker
         fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/workers/process-queue`, {
             headers: { 'Authorization': `Bearer ${process.env.CRON_SECRET}` }
         }).catch(err => console.error('Failed to trigger worker:', err));
 
-        console.log(`[Queue] Enqueued DM for ${recipientId}`);
+        console.log(`[Queue] Enqueued DM for ${params.recipientId}`);
 
     } catch (error: any) {
         console.error('Failed to enqueue job:', error);
-        // Fallback log prevents silent failures if DB is accessible
         await DMLog.create({
-            creatorId,
-            recipientId,
-            ruleId: rule._id,
-            triggerSource: source,
+            creatorId: params.creatorId,
+            recipientId: params.recipientId,
+            ruleId: params.ruleId,
+            triggerSource: params.source,
             status: 'failed',
-            messageSent: rule.replyText,
+            messageSent: params.text,
             errorDetails: `Queue creation failed: ${error.message}`
         });
     }

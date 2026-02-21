@@ -2,33 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    DataGrid,
-    GridColDef,
-    GridActionsCellItem
-} from '@mui/x-data-grid';
-import {
-    Button,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    TextField,
-    MenuItem,
-    FormControlLabel,
-    Switch,
-    Typography,
-    Box,
-    Divider,
-    Chip,
-    Alert,
-    Autocomplete
-} from '@mui/material';
-import {
-    Add as AddIcon,
-    Edit as EditIcon,
-    Delete as DeleteIcon,
-    LocalOffer as CouponIcon
-} from '@mui/icons-material';
+    Plus,
+    Edit2,
+    Trash2,
+    Tag,
+    Clock,
+    CheckCircle,
+    X,
+    AlertTriangle,
+    Loader2,
+    Calendar,
+    Target,
+    Settings,
+    ShieldAlert
+} from 'lucide-react';
 
 export default function CouponsManagementEnhanced() {
     const [coupons, setCoupons] = useState([]);
@@ -101,7 +88,8 @@ export default function CouponsManagementEnhanced() {
 
     const handleClose = () => setOpen(false);
 
-    const handleSubmit = async () => {
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
         try {
             const method = editingCoupon ? 'PUT' : 'POST';
             const url = '/api/admin/coupons';
@@ -127,176 +115,131 @@ export default function CouponsManagementEnhanced() {
         }
     };
 
-    const columns: GridColDef[] = [
-        { field: 'code', headerName: 'Code', width: 150, renderCell: (p: any) => <Typography fontWeight="bold" color="primary">{p.value}</Typography> },
-        { field: 'discountType', headerName: 'Type', width: 130 },
-        {
-            field: 'discountValue', headerName: 'Value', width: 100, renderCell: (p: any) => (
-                <span>{p.row.discountType === 'percentage' ? `${p.value}%` : `₹${p.value}`}</span>
-            )
-        },
-        {
-            field: 'usedCount', headerName: 'Usage', width: 120, renderCell: (p: any) => (
-                <Chip label={`${p.row.usedCount || 0} / ${p.row.usageLimit}`} size="small" variant="outlined" />
-            )
-        },
-        { field: 'validUntil', headerName: 'Expires', width: 150, valueGetter: (params: any) => new Date(params.row.validUntil).toLocaleDateString() },
-        {
-            field: 'status',
-            headerName: 'Status',
-            width: 100,
-            renderCell: (p: any) => (
-                <Chip
-                    label={p.value === 'active' ? 'Active' : p.value}
-                    color={p.value === 'active' ? 'success' : 'default'}
-                    size="small"
-                />
-            )
-        },
-        {
-            field: 'actions',
-            type: 'actions',
-            headerName: 'Actions',
-            width: 100,
-            getActions: (params: any) => [
-                <GridActionsCellItem icon={<EditIcon />} label="Edit" onClick={() => handleOpen(params.row)} />,
-                <GridActionsCellItem icon={<DeleteIcon />} label="Delete" onClick={() => {/* TODO: DELETE API */ }} />,
-            ],
-        },
-    ];
-
     return (
-        <Box sx={{ width: '100%', p: 2, bgcolor: '#fff', borderRadius: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h5" fontWeight="bold">Coupons Management</Typography>
-                <Button variant="contained" color="secondary" startIcon={<AddIcon />} onClick={() => handleOpen()}>
-                    Create Coupon
-                </Button>
-            </Box>
-
-            <div style={{ height: 600, width: '100%' }}>
-                <DataGrid rows={coupons} columns={columns} getRowId={(row) => row._id} loading={loading} />
+        <div className="space-y-10">
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                    <div className="w-2 h-8 bg-rose-500 rounded-full" />
+                    <h2 className="text-2xl font-black text-white uppercase tracking-tighter italic">Promotion Console Enhanced</h2>
+                </div>
+                <button
+                    onClick={() => handleOpen()}
+                    className="px-8 py-4 bg-rose-500 hover:bg-rose-600 text-black font-black uppercase text-[10px] tracking-widest rounded-2xl transition-all shadow-xl shadow-rose-500/20 active:scale-95 flex items-center gap-3"
+                >
+                    <Plus className="w-5 h-5" /> INITIALIZE PROMO
+                </button>
             </div>
 
-            <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-                <DialogTitle>{editingCoupon ? 'Edit Coupon' : 'Create New Coupon'}</DialogTitle>
-                <DialogContent dividers>
-                    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            <div className="bg-zinc-900/40 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md overflow-hidden">
+                <table className="w-full text-left">
+                    <thead className="bg-white/[0.02] border-b border-white/5">
+                        <tr className="px-8">
+                            <th className="px-10 py-8 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Promo Code</th>
+                            <th className="px-10 py-8 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Discount Core</th>
+                            <th className="px-10 py-8 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Utilization Hub</th>
+                            <th className="px-10 py-8 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Expiration Window</th>
+                            <th className="px-10 py-8 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Status</th>
+                            <th className="px-10 py-8 text-right text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Directive</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                        {loading ? (
+                            <tr>
+                                <td colSpan={6} className="px-10 py-20 text-center">
+                                    <div className="flex flex-col items-center gap-4">
+                                        <Loader2 className="h-10 w-10 animate-spin text-rose-500" />
+                                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em]">Querying Registry</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : coupons.length === 0 ? (
+                            <tr>
+                                <td colSpan={6} className="px-10 py-20 text-center">
+                                    <p className="text-[10px] font-black text-zinc-700 uppercase tracking-widest">No Active Promotions</p>
+                                </td>
+                            </tr>
+                        ) : (
+                            coupons.map((coupon: any) => (
+                                <tr key={coupon._id} className="hover:bg-white/[0.02] transition-colors group">
+                                    <td className="px-10 py-8 font-mono font-black text-rose-500 text-base tracking-widest uppercase italic">{coupon.code}</td>
+                                    <td className="px-10 py-8">
+                                        <span className="text-xl font-black text-white italic tracking-tighter">
+                                            {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `₹${coupon.discountValue}`}
+                                        </span>
+                                    </td>
+                                    <td className="px-10 py-8">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-32 h-2 bg-black/40 rounded-full overflow-hidden border border-white/5">
+                                                <div
+                                                    className="h-full bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.5)]"
+                                                    style={{ width: `${Math.min(100, (coupon.usedCount / (coupon.usageLimit || 1)) * 100)}%` }}
+                                                />
+                                            </div>
+                                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{coupon.usedCount} / {coupon.usageLimit}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-10 py-8 font-black text-zinc-500 text-[10px] uppercase tracking-widest italic">{new Date(coupon.validUntil).toLocaleDateString()}</td>
+                                    <td className="px-10 py-8">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full ${coupon.status === 'active' ? 'bg-emerald-500' : 'bg-zinc-600'} animate-pulse`} />
+                                            <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">{coupon.status === 'active' ? 'OPERATIONAL' : 'OFFLINE'}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-10 py-8 text-right">
+                                        <div className="flex items-center justify-end gap-3">
+                                            <button onClick={() => handleOpen(coupon)} className="p-3 bg-white/5 rounded-xl border border-white/5 text-zinc-500 hover:text-white transition-all"><Edit2 className="w-4 h-4" /></button>
+                                            <button className="p-3 bg-white/5 rounded-xl border border-white/5 text-zinc-500 hover:text-rose-500 transition-all"><Trash2 className="w-4 h-4" /></button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
-                    <Box sx={{ display: 'grid', gap: 3 }}>
-                        <Typography variant="subtitle2" color="primary">Section 1: Coupon Details</Typography>
-                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
-                            <TextField
-                                fullWidth label="Coupon Code" required
-                                value={formData.code}
-                                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '') })}
-                                disabled={!!editingCoupon}
-                                helperText="Uppercase, no spaces"
-                            />
-                            <TextField
-                                fullWidth label="Description"
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            />
-                            <TextField
-                                select fullWidth label="Discount Type" required
-                                value={formData.discountType}
-                                onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
-                            >
-                                <MenuItem value="percentage">Percentage (%)</MenuItem>
-                                <MenuItem value="fixed_amount">Fixed Amount (₹)</MenuItem>
-                            </TextField>
-                            <TextField
-                                fullWidth type="number" label="Discount Value" required
-                                value={formData.discountValue}
-                                onChange={(e) => setFormData({ ...formData, discountValue: Number(e.target.value) })}
-                            />
-                        </Box>
-
-                        <Divider />
-                        <Typography variant="subtitle2" color="primary">Section 2: Applicability Rules</Typography>
-                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr' } }}>
-                            <TextField
-                                select fullWidth label="Applies To"
-                                value={formData.appliesTo}
-                                onChange={(e) => setFormData({ ...formData, appliesTo: e.target.value })}
-                            >
-                                <MenuItem value="all_plans">All Paid Plans</MenuItem>
-                                <MenuItem value="specific_plans">Specific Plans</MenuItem>
-                                <MenuItem value="specific_tiers">Specific Tiers</MenuItem>
-                            </TextField>
-                            <Box>
-                                {formData.appliesTo === 'specific_plans' && (
-                                    <Autocomplete
-                                        multiple
-                                        options={plans}
-                                        getOptionLabel={(option: any) => option.name}
-                                        value={plans.filter((p: any) => (formData.applicablePlanIds as any[]).includes(p._id))}
-                                        onChange={(_, newValue) => setFormData({ ...formData, applicablePlanIds: newValue.map((v: any) => v._id) as any })}
-                                        renderInput={(params) => <TextField {...params} label="Select Plans" />}
-                                    />
-                                )}
-                                {formData.appliesTo === 'specific_tiers' && (
-                                    <Autocomplete
-                                        multiple
-                                        options={['basic', 'pro', 'enterprise']}
-                                        value={formData.applicableTiers}
-                                        onChange={(_, newValue) => setFormData({ ...formData, applicableTiers: newValue as any })}
-                                        renderInput={(params) => <TextField {...params} label="Select Tiers" />}
-                                    />
-                                )}
-                            </Box>
-                        </Box>
-
-                        <Divider />
-                        <Typography variant="subtitle2" color="primary">Section 3: Usage Restrictions</Typography>
-                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' } }}>
-                            <TextField
-                                fullWidth type="number" label="Max Total Uses" required
-                                value={formData.usageLimit}
-                                onChange={(e) => setFormData({ ...formData, usageLimit: Number(e.target.value) })}
-                            />
-                            <TextField
-                                fullWidth type="number" label="Uses Per User" required
-                                value={formData.usagePerUser}
-                                onChange={(e) => setFormData({ ...formData, usagePerUser: Number(e.target.value) })}
-                            />
-                            <TextField
-                                fullWidth type="number" label="Min Purchase Amt (₹)"
-                                value={formData.minOrderAmount}
-                                onChange={(e) => setFormData({ ...formData, minOrderAmount: Number(e.target.value) })}
-                            />
-                        </Box>
-
-                        <Divider />
-                        <Typography variant="subtitle2" color="primary">Section 4: Validity & Advanced</Typography>
-                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
-                            <TextField
-                                fullWidth type="date" label="Valid From" InputLabelProps={{ shrink: true }}
-                                value={formData.validFrom}
-                                onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
-                            />
-                            <TextField
-                                fullWidth type="date" label="Valid Until" required InputLabelProps={{ shrink: true }}
-                                value={formData.validUntil}
-                                onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
-                            />
-                            <FormControlLabel
-                                control={<Switch checked={formData.status === 'active'} onChange={(e) => setFormData({ ...formData, status: e.target.checked ? 'active' : 'inactive' })} />}
-                                label="Is Active"
-                            />
-                            <FormControlLabel
-                                control={<Switch checked={formData.cannotCombineWithOtherCoupons} onChange={(e) => setFormData({ ...formData, cannotCombineWithOtherCoupons: e.target.checked })} />}
-                                label="Cannot Combine Coupons"
-                            />
-                        </Box>
-                    </Box>
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button onClick={handleSubmit} variant="contained" color="secondary">Save Coupon</Button>
-                </DialogActions>
-            </Dialog>
-        </Box>
+            {open && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-xl animate-in fade-in duration-300">
+                    <div className="bg-zinc-900 border border-white/10 rounded-[3rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar relative p-10">
+                        <button onClick={handleClose} className="absolute top-8 right-8 p-4 text-zinc-500 hover:text-white transition-all"><X className="w-6 h-6" /></button>
+                        <div className="space-y-12">
+                            <h3 className="text-3xl font-black text-white uppercase italic tracking-tighter flex items-center gap-4">
+                                <div className="w-2 h-8 bg-rose-500 rounded-full" />
+                                {editingCoupon ? 'Configure Promotion' : 'Initialize Promotion'}
+                            </h3>
+                            <form onSubmit={handleSubmit} className="space-y-12 pb-10">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Voucher Code</label>
+                                        <input required value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '') })} disabled={!!editingCoupon} className="w-full bg-black/40 border-white/5 border-2 rounded-2xl h-14 px-6 text-white font-mono font-black italic focus:border-rose-500 transition-all outline-none" />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Description</label>
+                                        <input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className="w-full bg-black/40 border-white/5 border-2 rounded-2xl h-14 px-6 text-white font-black uppercase italic focus:border-rose-500 transition-all outline-none" />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Protocol Type</label>
+                                        <select value={formData.discountType} onChange={(e) => setFormData({ ...formData, discountType: e.target.value })} className="w-full bg-black/40 border-white/5 border-2 rounded-2xl h-14 px-6 text-white font-black uppercase tracking-widest focus:border-rose-500 transition-all outline-none appearance-none cursor-pointer">
+                                            <option value="percentage" className="bg-zinc-900">PERCENTAGE (%)</option>
+                                            <option value="fixed_amount" className="bg-zinc-900">FIXED AMOUNT (₹)</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-1">Market Value</label>
+                                        <input type="number" required value={formData.discountValue} onChange={(e) => setFormData({ ...formData, discountValue: Number(e.target.value) })} className="w-full bg-black/40 border-white/5 border-2 rounded-2xl h-14 px-6 text-white font-black italic focus:border-rose-500 transition-all outline-none" />
+                                    </div>
+                                </div>
+                                <div className="flex gap-6">
+                                    <button type="button" onClick={handleClose} className="flex-1 h-20 bg-black/40 text-zinc-600 font-black uppercase text-xs tracking-[0.2em] rounded-[1.5rem] border border-white/5 hover:text-white transition-all italic">ABORT</button>
+                                    <button type="submit" className="flex-[2] h-20 bg-rose-500 text-black font-black uppercase text-xs tracking-[0.3em] rounded-[1.5rem] shadow-2xl shadow-rose-500/20 hover:bg-rose-400 transition-all italic">COMMIT_PROTOCOL</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }

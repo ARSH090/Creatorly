@@ -67,7 +67,7 @@ export async function POST(req: Request) {
 
             // Razorpay amount is in paise, Order amount is in INR
             const capturedAmountInINR = payment.amount / 100;
-            if (capturedAmountInINR !== order.amount) {
+            if (Math.abs(capturedAmountInINR - order.amount) > 1) {
                 console.error(`🚨 FRAUD ALERT: Amount mismatch for order ${order._id}. Expected ${order.amount}, got ${capturedAmountInINR}`);
                 order.status = 'failed'; // Mark as failed due to fraud attempt
                 await order.save();
@@ -153,8 +153,8 @@ export async function POST(req: Request) {
                 const booking = await Booking.findById(order.metadata.bookingId);
                 if (booking) {
                     booking.status = 'confirmed';
-                    // Store payment link in booking
-                    booking.meetLink = `https://meet.google.com/placeholder-${booking._id}`; // Placeholder 
+                    // meetLink is intentionally NOT auto-generated here (placeholder URLs break UX).
+                    // Creator will send the actual meeting link manually, or via Google Calendar integration.
                     await booking.save();
                     console.log(`📅 Booking ${booking._id} confirmed for order ${order._id}`);
                 }

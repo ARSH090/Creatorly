@@ -1,8 +1,9 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IWebhookEventLog extends Document {
-    platform: 'meta';
+    platform: string;
     eventId: string; // UNIQUE
+    eventType: string;
     payloadHash: string; // Idempotency check on content
     payload: any;
     processed: boolean;
@@ -10,18 +11,23 @@ export interface IWebhookEventLog extends Document {
     error?: string;
     receivedAt: Date;
     processedAt?: Date;
+    processingTime?: number; // In milliseconds
+    createdAt: Date;
+    updatedAt: Date;
 }
 
 const WebhookEventLogSchema: Schema = new Schema({
-    platform: { type: String, default: 'meta', required: true },
+    platform: { type: String, required: true, index: true },
     eventId: { type: String, required: true, unique: true, index: true },
+    eventType: { type: String, required: true, index: true },
     payloadHash: { type: String, required: true, index: true },
     payload: { type: Schema.Types.Mixed, required: true },
     processed: { type: Boolean, default: false, index: true },
     status: { type: String, enum: ['pending', 'processed', 'failed', 'skipped'], default: 'pending' },
     error: String,
     receivedAt: { type: Date, default: Date.now },
-    processedAt: Date
+    processedAt: Date,
+    processingTime: Number
 }, { timestamps: true });
 
 WebhookEventLogSchema.index({ receivedAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 30 }); // Keep for 30 days for audit

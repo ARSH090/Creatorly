@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Plan from '@/lib/models/Plan';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { logAdminAction } from '@/lib/admin/logger';
+import { syncRazorpayPlan } from '@/lib/payments/razorpay';
 
 /**
  * GET /api/admin/plans/[id]
@@ -46,6 +47,34 @@ async function putHandler(
         const plan = await Plan.findById(id);
         if (!plan) {
             return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
+        }
+
+        // 1. Handle Price Changes (Sync to Razorpay)
+        // Note: Razorpay plans are immutable. If price changes, we create a new plan version.
+        if (plan.tier !== 'free') {
+            const monthlyPriceChanged = body.monthlyPrice !== undefined && body.monthlyPrice !== plan.monthlyPrice;
+            const yearlyPriceChanged = body.yearlyPrice !== undefined && body.yearlyPrice !== plan.yearlyPrice;
+
+            if (monthlyPriceChanged) {
+                const monthlyRp = await syncRazorpayPlan({
+                    name: body.name || plan.name,
+                    description: body.description || plan.description,
+                    amount: body.monthlyPrice,
+                    interval: 'monthly'
+                });
+                body.razorpayMonthlyPlanId = monthlyRp.id;
+                body.razorpayPlanId = monthlyRp.id; // Update legacy field too
+            }
+
+            if (yearlyPriceChanged) {
+                const yearlyRp = await syncRazorpayPlan({
+                    name: body.name || plan.name,
+                    description: body.description || plan.description,
+                    amount: body.yearlyPrice,
+                    interval: 'yearly'
+                });
+                body.razorpayYearlyPlanId = yearlyRp.id;
+            }
         }
 
         // Update plan fields

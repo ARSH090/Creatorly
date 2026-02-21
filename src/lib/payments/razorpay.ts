@@ -43,3 +43,63 @@ export const verifyRazorpaySignature = (
 
     return generatedSignature === signature;
 };
+
+/**
+ * Creates or updates a Plan in Razorpay
+ */
+export const syncRazorpayPlan = async (options: {
+    name: string;
+    description?: string;
+    amount: number; // in INR
+    interval: 'monthly' | 'yearly';
+}) => {
+    try {
+        const plan = await razorpay.plans.create({
+            period: options.interval === 'monthly' ? 'monthly' : 'yearly',
+            interval: 1,
+            item: {
+                name: options.name + (options.interval === 'monthly' ? ' (Monthly)' : ' (Yearly)'),
+                amount: Math.round(options.amount * 100), // to paise
+                currency: 'INR',
+                description: options.description || `Creatorly ${options.name} ${options.interval} plan`
+            }
+        });
+        return plan;
+    } catch (error) {
+        console.error(`Error syncing Razorpay plan (${options.interval}):`, error);
+        throw error;
+    }
+};
+
+/**
+ * Creates an Offer in Razorpay for synchronization
+ */
+export const syncRazorpayOffer = async (options: {
+    name: string;
+    code: string;
+    description?: string;
+    type: 'percentage' | 'fixed';
+    value: number;
+    maxAmount?: number;
+    validUntil?: Date;
+}) => {
+    try {
+        const offer = await (razorpay as any).offers.create({
+            name: options.name || options.code,
+            display_name: options.description || `Discount code ${options.code}`,
+            payment_method: 'all',
+            type: 'discount',
+            item_type: 'plan', // For subscriptions
+            discount: {
+                type: options.type === 'percentage' ? 'percentage' : 'flat',
+                value: options.type === 'percentage' ? options.value : Math.round(options.value * 100) // to paise
+            },
+            max_amount: options.maxAmount ? Math.round(options.maxAmount * 100) : undefined,
+            valid_till: options.validUntil ? Math.floor(options.validUntil.getTime() / 1000) : undefined,
+        } as any); // Cast because types might be strict
+        return offer;
+    } catch (error) {
+        console.error(`Error syncing Razorpay offer (${options.code}):`, error);
+        throw error;
+    }
+};

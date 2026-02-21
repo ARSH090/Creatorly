@@ -50,6 +50,30 @@ export interface IProduct extends Document {
     discountCodes?: any[];
     compareAtPrice?: number;
 
+    // Social Proof & Info
+    testimonials?: Array<{
+        id: string;
+        name: string;
+        content: string;
+        rating: number;
+        avatar?: string;
+    }>;
+    faqs?: Array<{
+        id: string;
+        question: string;
+        answer: string;
+    }>;
+
+    // Project Integration
+    autoCreateProject?: boolean;
+    projectTemplate?: {
+        tasks: Array<{
+            title: string;
+            description?: string;
+            priority?: 'Low' | 'Medium' | 'High' | 'Urgent';
+        }>;
+    };
+
     // Timestamps
     createdAt: Date;
     updatedAt: Date;
@@ -93,6 +117,43 @@ const ProductSchema: Schema = new Schema({
     tags: [{ type: String }],
 
     coverImageUrl: String,
+    image: String,
+    thumbnail: String,
+    files: [{
+        name: String,
+        url: String,
+        type: { type: String },
+        size: Number
+    }],
+    digitalFileUrl: String,
+    compareAtPrice: Number,
+
+    testimonials: [{
+        id: String,
+        name: String,
+        content: String,
+        rating: { type: Number, min: 1, max: 5 },
+        avatar: String
+    }],
+    faqs: [{
+        id: String,
+        question: String,
+        answer: String
+    }],
+
+    // Project Integration
+    autoCreateProject: { type: Boolean, default: false },
+    projectTemplate: {
+        tasks: [{
+            title: String,
+            description: String,
+            priority: {
+                type: String,
+                enum: ['Low', 'Medium', 'High', 'Urgent'],
+                default: 'Medium'
+            }
+        }]
+    },
 
     publishedAt: Date,
     deletedAt: Date

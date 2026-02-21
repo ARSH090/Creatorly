@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
         let downloadLimit = 3; // Default
 
         for (const cartItem of cart) {
-            const product = await Product.findOne({ _id: cartItem.id, status: 'published' });
+            const product = await Product.findOne({ _id: cartItem.id, status: 'active' });
             if (!product) {
                 return NextResponse.json({ error: `Product ${cartItem.id} is not available for purchase` }, { status: 400 });
             }
@@ -85,6 +85,32 @@ export async function POST(req: NextRequest) {
                 const { Booking } = await import('@/lib/models/Booking');
                 const startTime = new Date(`${cartItem.metadata.bookingDate.split('T')[0]}T${cartItem.metadata.bookingTime}`);
                 const endTime = new Date(startTime.getTime() + (product.coachingDuration || 30) * 60000);
+
+                // Race condition check: Verify slot is still available
+                const existingBooking = await Booking.findOne({
+                    creatorId: product.creatorId,
+                    status: { $in: ['confirmed', 'pending'] },
+                    $or: [
+                        { startTime: { $lt: endTime, $gte: startTime } }, // starts during requested slot
+                        { endTime: { $gt: startTime, $lte: endTime } },   // ends during requested slot
+                        { startTime: { $lte: startTime }, endTime: { $gte: endTime } } // wraps around requested slot
+                    ]
+                });
+
+                if (existingBooking) {
+                    // Check if the pending booking is actually "stale" (older than 30 mins)
+                    const isStale = existingBooking.status === 'pending' &&
+                        (new Date().getTime() - new Date(existingBooking.createdAt).getTime() > 30 * 60000);
+
+                    if (!isStale) {
+                        return NextResponse.json({
+                            error: `The slot ${cartItem.metadata.bookingTime} on ${cartItem.metadata.bookingDate.split('T')[0]} is no longer available.`
+                        }, { status: 400 });
+                    }
+
+                    // If stale, we'll proceed and the cleanup job or this new creation will eventually overwrite/supersede 
+                    // (Actually we should probably delete the stale one if we find it, but for safety let's just allow the new one)
+                }
 
                 const booking = await Booking.create({
                     creatorId: product.creatorId,
@@ -170,9 +196,8 @@ export async function POST(req: NextRequest) {
                     couponId = coupon._id;
                     appliedCouponCode = coupon.code;
 
-                    // Increment usage count
-                    coupon.usedCount = (coupon.usedCount || 0) + 1;
-                    await coupon.save();
+                    // NOTE: usedCount is incremented in the webhook (payment.captured)
+                    // NOT here, to prevent burning coupons on abandoned checkouts.
                 }
             }
         }
@@ -240,7 +265,7 @@ export async function POST(req: NextRequest) {
             dbSubscriptionId = newSub._id.toString();
         }
 
-        await Order.create({
+        const order = await Order.create({
             items,
             creatorId: creatorId as mongoose.Types.ObjectId,
             userId: user ? (user as any)._id : new mongoose.Types.ObjectId(),
@@ -266,6 +291,14 @@ export async function POST(req: NextRequest) {
                 subscriptionId: razorpaySubscriptionId
             }
         });
+
+        // Trigger Abandoned Cart Sequence
+        // Note: The marketing service handles duplicate checks.
+        // If they complete the purchase, we'll cancel this enrollment in the webhook.
+        if (creatorId) {
+            const { enrollInSequence } = await import('@/lib/services/marketing');
+            await enrollInSequence(customer.email, creatorId.toString(), 'abandoned_cart');
+        }
 
         // Detect Upsell Opportunity
         let upsellOffer = null;

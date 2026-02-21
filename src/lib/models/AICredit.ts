@@ -51,9 +51,25 @@ export interface IAICreditTransaction extends Document {
 }
 
 /**
+ * AI Credit Document Interface (includes instance methods)
+ */
+export interface IAICreditDocument extends IAICredit, Document {
+    _id: mongoose.Types.ObjectId;
+    useCredits(amount: number, description: string, metadata?: Record<string, any>): Promise<IAICreditDocument>;
+    addCredits(amount: number, type: CreditTransactionType, description: string, metadata?: Record<string, any>): Promise<IAICreditDocument>;
+}
+
+/**
+ * AI Credit Model Interface (includes static methods)
+ */
+export interface IAICreditModel extends Model<IAICreditDocument> {
+    getOrCreate(creatorId: mongoose.Types.ObjectId | string): Promise<IAICreditDocument>;
+}
+
+/**
  * AI Credit Schema
  */
-const AICreditSchema: Schema = new Schema({
+const AICreditSchema: Schema<IAICreditDocument, IAICreditModel> = new Schema({
     creatorId: {
         type: Schema.Types.ObjectId,
         ref: 'User',
@@ -144,9 +160,9 @@ AICreditTransactionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 365 * 24
 /**
  * Get or create AICredit for a creator
  */
-AICreditSchema.statics.getOrCreate = async function(creatorId: mongoose.Types.ObjectId | string) {
+AICreditSchema.statics.getOrCreate = async function (creatorId: mongoose.Types.ObjectId | string) {
     let credit = await this.findOne({ creatorId });
-    
+
     if (!credit) {
         credit = await this.create({
             creatorId,
@@ -156,21 +172,21 @@ AICreditSchema.statics.getOrCreate = async function(creatorId: mongoose.Types.Ob
             packageType: CreditPackage.STARTER
         });
     }
-    
+
     return credit;
 };
 
 /**
  * Use credits
  */
-AICreditSchema.methods.useCredits = async function(amount: number, description: string, metadata?: Record<string, any>) {
+AICreditSchema.methods.useCredits = async function (amount: number, description: string, metadata?: Record<string, any>) {
     if (this.remainingCredits < amount) {
         throw new Error('Insufficient credits');
     }
-    
+
     this.usedCredits += amount;
     this.remainingCredits -= amount;
-    
+
     // Create transaction record
     await AICreditTransaction.create({
         creatorId: this.creatorId,
@@ -180,17 +196,17 @@ AICreditSchema.methods.useCredits = async function(amount: number, description: 
         metadata,
         balanceAfter: this.remainingCredits
     });
-    
+
     return this.save();
 };
 
 /**
  * Add credits
  */
-AICreditSchema.methods.addCredits = async function(amount: number, type: CreditTransactionType, description: string, metadata?: Record<string, any>) {
+AICreditSchema.methods.addCredits = async function (amount: number, type: CreditTransactionType, description: string, metadata?: Record<string, any>) {
     this.totalCredits += amount;
     this.remainingCredits += amount;
-    
+
     // Create transaction record
     await AICreditTransaction.create({
         creatorId: this.creatorId,
@@ -200,12 +216,12 @@ AICreditSchema.methods.addCredits = async function(amount: number, type: CreditT
         metadata,
         balanceAfter: this.remainingCredits
     });
-    
+
     return this.save();
 };
 
-export const AICredit = (mongoose.models.AICredit as Model<IAICredit>) ||
-    mongoose.model<IAICredit>('AICredit', AICreditSchema);
+export const AICredit = (mongoose.models.AICredit as IAICreditModel) ||
+    mongoose.model<IAICreditDocument, IAICreditModel>('AICredit', AICreditSchema);
 
 export const AICreditTransaction = (mongoose.models.AICreditTransaction as Model<IAICreditTransaction>) ||
     mongoose.model<IAICreditTransaction>('AICreditTransaction', AICreditTransactionSchema);

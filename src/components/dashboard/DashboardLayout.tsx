@@ -66,6 +66,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: 'Projects', icon: Folder, href: '/dashboard/projects', badge: stats?.productsCount },
         { name: 'Orders', icon: ShoppingCart, href: '/dashboard/orders', badge: stats?.pendingOrders },
         { name: 'Analytics', icon: TrendingUp, href: '/dashboard/analytics' },
+        { name: 'Leads', icon: Users, href: '/dashboard/leads' },
         { name: 'Marketing', icon: Mail, href: '/dashboard/email/campaigns' },
         { name: 'AutoDM Hub', icon: Zap, href: '/autodm' },
         { name: 'Team', icon: Users, href: '/dashboard/team' },

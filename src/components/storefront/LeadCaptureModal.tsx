@@ -1,14 +1,13 @@
-'use client';
-
-import React, { useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useForm } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { X, Loader2, CheckCircle2, AlertCircle, MessageCircle } from 'lucide-react';
-import type { ServiceButton, StorefrontTheme, LeadSubmitStatus } from '@/types/storefront.types';
+import type { StorefrontTheme, LeadSubmitStatus } from '@/types/storefront.types';
 import { primaryWithOpacity, getBorderRadiusClass } from '@/utils/theme.utils';
+import { useLeadStore } from '@/lib/store/useLeadStore';
 
 // ─── Validation Schema ────────────────────────────────────────────────────────
 
@@ -19,12 +18,9 @@ const formSchema = z.object({
         .min(10, 'Enter a valid phone number')
         .max(15, 'Phone number too long')
         .regex(/^\+?[1-9]\d{6,14}$/, 'Use international format: +91XXXXXXXXXX'),
-    email: z
-        .string()
-        .email('Enter a valid email address')
-        .optional()
-        .or(z.literal('')),
+    email: z.string().email('Invalid email').or(z.literal('')).optional(),
     interest: z.string(),
+    productId: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -82,26 +78,21 @@ function InputField({
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface LeadCaptureModalProps {
-    open: boolean;
-    button: ServiceButton | null;
     creatorUsername: string;
     theme: StorefrontTheme;
-    onClose: () => void;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function LeadCaptureModal({
-    open,
-    button,
     creatorUsername,
     theme,
-    onClose,
 }: LeadCaptureModalProps) {
-    const [status, setStatus] = React.useState<LeadSubmitStatus>('idle');
-    const [deepLink, setDeepLink] = React.useState<string | null>(null);
-    const [autoSend, setAutoSend] = React.useState<string | null>(null);
-    const [serverError, setServerError] = React.useState<string | null>(null);
+    const { isOpen, source, closeLeadModal } = useLeadStore();
+    const [status, setStatus] = useState<LeadSubmitStatus>('idle');
+    const [deepLink, setDeepLink] = useState<string | null>(null);
+    const [autoSend, setAutoSend] = useState<string | null>(null);
+    const [serverError, setServerError] = useState<string | null>(null);
 
     const radiusClass = getBorderRadiusClass(theme.buttonStyle);
 
@@ -113,19 +104,28 @@ export default function LeadCaptureModal({
         formState: { errors },
     } = useForm<FormValues>({
         resolver: zodResolver(formSchema),
-        defaultValues: { name: '', phone: '', email: '', interest: '' },
+        defaultValues: {
+            name: '',
+            phone: '',
+            email: '',
+            interest: '',
+            productId: ''
+        },
     });
 
-    // Sync interest field with the clicked button
+    // Sync interest field with the source
     useEffect(() => {
-        if (button) {
-            setValue('interest', button.label);
+        if (isOpen && source) { // Added isOpen check to prevent setting on initial render if not open
+            setValue('interest', source.label);
+            if (source.productId) {
+                setValue('productId', source.productId);
+            }
         }
-    }, [button, setValue]);
+    }, [isOpen, source, setValue]); // Added isOpen to dependencies
 
     // Reset entire modal state when it closes
     useEffect(() => {
-        if (!open) {
+        if (!isOpen) {
             setTimeout(() => {
                 reset();
                 setStatus('idle');
@@ -134,10 +134,10 @@ export default function LeadCaptureModal({
                 setServerError(null);
             }, 300); // wait for close animation
         }
-    }, [open, reset]);
+    }, [isOpen, reset]);
 
-    const onSubmit = useCallback(
-        async (values: FormValues) => {
+    const onSubmit: SubmitHandler<FormValues> = useCallback(
+        async (values) => {
             setStatus('loading');
             setServerError(null);
 
@@ -173,7 +173,7 @@ export default function LeadCaptureModal({
     );
 
     return (
-        <Dialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
+        <Dialog.Root open={isOpen} onOpenChange={(o) => !o && closeLeadModal()}>
             <Dialog.Portal>
                 {/* Backdrop */}
                 <Dialog.Overlay asChild>
@@ -190,8 +190,8 @@ export default function LeadCaptureModal({
                     data-testid="lead-modal"
                     aria-describedby="modal-description"
                     className="fixed z-50 inset-0 flex items-end sm:items-center justify-center p-4 sm:p-0"
-                    onEscapeKeyDown={onClose}
-                    onInteractOutside={onClose}
+                    onEscapeKeyDown={closeLeadModal}
+                    onInteractOutside={closeLeadModal}
                 >
                     <motion.div
                         className="relative w-full sm:max-w-md rounded-3xl sm:rounded-2xl overflow-hidden shadow-2xl"
@@ -214,7 +214,7 @@ export default function LeadCaptureModal({
                         >
                             <div>
                                 <Dialog.Title className="text-base font-bold">
-                                    {button?.label ?? 'Get in Touch'}
+                                    {source?.label ?? 'Get in Touch'}
                                 </Dialog.Title>
                                 <p id="modal-description" className="text-xs opacity-50 mt-0.5">
                                     Fill in your details and we&apos;ll reach out shortly.
@@ -226,7 +226,7 @@ export default function LeadCaptureModal({
                                     aria-label="Close modal"
                                     className="w-8 h-8 rounded-full flex items-center justify-center
                                                bg-white/5 hover:bg-white/10 transition-colors"
-                                    onClick={onClose}
+                                    onClick={closeLeadModal}
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
@@ -276,8 +276,9 @@ export default function LeadCaptureModal({
                                             {...register('email')}
                                         />
 
-                                        {/* Hidden interest field */}
+                                        {/* Hidden fields */}
                                         <input type="hidden" {...register('interest')} />
+                                        <input type="hidden" {...register('productId')} />
 
                                         {/* Server error banner */}
                                         {status === 'error' && serverError && (
@@ -371,7 +372,7 @@ export default function LeadCaptureModal({
                                         )}
 
                                         <button
-                                            onClick={onClose}
+                                            onClick={closeLeadModal}
                                             className="text-xs opacity-40 hover:opacity-70 transition-opacity underline"
                                         >
                                             Close

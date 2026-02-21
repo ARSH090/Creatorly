@@ -44,6 +44,7 @@ export default function CreatorBio({ creator }: CreatorBioProps) {
                             fill
                             sizes="96px"
                             className="object-cover"
+                            priority
                         />
                     ) : (
                         <div className="flex items-center justify-center w-full h-full text-3xl font-bold text-purple-300">

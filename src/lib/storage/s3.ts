@@ -10,6 +10,14 @@ const s3Client = new S3Client({
     },
 });
 
+// Utility to sanitize filenames
+export function sanitizeKey(filename: string): string {
+    return filename
+        .split('.')[0]
+        .replace(/[^a-zA-Z0-9]/g, '-')
+        .toLowerCase();
+}
+
 export async function getPresignedUploadUrl(
     key: string,
     contentType: string,
@@ -19,6 +27,8 @@ export async function getPresignedUploadUrl(
         Bucket: process.env.AWS_S3_BUCKET,
         Key: key,
         ContentType: contentType,
+        // Remove ACL: 'public-read' as it requires specific bucket settings
+        // and is better handled by bucket policy or dedicated CloudFront
     });
 
     try {

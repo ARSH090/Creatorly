@@ -14,7 +14,7 @@ export async function getMongoUser(): Promise<IUser | null> {
 
         if (user) return user;
 
-        // 2. If not found, try to find by email (for migration)
+        // 2. If not found, try to find by email (for migration or race conditions)
         const clerkUser = await currentUser();
         if (!clerkUser) return null;
 
@@ -23,9 +23,13 @@ export async function getMongoUser(): Promise<IUser | null> {
 
         user = await User.findOne({ email });
 
-        // 3. If found by email, link clerkId
+        // 3. If found by email, link clerkId and sync handle if missing
         if (user) {
+            const unsafeMetadata = (clerkUser.unsafeMetadata as any) || {};
             user.clerkId = userId;
+            if (!user.username && unsafeMetadata.username) {
+                user.username = unsafeMetadata.username;
+            }
             await user.save();
             return user;
         }

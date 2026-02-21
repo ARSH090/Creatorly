@@ -14,6 +14,7 @@ export interface IPlan extends Document {
     // Limits
     maxUsers: number;
     maxStorageMb: number;
+    maxAutoDms: number;
     maxApiCalls: number;
     rateLimitPerMin: number;
 
@@ -28,7 +29,9 @@ export interface IPlan extends Document {
     isActive: boolean;
     isVisible: boolean;
     sortOrder: number;
-    razorpayPlanId?: string;
+    razorpayPlanId?: string; // Legacy/Primary
+    razorpayMonthlyPlanId?: string;
+    razorpayYearlyPlanId?: string;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -92,6 +95,16 @@ const PlanSchema: Schema = new Schema({
                 return this.tier === PlanTier.FREE ? val <= 100 : val >= 1024;
             },
             message: 'Free tier supports max 100MB storage.'
+        }
+    },
+    maxAutoDms: {
+        type: Number,
+        required: true,
+        validate: {
+            validator: function (this: any, val: number): boolean {
+                return this.tier === PlanTier.FREE ? val <= 100 : val >= 500;
+            },
+            message: 'Free tier supports max 100 Auto DMs.'
         }
     },
     maxApiCalls: {
@@ -161,7 +174,9 @@ const PlanSchema: Schema = new Schema({
     isActive: { type: Boolean, default: true, index: true },
     isVisible: { type: Boolean, default: true, index: true },
     sortOrder: { type: Number, default: 0 },
-    razorpayPlanId: { type: String, sparse: true, unique: true }
+    razorpayPlanId: { type: String, sparse: true },
+    razorpayMonthlyPlanId: { type: String, sparse: true },
+    razorpayYearlyPlanId: { type: String, sparse: true }
 }, { timestamps: true });
 
 
@@ -172,6 +187,7 @@ PlanSchema.pre('save', async function (this: IPlan) {
         this.yearlyPrice = 0;
         this.maxUsers = 1;
         this.maxStorageMb = 100;
+        this.maxAutoDms = 100;
         this.maxApiCalls = 1000;
         this.hasAnalytics = false;
         this.hasPrioritySupport = false;

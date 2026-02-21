@@ -22,13 +22,36 @@ async function handler(req: NextRequest, user: any) {
         {
             $match: {
                 creatorId: user._id,
-                eventType: 'store_view',
-                timestamp: { $gte: startDate }
+                eventType: 'page_view',
+                createdAt: { $gte: startDate }
             }
         },
         {
             $group: {
-                _id: { $ifNull: ['$source', 'direct'] },
+                _id: {
+                    $cond: [
+                        { $ne: ["$utm_source", null] },
+                        "$utm_source",
+                        {
+                            $cond: [
+                                { $ne: ["$referrer", null] },
+                                {
+                                    $switch: {
+                                        branches: [
+                                            { case: { $regexMatch: { input: "$referrer", regex: /instagram\.com/i } }, then: "Instagram" },
+                                            { case: { $regexMatch: { input: "$referrer", regex: /facebook\.com/i } }, then: "Facebook" },
+                                            { case: { $regexMatch: { input: "$referrer", regex: /t\.co|twitter\.com/i } }, then: "Twitter" },
+                                            { case: { $regexMatch: { input: "$referrer", regex: /tiktok\.com/i } }, then: "TikTok" },
+                                            { case: { $regexMatch: { input: "$referrer", regex: /google\.com/i } }, then: "Google" }
+                                        ],
+                                        default: "Other Referral"
+                                    }
+                                },
+                                "Direct"
+                            ]
+                        }
+                    ]
+                },
                 count: { $sum: 1 }
             }
         },
@@ -38,8 +61,8 @@ async function handler(req: NextRequest, user: any) {
         {
             $project: {
                 _id: 0,
-                source: '$_id',
-                visits: '$count'
+                source: "$_id",
+                visits: "$count"
             }
         }
     ]);

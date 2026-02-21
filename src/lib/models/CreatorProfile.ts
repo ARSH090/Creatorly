@@ -123,6 +123,20 @@ export interface ICreatorProfile extends Document {
         };
     };
 
+    // Testimonials & FAQs
+    testimonials: Array<{
+        id: string;
+        name: string;
+        role: string;
+        content: string;
+        avatar?: string;
+    }>;
+    faqs: Array<{
+        id: string;
+        question: string;
+        answer: string;
+    }>;
+
     createdAt: Date;
     updatedAt: Date;
 }
@@ -189,9 +203,23 @@ const CreatorProfileSchema: Schema = new Schema({
 
     layout: [{
         id: String,
-        type: { type: String, enum: ['hero', 'services', 'links', 'products', 'newsletter', 'featured_products', 'categories', 'testimonials'] },
+        type: { type: String, enum: ['hero', 'services', 'links', 'products', 'newsletter', 'featured_products', 'categories', 'testimonials', 'faq'] },
         enabled: { type: Boolean, default: true },
         order: Number
+    }],
+
+    testimonials: [{
+        id: String,
+        name: String,
+        role: String,
+        content: String,
+        avatar: String
+    }],
+
+    faqs: [{
+        id: String,
+        question: String,
+        answer: String
     }],
 
     customDomain: {

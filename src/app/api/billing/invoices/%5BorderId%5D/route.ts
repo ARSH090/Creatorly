@@ -53,35 +53,56 @@ async function handler(req: NextRequest, { params }: { params: Promise<{ orderId
         doc.setFontSize(12);
         doc.text('To:', 120, 50);
         doc.setFontSize(10);
-        doc.text(order.customerEmail, 120, 55);
-        doc.text(`Transaction ID: ${order.razorpayPaymentId || 'N/A'}`, 120, 60);
+        doc.text(order.customerName || order.customerEmail, 120, 55);
+        if (order.customerName) doc.text(order.customerEmail, 120, 60);
+        doc.text(`Transaction ID: ${order.razorpayPaymentId || 'N/A'}`, 120, 65);
 
         // 4. Items Table
+        const currency = order.currency || 'INR';
         const tableColumn = ["Item", "Quantity", "Price", "Total"];
         const tableRows = order.items.map(item => [
             item.name,
             item.quantity.toString(),
-            `INR ${item.price.toFixed(2)}`,
-            `INR ${(item.price * item.quantity).toFixed(2)}`
+            `${currency} ${item.price.toFixed(2)}`,
+            `${currency} ${(item.price * item.quantity).toFixed(2)}`
         ]);
 
         (doc as any).autoTable({
             head: [tableColumn],
             body: tableRows,
-            startY: 70,
+            startY: 75,
             theme: 'striped',
             headStyles: { fillColor: [99, 102, 241] },
         });
 
-        // 5. Total
-        const finalY = (doc as any).lastAutoTable.finalY + 10;
+        // 5. Detailed Total Breakdown
+        let currentY = (doc as any).lastAutoTable.finalY + 15;
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+
+        const addLine = (label: string, value: number) => {
+            if (value === 0) return;
+            doc.text(label, 130, currentY);
+            doc.text(`${currency} ${value.toFixed(2)}`, 170, currentY, { align: 'right' });
+            currentY += 7;
+        };
+
+        addLine('Subtotal:', order.amount);
+        if (order.taxAmount) addLine('Tax:', order.taxAmount);
+        if (order.discountAmount) addLine('Discount:', -order.discountAmount);
+        if (order.tipAmount) addLine('Tip:', order.tipAmount);
+
         doc.setFontSize(14);
-        doc.text(`Grand Total: INR ${order.amount.toFixed(2)}`, 140, finalY);
+        doc.setTextColor(0);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Grand Total:', 130, currentY + 5);
+        doc.text(`${currency} ${order.total.toFixed(2)}`, 170, currentY + 5, { align: 'right' });
 
         // 6. Footer
         doc.setFontSize(8);
         doc.setTextColor(150);
-        doc.text('Thank you for being part of the Creatorly economy.', 105, 280, { align: 'center' });
+        doc.setFont('helvetica', 'normal');
+        doc.text('Thank you for being part of the Creatorly economy.', 105, 285, { align: 'center' });
 
         // Generate Buffer
         const pdfBuffer = doc.output('arraybuffer');

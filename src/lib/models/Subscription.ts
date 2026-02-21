@@ -17,6 +17,7 @@ export interface ISubscription extends Document {
     trialEndsAt?: Date;
     status: 'active' | 'canceled' | 'expired' | 'past_due' | 'pending' | 'trialing';
     autoRenew: boolean;
+    cancelAtPeriodEnd: boolean;
     autopayEnabled: boolean;
 
     // Payment provider fields
@@ -83,7 +84,7 @@ const SubscriptionSchema: Schema = new Schema({
         index: true
     },
     autoRenew: { type: Boolean, default: true },
-
+    cancelAtPeriodEnd: { type: Boolean, default: false },
     trialEndsAt: { type: Date },
     autopayEnabled: { type: Boolean, default: false },
 

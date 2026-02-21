@@ -6,6 +6,7 @@ import { ShoppingBag, Star, Zap, TrendingUp, Eye, Play, Lock, FileText, Users, L
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useCheckoutStore } from '@/lib/store/useCheckoutStore';
+import { useLeadStore } from '@/lib/store/useLeadStore';
 import BookingModal from './BookingModal';
 
 interface ProductCardProps {
@@ -36,6 +37,7 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState<{ date: Date; time: string } | null>(null);
     const { addToCart, setStep } = useCheckoutStore();
+    const { openLeadModal } = useLeadStore();
     const router = useRouter();
 
     const handleAction = async () => {
@@ -53,6 +55,17 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
         // If coaching and no slot selected, open modal
         if (product.type === 'coaching' && !selectedSlot) {
             setIsBookingModalOpen(true);
+            return;
+        }
+
+        // If free product, trigger lead capture modal directly
+        if (product.price === 0) {
+            openLeadModal({
+                id: product.id,
+                label: product.name,
+                type: 'product',
+                productId: product.id
+            });
             return;
         }
 

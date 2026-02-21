@@ -209,6 +209,17 @@ export async function POST(req: NextRequest) {
                 log.error('Failed to increment order counter', { error: counterErr });
             }
 
+            // Increment coupon usedCount NOW (after payment success, not at order creation)
+            if (order.couponId) {
+                try {
+                    const { default: Coupon } = await import('@/lib/models/Coupon');
+                    await Coupon.findByIdAndUpdate(order.couponId, { $inc: { usedCount: 1 } });
+                    log.info(`Coupon ${order.couponId} usage incremented for order ${order._id}`);
+                } catch (couponErr) {
+                    log.error('Failed to increment coupon usage', { error: couponErr });
+                }
+            }
+
             // 5. Fulfillment logic
             try {
                 // Generate download tokens
@@ -264,6 +275,23 @@ export async function POST(req: NextRequest) {
                 const { sendPaymentConfirmationEmail, sendDownloadInstructionsEmail, sendAffiliateNotificationEmail } = await import('@/lib/services/email');
                 await sendPaymentConfirmationEmail(order.customerEmail, order._id.toString(), order.total, order.items);
 
+                // Trigger Purchase Sequence & Cancel Abandoned Cart
+                try {
+                    const { enrollInSequence } = await import('@/lib/services/marketing');
+                    const { default: SequenceEnrollment } = await import('@/lib/models/SequenceEnrollment');
+
+                    // 1. Cancel abandoned cart sequence for this user/creator
+                    await SequenceEnrollment.updateMany(
+                        { email: order.customerEmail, creatorId: order.creatorId, status: 'active' },
+                        { status: 'cancelled' }
+                    );
+
+                    // 2. Enroll in purchase sequence
+                    await enrollInSequence(order.customerEmail, order.creatorId.toString(), 'purchase');
+                } catch (seqErr: any) {
+                    log.error('Failed to handle sequence enrollment in webhook', { error: seqErr.message });
+                }
+
                 const digitalItems = order.items.filter(i => ['digital', 'course'].includes(i.type));
                 if (digitalItems.length > 0) {
                     await sendDownloadInstructionsEmail(
@@ -282,6 +310,53 @@ export async function POST(req: NextRequest) {
                             await sendAffiliateNotificationEmail(affiliateUser.email, affiliateDoc.affiliateCode, order.commissionAmount, order._id.toString());
                         }
                     }
+                }
+
+                // 6. Handle Booking Confirmation
+                if (order.metadata?.bookingId) {
+                    const { Booking } = await import('@/lib/models/Booking');
+                    const booking = await Booking.findById(order.metadata.bookingId);
+                    if (booking) {
+                        booking.status = 'confirmed';
+                        await booking.save();
+                        log.info(`Booking ${booking._id} confirmed for order ${order._id}`);
+
+                        // Send booking-specific email
+                        try {
+                            const { sendBookingConfirmationEmail } = await import('@/lib/services/email');
+                            const { format } = await import('date-fns');
+                            await sendBookingConfirmationEmail(order.customerEmail, {
+                                productName: order.items[0]?.name || 'Coaching Session',
+                                date: format(new Date(booking.startTime), 'EEEE, MMMM do, yyyy'),
+                                time: format(new Date(booking.startTime), 'hh:mm a'),
+                                duration: Math.round((new Date(booking.endTime).getTime() - new Date(booking.startTime).getTime()) / 60000)
+                            });
+                        } catch (emailErr: any) {
+                            log.error(`Failed to send booking confirmation email for booking ${booking._id}`, { error: emailErr.message });
+                        }
+                    }
+                }
+
+                // 7. Auto-create Project if applicable
+                try {
+                    const { ProjectService } = await import('@/lib/services/projectService');
+                    const project = await ProjectService.createProjectFromOrder(order._id.toString());
+                    if (project) {
+                        log.info(`Project ${project._id} auto-created for order ${order._id}`);
+                    }
+                } catch (projErr: any) {
+                    log.error(`Failed to auto-create project for order ${order._id}`, { error: projErr.message });
+                }
+
+                // 8. Auto-generate Invoice
+                try {
+                    const { BillingService } = await import('@/lib/services/billingService');
+                    const invoice = await BillingService.generateInvoiceFromOrder(order._id.toString());
+                    if (invoice) {
+                        log.info(`Invoice ${invoice.invoiceNumber} generated for order ${order._id}`);
+                    }
+                } catch (billingErr: any) {
+                    log.error(`Failed to generate invoice for order ${order._id}`, { error: billingErr.message });
                 }
             } catch (err: any) {
                 log.error(`Order ${order._id} fulfillment encountered issues`, { error: err.message });
@@ -316,16 +391,30 @@ export async function POST(req: NextRequest) {
                 sub.startDate = new Date();
                 await sub.save();
 
-                // TIER: Upgrade user based on subscription plan
-                const tier = sub.planId?.toString().toLowerCase().includes('pro') ? 'pro' : 'creator';
-                await User.findByIdAndUpdate(sub.userId, {
-                    subscriptionTier: tier,
-                    subscriptionStatus: 'active',
-                    subscriptionStartAt: new Date(),
-                    subscriptionEndAt: sub.endDate
-                });
+                // TIER UPGRADE LOGIC (Platform Plans Only)
+                // Distinct from Creator Membership Products (which have a productId)
+                if (sub.planId) {
+                    const { Plan } = await import('@/lib/models/Plan');
+                    const platformPlan = await Plan.findById(sub.planId);
 
-                log.info(`Subscription ${subId} authenticated - User upgraded to ${tier} tier`);
+                    if (platformPlan) {
+                        const tier = platformPlan.tier || (platformPlan.name.toLowerCase().includes('pro') ? 'pro' : 'creator');
+                        await User.findByIdAndUpdate(sub.userId, {
+                            subscriptionTier: tier,
+                            subscriptionStatus: 'active',
+                            subscriptionStartAt: new Date(),
+                            subscriptionEndAt: sub.endDate,
+                            plan: tier // Support for legacy plan field
+                        });
+                        log.info(`Subscription ${subId} authenticated - Platform TIER upgraded to ${tier}`);
+                    }
+                } else if (sub.productId) {
+                    // This is a creator-level product membership
+                    // No platform-tier upgrade, just mark subscription as active
+                    log.info(`Membership Product authenticated for sub ${subId} - Product ID: ${sub.productId}`);
+
+                    // Optional: Link to User model's activeSubscriptions if we start tracking multiple
+                }
             } else {
                 log.warn(`Subscription ${subId} not found for authentication`);
             }
@@ -355,8 +444,12 @@ export async function POST(req: NextRequest) {
 
                 const product = await Product.findById(sub.productId);
                 if (product) {
+                    // Look up subscriber email from User model
+                    const subscriber = await User.findById(sub.userId).select('email').lean() as any;
+                    const subscriberEmail = subscriber?.email || 'unknown@subscriber.com';
+
                     await Order.create({
-                        creatorId: sub.userId,
+                        creatorId: product.creatorId, // Use the product's creator, not the subscriber
                         items: [{
                             productId: product._id,
                             name: product.name,
@@ -365,7 +458,7 @@ export async function POST(req: NextRequest) {
                             type: 'subscription'
                         }],
                         userId: sub.userId,
-                        customerEmail: sub.razorpayCustomerId || 'subscription@user.com',
+                        customerEmail: subscriberEmail,
                         amount: amount,
                         total: amount,
                         currency: 'INR',
@@ -436,13 +529,15 @@ export async function POST(req: NextRequest) {
                 sub.autoRenew = false;
                 await sub.save();
 
-                // Update user status to cancelled (tier downgrades at endDate)
-                await User.findByIdAndUpdate(sub.userId, {
-                    subscriptionStatus: 'cancelled'
-                    // Keep tier active until subscription_end_at
-                });
+                // If platform plan, update user record
+                if (sub.planId) {
+                    await User.findByIdAndUpdate(sub.userId, {
+                        subscriptionStatus: 'cancelled'
+                        // Tier remains active until endDate
+                    });
+                }
 
-                log.info(`Subscription ${subId} cancelled - access until ${sub.endDate}`);
+                log.info(`Subscription ${subId} cancelled - access remains until ${sub.endDate}`);
             }
             return NextResponse.json({ status: 'subscription_cancelled' });
         }
@@ -456,28 +551,34 @@ export async function POST(req: NextRequest) {
                 sub.status = 'expired';
                 await sub.save();
 
-                // DOWNGRADE TO FREE
-                await User.findByIdAndUpdate(sub.userId, {
-                    subscriptionTier: 'free',
-                    subscriptionStatus: 'expired'
-                });
+                // DOWNGRADE TO FREE (Platform Plans Only)
+                if (sub.planId) {
+                    await User.findByIdAndUpdate(sub.userId, {
+                        subscriptionTier: 'free',
+                        subscriptionStatus: 'expired'
+                    });
 
-                // Deactivate products over FREE tier limit (keep first 1)
-                const products = await Product.find({
-                    creatorId: sub.userId,
-                    status: 'published'
-                }).sort({ createdAt: 1 });
+                    // Deactivate products over FREE tier limit (keep first 1)
+                    const products = await Product.find({
+                        creatorId: sub.userId,
+                        status: 'active' // Corrected from 'published'
+                    }).sort({ createdAt: 1 });
 
-                if (products.length > 1) {
-                    const toDeactivate = products.slice(1); // All except first
-                    await Product.updateMany(
-                        { _id: { $in: toDeactivate.map((p: any) => p._id) } },
-                        { $set: { isActive: false } }
-                    );
-                    log.info(`Deactivated ${toDeactivate.length} products for expired subscription ${subId}`);
+                    if (products.length > 1) {
+                        const toDeactivate = products.slice(1);
+                        await Product.updateMany(
+                            { _id: { $in: toDeactivate.map((p: any) => p._id) } },
+                            { $set: { status: 'draft', isActive: false } }
+                        );
+                        log.info(`Deactivated ${toDeactivate.length} excess products for expired platform sub ${subId}`);
+                    }
+                    log.info(`Platform Subscription ${subId} expired - User downgraded to FREE`);
+                } else if (sub.productId) {
+                    // Creator Membership expired
+                    // Product access logic usually checks if an active subscription exists, 
+                    // so marking the sub as expired is sufficient.
+                    log.info(`Creator Membership ${subId} expired for user ${sub.userId}`);
                 }
-
-                log.info(`Subscription ${subId} expired - User downgraded to FREE`);
             }
             return NextResponse.json({ status: 'subscription_expired_downgraded' });
         }

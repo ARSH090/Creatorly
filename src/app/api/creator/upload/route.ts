@@ -1,64 +1,36 @@
-import { NextRequest } from 'next/server';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { NextRequest, NextResponse } from 'next/server';
+import { getPresignedUploadUrl, getPublicUrl, sanitizeKey } from '@/lib/storage/s3';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
-import crypto from 'crypto';
-
-const s3Client = new S3Client({
-    region: process.env.AWS_REGION || 'us-east-1',
-    credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
-    }
-});
 
 /**
  * POST /api/creator/upload
- * Generates presigned S3 URL for direct file uploads
- * Body: { filename, contentType, fileSize }
- * Returns: { uploadUrl, fileKey, publicUrl }
+ * Generates a presigned S3 URL for secure direct-to-S3 uploads
  */
 async function handler(req: NextRequest, user: any) {
     const body = await req.json();
-    const { filename, contentType, fileSize } = body;
+    const { filename, contentType } = body;
 
     if (!filename || !contentType) {
-        throw new Error('filename and contentType are required');
+        throw new Error('Filename and Content-Type are required');
     }
 
-    // Check file size limit based on plan
-    const { getPlanLimits } = await import('@/lib/utils/planLimits');
-    const limits = getPlanLimits(user.plan || 'free');
-    const maxFileSizeMb = limits.maxStorageMb;
+    // 1. Sanitize and generate unique key
+    const sanitizedName = sanitizeKey(filename);
+    const fileExtension = filename.split('.').pop();
+    const key = `creators/${user._id}/assets/${Date.now()}-${sanitizedName}.${fileExtension}`;
 
-    if (fileSize && fileSize > maxFileSizeMb * 1024 * 1024) {
-        throw new Error(`File size exceeds your plan limit of ${maxFileSizeMb}MB`);
-    }
+    // 2. Generate Presigned URL (Valid for 1 hour)
+    const uploadUrl = await getPresignedUploadUrl(key, contentType, 3600);
 
-    // Generate unique file key
-    const timestamp = Date.now();
-    const random = crypto.randomBytes(8).toString('hex');
-    const sanitizedFilename = filename.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const fileKey = `uploads/${user._id}/${timestamp}-${random}-${sanitizedFilename}`;
-
-    // Generate presigned URL (valid for 5 minutes)
-    const command = new PutObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET!,
-        Key: fileKey,
-        ContentType: contentType,
-        ACL: 'public-read' // Make files publicly accessible
-    });
-
-    const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 300 });
-
-    const publicUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION || 'us-east-1'}.amazonaws.com/${fileKey}`;
+    // 3. Generate Public access URL
+    const publicUrl = getPublicUrl(key);
 
     return {
+        success: true,
         uploadUrl,
-        fileKey,
         publicUrl,
-        expiresIn: 300
+        key
     };
 }
 

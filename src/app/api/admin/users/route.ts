@@ -3,6 +3,7 @@ import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { recordAdminAction } from '@/lib/utils/auditLogger';
 
 async function getHandler(req: NextRequest) {
   await dbConnect();
@@ -56,5 +57,47 @@ async function getHandler(req: NextRequest) {
   });
 }
 
+async function patchHandler(req: NextRequest, admin: any) {
+  await dbConnect();
+  const body = await req.json();
+  const { userId, role, subscriptionStatus, isSuspended } = body;
+
+  if (!userId) {
+    return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
+  }
+
+  const updates: any = {};
+  if (role) updates.role = role;
+  if (subscriptionStatus) updates.subscriptionStatus = subscriptionStatus;
+  if (isSuspended !== undefined) updates.isSuspended = isSuspended;
+
+  const targetUser = await User.findById(userId);
+  if (!targetUser) {
+    return NextResponse.json({ error: 'User not found' }, { status: 404 });
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(userId, { $set: updates }, { new: true });
+
+  // Record Audit Log
+  await recordAdminAction({
+    adminEmail: admin.email,
+    action: 'UPDATE_USER',
+    targetType: 'user',
+    targetId: userId,
+    changes: {
+      before: {
+        role: targetUser.role,
+        subscriptionStatus: targetUser.subscriptionStatus,
+        isSuspended: targetUser.isSuspended
+      },
+      after: updates
+    },
+    req
+  });
+
+  return NextResponse.json({ success: true, user: updatedUser });
+}
+
 export const GET = withAdminAuth(withErrorHandler(getHandler));
+export const PATCH = withAdminAuth(withErrorHandler(patchHandler));
 

@@ -18,6 +18,8 @@ import { getCurrentUser } from '@/lib/auth/server-auth';
 import Order from '@/lib/models/Order';
 import NewsletterSignup from '@/components/storefront/NewsletterSignup';
 import { ProductGridSkeleton, ServiceButtonsSkeleton, LinksSectionSkeleton } from '@/components/storefront/ProductSkeleton';
+import TestimonialsSection from '@/components/storefront/TestimonialsSection';
+import FAQSection from '@/components/storefront/FAQSection';
 import { applyThemeToCSSVars, getGoogleFontsUrl } from '@/utils/theme.utils';
 import type { StorefrontTheme, ServiceButton, PublicLink } from '@/types/storefront.types';
 
@@ -52,23 +54,24 @@ export async function generateMetadata({
     }).lean() as any;
 
     if (!creator) {
-        return { title: 'Creator Not Found | AutoDM Hub' };
+        return { title: 'Creator Not Found | Creatorly' };
     }
 
     const profile = await CreatorProfile.findOne({ creatorId: creator._id }).lean() as any;
     const displayName = creator.displayName || creator.username;
-    const bio = profile?.description || creator.bio || `Check out ${displayName}'s store on AutoDM Hub.`;
-    const image = creator.avatar || '/default-avatar.png';
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://autodmhub.com';
+    const bio = profile?.description || creator.bio || `Check out ${displayName}'s store on Creatorly.`;
+    const avatar = creator.avatar || '/default-avatar.png';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in';
+    const image = avatar.startsWith('http') ? avatar : `${appUrl}${avatar}`;
 
     return {
-        title: `${displayName} | AutoDM Hub`,
+        title: `${displayName} | Creatorly`,
         description: bio,
         alternates: {
             canonical: `${appUrl}/u/${username}`,
         },
         openGraph: {
-            title: `${displayName}'s Store`,
+            title: `${displayName} | Creatorly`,
             description: bio,
             images: [{ url: image, width: 400, height: 400, alt: displayName }],
             type: 'profile',
@@ -76,7 +79,7 @@ export async function generateMetadata({
         },
         twitter: {
             card: 'summary',
-            title: `${displayName} | AutoDM Hub`,
+            title: `${displayName} | Creatorly`,
             description: bio,
             images: [image],
         },
@@ -117,7 +120,7 @@ export default async function CreatorStorefront({
                     </div>
                     <div className="pt-6 border-t border-white/5">
                         <p className="text-[10px] font-black text-zinc-700 uppercase tracking-[0.3em]">
-                            Protected by AutoDM Hub Governance
+                            Protected by Creatorly Governance
                         </p>
                     </div>
                 </div>
@@ -126,7 +129,7 @@ export default async function CreatorStorefront({
     }
 
     const profile = await CreatorProfile.findOne({ creatorId: creator._id }).lean() as any;
-    const products = await ProductModel.find({ creatorId: creator._id, isActive: true })
+    const products = await ProductModel.find({ creatorId: creator._id, isActive: true, status: 'active' })
         .sort({ isFeatured: -1, createdAt: -1 })
         .lean() as IProduct[];
 
@@ -137,7 +140,7 @@ export default async function CreatorStorefront({
         const orders = await Order.find({
             userId: (currentUser as any)._id,
             creatorId: creator._id,
-            status: 'success',
+            status: 'completed',
         }).lean();
         purchasedProductIds = orders.flatMap((o: any) =>
             o.items.map((item: any) => item.productId.toString())
@@ -246,7 +249,7 @@ export default async function CreatorStorefront({
     const fontsUrl = getGoogleFontsUrl(theme.fontFamily);
 
     // ── JSON-LD structured data ──
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://autodmhub.com';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in';
     const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'Person',
@@ -378,6 +381,26 @@ export default async function CreatorStorefront({
                                     </section>
                                 ) : null;
 
+                            // ── Testimonials ──────────────────────────────────
+                            case 'testimonials':
+                                return profile?.testimonials?.length > 0 ? (
+                                    <TestimonialsSection
+                                        key="testimonials"
+                                        testimonials={profile.testimonials}
+                                        theme={theme}
+                                    />
+                                ) : null;
+
+                            // ── FAQ ───────────────────────────────────────────
+                            case 'faq':
+                                return profile?.faqs?.length > 0 ? (
+                                    <FAQSection
+                                        key="faq"
+                                        faqs={profile.faqs}
+                                        theme={theme}
+                                    />
+                                ) : null;
+
                             default:
                                 return null;
                         }
@@ -385,14 +408,14 @@ export default async function CreatorStorefront({
 
                     <footer className="pt-20 pb-10 text-center border-t border-white/5" role="contentinfo">
                         <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em]">
-                            Powered by AutoDM Hub
+                            Powered by Creatorly
                         </p>
                     </footer>
 
                     {/* Real-time Chat */}
                     <ChatWidget creatorId={creator._id.toString()} />
                 </main>
-            </div>
+            </div >
         </>
     );
 }

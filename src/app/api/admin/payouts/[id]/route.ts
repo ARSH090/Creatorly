@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Payout from '@/lib/models/Payout';
-import AdminLog from '@/lib/models/AdminLog';
+import { recordAdminAction } from '@/lib/utils/auditLogger';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { checkAdminPermission } from '@/lib/middleware/adminAuth';
 
@@ -34,14 +34,13 @@ export const PUT = withAdminAuth(async (req: NextRequest, session: any, context:
 
         await payout.save();
 
-        await AdminLog.create({
+        await recordAdminAction({
             adminEmail: session.email || session.user?.email,
             action: 'update_payout_status',
             targetType: 'payout',
-            targetId: payout._id,
+            targetId: payout._id.toString(),
             changes: { from: oldStatus, to: body.status, notes: body.notes },
-            ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
-            userAgent: req.headers.get('user-agent') || 'unknown'
+            req
         });
 
         return NextResponse.json(payout);

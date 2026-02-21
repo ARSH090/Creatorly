@@ -31,6 +31,18 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ processed: 0, message: 'No pending jobs' });
     }
 
+    // 1b. Self-Seeding: Ensure a booking_cleanup job exists if none are pending
+    const cleanupJob = await QueueJob.findOne({ type: 'booking_cleanup', status: 'pending' });
+    if (!cleanupJob) {
+        await QueueJob.create({
+            type: 'booking_cleanup',
+            payload: {},
+            status: 'pending',
+            nextRunAt: new Date(Date.now() + 5 * 60000) // Start in 5 mins if new
+        });
+        console.log('[Worker] Seeded initial booking_cleanup job');
+    }
+
     // 2. Process in parallel
     const results = await Promise.allSettled(
         jobs.map(job => processQueueJob((job._id as any).toString()))

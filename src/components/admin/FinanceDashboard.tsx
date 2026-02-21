@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { IndianRupee, TrendingUp, Clock, CheckCircle } from 'lucide-react';
+import { IndianRupee, TrendingUp, Clock, CheckCircle, AlertTriangle, ShieldCheck, PieChart, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 
 interface FinanceMetrics {
   monthly: Record<string, any>;
@@ -49,11 +49,7 @@ export function FinanceDashboard() {
   };
 
   const handleProcessPayouts = async () => {
-    if (selectedPayouts.length === 0) {
-      alert('Please select payouts to process');
-      return;
-    }
-
+    if (selectedPayouts.length === 0) return;
     if (!confirm(`Process ${selectedPayouts.length} payouts?`)) return;
 
     try {
@@ -79,61 +75,90 @@ export function FinanceDashboard() {
   };
 
   if (loading) {
-    return <div className="text-white">Loading...</div>;
+    return (
+      <div className="min-h-[400px] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-16 h-16 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin" />
+          <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.5em] animate-pulse">Querying Financial Core</p>
+        </div>
+      </div>
+    );
   }
 
   const monthlyMetrics = metrics?.monthly || {};
   const yearlyMetrics = metrics?.yearly || {};
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-3xl font-bold text-white">Finance Dashboard</h2>
+    <div className="space-y-12">
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-black text-white tracking-tighter italic uppercase flex items-center gap-4">
+            <IndianRupee className="w-10 h-10 text-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.4)]" />
+            FINANCIAL INTELLIGENCE
+          </h1>
+          <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.4em] mt-2 ml-14">
+            Real-time Liquidity • Settlement Engine Active
+          </p>
+        </div>
+      </div>
 
       {/* Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <MetricCard
-          title="Monthly Revenue"
+          title="Monthly Flux"
           value={`₹${(monthlyMetrics.grossRevenue || 0).toLocaleString()}`}
-          icon={IndianRupee}
-          trend={monthlyMetrics.orders}
-        />
-        <MetricCard
-          title="Platform Commission"
-          value={`₹${(monthlyMetrics.platformCommission || 0).toLocaleString()}`}
           icon={TrendingUp}
-          trend={`${(((monthlyMetrics.platformCommission || 0) / (monthlyMetrics.grossRevenue || 1)) * 100).toFixed(1)}%`}
+          color="text-indigo-400"
+          bgColor="bg-indigo-500/10"
+          trend={`${monthlyMetrics.orders || 0} Txs`}
         />
         <MetricCard
-          title="Creator Earnings"
+          title="Platform Yield"
+          value={`₹${(monthlyMetrics.platformCommission || 0).toLocaleString()}`}
+          icon={ShieldCheck}
+          color="text-emerald-400"
+          bgColor="bg-emerald-500/10"
+          trend={`${(((monthlyMetrics.platformCommission || 0) / (monthlyMetrics.grossRevenue || 1)) * 100).toFixed(1)}% MARGIN`}
+        />
+        <MetricCard
+          title="Creator Payouts"
           value={`₹${(monthlyMetrics.creatorEarnings || 0).toLocaleString()}`}
-          icon={IndianRupee}
-          trend={monthlyMetrics.orders}
+          icon={PieChart}
+          color="text-amber-400"
+          bgColor="bg-amber-500/10"
+          trend="DISTRIBUTED"
         />
         <MetricCard
-          title="Pending Payouts"
+          title="Pending Settlement"
           value={`₹${(metrics?.payouts?.pending?.amount || 0).toLocaleString()}`}
           icon={Clock}
-          trend={metrics?.payouts?.pending?.count}
+          color="text-rose-400"
+          bgColor="bg-rose-500/10"
+          trend={`${metrics?.payouts?.pending?.count || 0} QUEUED`}
         />
       </div>
 
       {/* Yearly Summary */}
-      <div className="bg-gray-800 p-6 rounded-lg">
-        <h3 className="text-xl font-bold text-white mb-4">Yearly Summary</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <p className="text-gray-400 text-sm">Total Revenue</p>
-            <p className="text-2xl font-bold text-white">
+      <div className="bg-zinc-900/40 rounded-[3rem] border border-white/5 p-10 shadow-2xl backdrop-blur-md relative overflow-hidden group">
+        <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-[100px] -mr-32 -mt-32 group-hover:bg-indigo-500/10 transition-colors" />
+        <h3 className="text-2xl font-black text-white mb-8 flex items-center gap-4 uppercase tracking-tighter italic">
+          <div className="w-2 h-8 bg-indigo-500 rounded-full" />
+          ANNUAL CONSOLIDATION
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+          <div className="space-y-2 p-6 bg-black/20 rounded-2xl border border-white/5">
+            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Gross Aggregate</p>
+            <p className="text-3xl font-black text-white tracking-tighter italic">
               ₹{(yearlyMetrics.grossRevenue || 0).toLocaleString()}
             </p>
           </div>
-          <div>
-            <p className="text-gray-400 text-sm">Total Orders</p>
-            <p className="text-2xl font-bold text-white">{yearlyMetrics.orders || 0}</p>
+          <div className="space-y-2 p-6 bg-black/20 rounded-2xl border border-white/5">
+            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Transaction Volume</p>
+            <p className="text-3xl font-black text-white tracking-tighter italic">{yearlyMetrics.orders || 0}</p>
           </div>
-          <div>
-            <p className="text-gray-400 text-sm">Platform Commission</p>
-            <p className="text-2xl font-bold text-white">
+          <div className="space-y-2 p-6 bg-black/20 rounded-2xl border border-white/5">
+            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Platform Net</p>
+            <p className="text-3xl font-black text-white tracking-tighter italic">
               ₹{(yearlyMetrics.platformCommission || 0).toLocaleString()}
             </p>
           </div>
@@ -141,23 +166,31 @@ export function FinanceDashboard() {
       </div>
 
       {/* Pending Payouts */}
-      <div className="bg-gray-800 rounded-lg overflow-hidden">
-        <div className="p-6 border-b border-gray-700 flex justify-between items-center">
-          <h3 className="text-xl font-bold text-white">Pending Payouts</h3>
+      <div className="bg-zinc-900/40 rounded-[3rem] border border-white/5 shadow-2xl backdrop-blur-md overflow-hidden">
+        <div className="p-10 border-b border-white/5 flex justify-between items-center bg-white/[0.02]">
+          <h3 className="text-2xl font-black text-white flex items-center gap-4 uppercase tracking-tighter italic">
+            <div className="w-2 h-8 bg-emerald-500 rounded-full" />
+            PENDING SETTLEMENTS
+          </h3>
           <button
             onClick={handleProcessPayouts}
             disabled={selectedPayouts.length === 0 || processingPayouts}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white rounded transition"
+            className="px-8 py-4 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-30 text-black font-black uppercase text-[10px] tracking-widest rounded-2xl transition-all shadow-xl shadow-emerald-500/20 active:scale-95 flex items-center gap-3"
           >
-            {processingPayouts ? 'Processing...' : 'Process Selected'}
+            {processingPayouts ? (
+              <Clock className="w-5 h-5 animate-spin" />
+            ) : (
+              <CheckCircle className="w-5 h-5" />
+            )}
+            {processingPayouts ? 'EXECUTING...' : `AUTHORIZE ${selectedPayouts.length || ''}`}
           </button>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-700 sticky top-0">
-              <tr>
-                <th className="px-6 py-3 text-left">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="bg-black/20 border-b border-white/5">
+                <th className="px-10 py-6">
                   <input
                     type="checkbox"
                     checked={selectedPayouts.length === payouts.length && payouts.length > 0}
@@ -168,29 +201,25 @@ export function FinanceDashboard() {
                         setSelectedPayouts([]);
                       }
                     }}
-                    className="rounded"
+                    className="w-5 h-5 rounded-lg border-white/10 bg-zinc-900 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
                   />
                 </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                  Creator
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-sm font-semibold text-gray-300">Date</th>
+                <th className="px-10 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Entity</th>
+                <th className="px-10 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Amount</th>
+                <th className="px-10 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest">Protocol Date</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-700">
+            <tbody className="divide-y divide-white/5">
               {payouts.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-6 py-4 text-center text-gray-400">
-                    No pending payouts
+                  <td colSpan={4} className="px-10 py-20 text-center">
+                    <p className="text-[10px] font-black text-zinc-700 uppercase tracking-[0.3em]">No Pending Transactions</p>
                   </td>
                 </tr>
               ) : (
                 payouts.map((payout) => (
-                  <tr key={payout._id} className="hover:bg-gray-700 transition">
-                    <td className="px-6 py-4">
+                  <tr key={payout._id} className="hover:bg-white/[0.02] transition-colors group">
+                    <td className="px-10 py-8">
                       <input
                         type="checkbox"
                         checked={selectedPayouts.includes(payout._id)}
@@ -203,22 +232,28 @@ export function FinanceDashboard() {
                             );
                           }
                         }}
-                        className="rounded"
+                        className="w-5 h-5 rounded-lg border-white/10 bg-zinc-900 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-0"
                       />
                     </td>
-                    <td className="px-6 py-4 text-sm">
+                    <td className="px-10 py-8">
                       <div>
-                        <p className="text-white font-medium">
+                        <p className="text-white font-black uppercase italic tracking-tight underline decoration-indigo-500/50 decoration-2 underline-offset-4">
                           {payout.creatorId.displayName}
                         </p>
-                        <p className="text-gray-400 text-xs">{payout.creatorId.email}</p>
+                        <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-tighter mt-1">{payout.creatorId.email}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-white">
-                      ₹{payout.amount.toLocaleString()}
+                    <td className="px-10 py-8">
+                      <span className="text-xl font-black text-white tracking-tighter italic">₹{payout.amount.toLocaleString()}</span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-400">
-                      {new Date(payout.createdAt).toLocaleDateString()}
+                    <td className="px-10 py-8">
+                      <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
+                        {new Date(payout.createdAt).toLocaleDateString(undefined, {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </span>
                     </td>
                   </tr>
                 ))
@@ -235,26 +270,35 @@ function MetricCard({
   title,
   value,
   icon: Icon,
+  color,
+  bgColor,
   trend,
 }: {
   title: string;
   value: string;
-  icon: React.ComponentType<any>;
-  trend: any;
+  icon: any;
+  color: string;
+  bgColor: string;
+  trend: string | number;
 }) {
   return (
-    <div className="bg-gray-800 p-6 rounded-lg">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-gray-400 text-sm">{title}</p>
-          <p className="text-2xl font-bold text-white mt-2">{value}</p>
+    <div className="bg-zinc-900/40 rounded-[2.5rem] p-8 border border-white/5 shadow-2xl backdrop-blur-sm relative overflow-hidden group">
+      <div className={`absolute top-0 right-0 w-24 h-24 ${bgColor} blur-[60px] -mr-12 -mt-12 group-hover:scale-150 transition-transform duration-700`} />
+      <div className="flex items-center justify-between mb-6 relative z-10">
+        <div className={`p-4 ${bgColor} rounded-2xl border border-white/5 group-hover:scale-110 transition-transform duration-500`}>
+          <Icon className={`w-6 h-6 ${color}`} />
         </div>
-        <Icon className="text-blue-500" size={32} />
+      </div>
+      <div className="relative z-10">
+        <p className="text-4xl font-black text-white tracking-tighter italic group-hover:translate-x-1 transition-transform">{value}</p>
+        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] mt-2 ml-1">{title}</p>
       </div>
       {trend && (
-        <p className="text-gray-400 text-sm mt-3">
-          {typeof trend === 'number' ? `${trend} items` : trend}
-        </p>
+        <div className="mt-6 flex items-center gap-2 relative z-10">
+          <div className="px-3 py-1 bg-white/5 rounded-full border border-white/5">
+            <span className={`text-[9px] font-black uppercase tracking-widest ${color}`}>{trend}</span>
+          </div>
+        </div>
       )}
     </div>
   );

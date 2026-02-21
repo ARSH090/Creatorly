@@ -16,11 +16,11 @@ export const POST = withAuth(async (req, user) => {
         }
 
         await connectToDatabase();
-        const product = await Product.findOne({ _id: productId, creatorId, status: 'published' });
+        const product = await Product.findOne({ _id: productId, creatorId, status: 'active' });
 
         if (!product) {
             log.warn('Attempted dashboard checkout for unavailable product', { productId, creatorId, userId: user._id });
-            return NextResponse.json({ error: 'Product not found or not published' }, { status: 404 });
+            return NextResponse.json({ error: 'Product not found or not active' }, { status: 404 });
         }
 
         // Handle Subscriptions

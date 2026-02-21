@@ -89,6 +89,13 @@ export async function getDownloadStats(orderId: string): Promise<{
 }
 
 /**
+ * Get all active tokens for an order
+ */
+export async function getTokensByOrder(orderId: string): Promise<IDownloadToken[]> {
+    return await DownloadToken.find({ orderId, isActive: true });
+}
+
+/**
  * Clean up expired tokens (run as cron job)
  */
 export async function cleanupExpiredTokens(): Promise<number> {

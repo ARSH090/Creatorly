@@ -6,8 +6,10 @@ import ProductGallery from '@/components/product/ProductGallery';
 import PriceDisplay from '@/components/product/PriceDisplay';
 import AddToCartButton from '@/components/product/AddToCartButton';
 import RelatedProducts from '@/components/product/RelatedProducts';
-import { ChevronRight, Share2, Twitter, Linkedin, Link as LinkIcon, MessageCircle } from 'lucide-react';
+import { ChevronRight, Share2, Twitter, Linkedin, Link as LinkIcon, MessageCircle, Star } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import TestimonialsSection from '@/components/storefront/TestimonialsSection';
+import FAQSection from '@/components/storefront/FAQSection';
 
 // ISR every 60 seconds (CTO Hardening)
 export const revalidate = 60;
@@ -25,7 +27,7 @@ import User from '@/lib/models/User';
 
 async function getProductData(slug: string) {
     await connectToDatabase();
-    const product = await Product.findOne({ slug, status: 'published', isActive: true });
+    const product = await Product.findOne({ slug, status: 'active', isActive: true });
 
     if (!product) return null;
 
@@ -38,23 +40,27 @@ async function getProductData(slug: string) {
     const relatedProducts = await Product.find({
         creatorId: product.creatorId,
         _id: { $ne: product._id },
-        status: 'published',
+        status: 'active',
         isActive: true
     })
         .limit(3)
         .sort({ createdAt: -1 });
 
-    const theme = profile?.theme || {
-        primaryColor: '#6366f1',
-        secondaryColor: '#a855f7',
-        accentColor: '#ec4899',
-        backgroundColor: '#030303',
-        textColor: '#ffffff',
-        fontFamily: 'Inter'
+    const t = profile?.theme;
+    const theme = {
+        primaryColor: String(t?.primaryColor ?? '#6366f1'),
+        secondaryColor: String(t?.secondaryColor ?? '#a855f7'),
+        accentColor: String(t?.accentColor ?? '#ec4899'),
+        backgroundColor: String(t?.backgroundColor ?? '#030303'),
+        textColor: String(t?.textColor ?? '#ffffff'),
+        fontFamily: String(t?.fontFamily ?? 'Inter'),
+        borderRadius: (t?.borderRadius ?? 'md') as 'sm' | 'md' | 'lg' | 'full',
+        buttonStyle: (t?.buttonStyle ?? 'rounded') as 'pill' | 'square' | 'rounded',
+        backgroundImage: t?.backgroundImage ? String(t.backgroundImage) : undefined,
     };
 
     return {
-        product,
+        product: JSON.parse(JSON.stringify(product)),
         creator: {
             ...creator.toObject(),
             _id: creator._id.toString(),
@@ -71,20 +77,24 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     if (!data) return { title: 'Product Not Found' };
 
     const { product, creator } = data;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in';
+    const productImg = product.image || '/default-product.png';
+    const image = productImg.startsWith('http') ? productImg : `${appUrl}${productImg}`;
+
     return {
         title: `${product.name} | ${creator.displayName} on Creatorly`,
         description: product.description.substring(0, 160),
         openGraph: {
-            title: product.name,
-            description: product.description,
-            images: product.image ? [product.image] : [],
+            title: `${product.name} | ${creator.displayName}`,
+            description: product.description.substring(0, 160),
+            images: [{ url: image, alt: product.name }],
             type: 'website',
         },
         twitter: {
             card: 'summary_large_image',
-            title: product.name,
-            description: product.description,
-            images: product.image ? [product.image] : [],
+            title: `${product.name} | Creatorly`,
+            description: product.description.substring(0, 160),
+            images: [image],
         }
     };
 }
@@ -205,6 +215,16 @@ export default async function ProductPage({ params, searchParams }: Props) {
                         </div>
                     </div>
                 </div>
+
+                {/* Testimonials */}
+                {(product.testimonials ?? []).length > 0 && (
+                    <TestimonialsSection testimonials={product.testimonials!} theme={theme as any} />
+                )}
+
+                {/* FAQ */}
+                {(product.faqs ?? []).length > 0 && (
+                    <FAQSection faqs={product.faqs!} theme={theme as any} />
+                )}
 
                 {/* Related Products */}
                 <RelatedProducts products={relatedProducts} />
