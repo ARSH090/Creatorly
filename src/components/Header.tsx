@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import Logo from './Logo';
 import React, { useState } from 'react';
@@ -11,8 +13,8 @@ const Header: React.FC = () => {
 
   const navLinks = [
     { href: '#features', label: 'Infrastructure' },
-    { href: '/privacy-policy', label: 'Privacy' },
-    { href: '/terms-of-service', label: 'Terms' },
+    { href: '/privacy', label: 'Privacy' },
+    { href: '/terms', label: 'Terms' },
   ];
 
   return (
@@ -43,8 +45,8 @@ const Header: React.FC = () => {
 
           <div className="flex items-center gap-4">
             <div className="hidden md:flex items-center gap-4">
-              <Link href="/auth/login" className="text-xs font-bold text-white hover:opacity-70 transition-opacity uppercase tracking-widest">Sign In</Link>
-              <Link href="/auth/register" className="h-9 px-4 rounded-full bg-white text-black text-xs font-bold flex items-center hover:bg-zinc-200 transition-colors uppercase tracking-widest">
+              <Link href="/auth/login" target="_blank" rel="noopener noreferrer" className="text-xs font-bold text-white hover:opacity-70 transition-opacity uppercase tracking-widest">Sign In</Link>
+              <Link href="/auth/register" target="_blank" rel="noopener noreferrer" className="h-9 px-4 rounded-full bg-white text-black text-xs font-bold flex items-center hover:bg-zinc-200 transition-colors uppercase tracking-widest">
                 Get Started
               </Link>
             </div>
@@ -76,6 +78,8 @@ const Header: React.FC = () => {
             <hr className="border-white/10" />
             <Link
               href="/auth/login"
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => setIsMenuOpen(false)}
               className="text-xl font-bold text-zinc-500 hover:text-white transition-colors uppercase tracking-widest"
             >
@@ -83,6 +87,8 @@ const Header: React.FC = () => {
             </Link>
             <Link
               href="/auth/register"
+              target="_blank"
+              rel="noopener noreferrer"
               onClick={() => setIsMenuOpen(false)}
               className="w-full h-14 bg-white text-black font-black text-center flex items-center justify-center rounded-2xl uppercase tracking-[0.2em]"
             >

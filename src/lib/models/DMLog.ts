@@ -60,6 +60,7 @@ const DMLogSchema: Schema = new Schema({
 
 DMLogSchema.index({ creatorId: 1, recipientId: 1, createdAt: -1 });
 DMLogSchema.index({ creatorId: 1, provider: 1, status: 1 });
-DMLogSchema.index({ leadId: 1 });
+DMLogSchema.index({ creatorId: 1, createdAt: -1 });
+DMLogSchema.index({ creatorId: 1, isPublished: 1 });
 
 export const DMLog: Model<IDMLog> = mongoose.models.DMLog || mongoose.model<IDMLog>('DMLog', DMLogSchema);

@@ -6,7 +6,7 @@ export interface IEmailCampaign extends Document {
     subject: string;
     content: string;
     recipients: string[]; // email addresses
-    status: 'draft' | 'scheduled' | 'sent' | 'failed';
+    status: 'draft' | 'scheduled' | 'queued' | 'sent' | 'failed';
     scheduledAt?: Date;
     sentAt?: Date;
     stats: {
@@ -30,7 +30,7 @@ const EmailCampaignSchema: Schema = new Schema({
     recipients: [{ type: String }],
     status: {
         type: String,
-        enum: ['draft', 'scheduled', 'sent', 'failed'],
+        enum: ['draft', 'scheduled', 'queued', 'sent', 'failed'],
         default: 'draft'
     },
     scheduledAt: { type: Date },

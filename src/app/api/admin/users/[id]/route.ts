@@ -23,7 +23,8 @@ async function getHandler(
 
     // Fetch related stats
     const [products, orders, payouts] = await Promise.all([
-        Product.find({ userId: id }).select('title price status').lean(),
+        // BUG-34 FIX: Products are keyed by creatorId, not userId
+        Product.find({ creatorId: id }).select('name price status').lean(),
         Order.find({ creatorId: id }).select('total status createdAt').limit(10).sort({ createdAt: -1 }).lean(),
         Payout.find({ userId: id }).select('amount status createdAt').limit(10).sort({ createdAt: -1 }).lean()
     ]);
@@ -52,7 +53,15 @@ async function putHandler(
     if (body.displayName) targetUser.displayName = body.displayName;
     if (body.email) targetUser.email = body.email;
     if (body.plan) targetUser.plan = body.plan;
-    if (body.role) targetUser.role = body.role;
+
+    // BUG-33 FIX: Only super-admins can assign super-admin role
+    if (body.role) {
+        const adminRole = (admin as any).role;
+        if (body.role === 'super-admin' && adminRole !== 'super-admin') {
+            return NextResponse.json({ error: 'Forbidden: Only super-admins can assign super-admin role' }, { status: 403 });
+        }
+        targetUser.role = body.role;
+    }
 
     await targetUser.save();
 

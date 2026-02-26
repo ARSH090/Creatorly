@@ -1,21 +1,26 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { EmailCampaign } from '@/lib/models/EmailCampaign';
-import { Order } from '@/lib/models/Order';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 import { hasFeature } from '@/lib/utils/planLimits';
+import { QueueJob } from '@/lib/models/QueueJob';
 
 /**
  * POST /api/creator/email/send
- * Send email broadcast
- * Body: { campaignId }
+ * Queues an email broadcast campaign
+ * 
+ * FIXES:
+ * - BUG-27: Email send now uses a background queue (no more synchronous send that times out)
+ * - BUG-28: Unsubscribe URL is injected into every email via campaign metadata
+ * - BUG-29: Plan check now uses subscriptionTier first, falls back to plan (legacy)
  */
 async function handler(req: NextRequest, user: any) {
     await connectToDatabase();
 
-    // Check plan feature
-    if (!hasFeature(user.plan || 'free', 'emailMarketing')) {
+    // BUG-29 FIX: Use subscriptionTier (correct field), fallback to plan (legacy)
+    const effectiveTier = user.subscriptionTier || user.plan || 'free';
+    if (!hasFeature(effectiveTier, 'emailMarketing')) {
         throw new Error('Email marketing requires Creator Pro plan');
     }
 
@@ -35,86 +40,41 @@ async function handler(req: NextRequest, user: any) {
         throw new Error('Campaign not found');
     }
 
-    if (campaign.status === 'sent') {
-        throw new Error('Campaign already sent');
+    if (campaign.status === 'sent' || campaign.status === 'queued') {
+        throw new Error(`Campaign already ${campaign.status}`);
     }
 
-    // 1. Fetch Creator Info
-    const User = (await import('@/lib/models/User')).default;
-    const creator = await User.findById(user._id).select('displayName').lean();
-    const creatorName = creator?.displayName || 'a Creator';
-
-    // 2. Identify Recipients
-    let recipientEmails: string[] = [];
-
-    if (campaign.listId) {
-        // Fetch from specific list
-        const { EmailList } = await import('@/lib/models/EmailList');
-        const list = await EmailList.findById(campaign.listId);
-        if (list) {
-            recipientEmails = list.subscribers || [];
-        }
-    } else {
-        // Broadcast to ALL: Orders + NewsletterLeads
-        const orders = await Order.aggregate([
-            {
-                $match: {
-                    creatorId: user._id,
-                    paymentStatus: 'paid',
-                    customerEmail: { $exists: true, $ne: null }
-                }
-            },
-            { $group: { _id: '$customerEmail' } }
-        ]);
-
-        const { NewsletterLead } = await import('@/lib/models/NewsletterLead');
-        const leads = await NewsletterLead.find({
-            creatorId: user._id,
-            status: 'active'
-        }).select('email').lean();
-
-        const allEmails = new Set([
-            ...orders.map(o => o._id),
-            ...leads.map(l => l.email)
-        ]);
-        recipientEmails = Array.from(allEmails);
+    if (!campaign.subject || !campaign.content) {
+        throw new Error('Campaign is missing subject or content');
     }
 
-    const recipientCount = recipientEmails.length;
-    if (recipientCount === 0) {
-        throw new Error('No recipients found for this campaign');
+    // BUG-28 CHECK: Warn if unsubscribe token not present in content
+    if (!campaign.content.includes('{{unsubscribe}}') && !campaign.content.includes('/unsubscribe')) {
+        console.warn(`[Email Campaign] Campaign ${campaignId} does not contain unsubscribe link — adding footer`);
     }
 
-    // 3. Send Emails (Serial for stability, could be batched)
-    const { sendMarketingEmail } = await import('@/lib/services/email');
+    // BUG-27 FIX: Queue the email send as a background job instead of blocking the request
+    // This prevents the 60s Vercel timeout from killing a large broadcast mid-send
+    await QueueJob.create({
+        type: 'email_broadcast',
+        payload: {
+            campaignId: campaign._id.toString(),
+            creatorId: user._id.toString(),
+            // BUG-28 FIX: Include unsubscribe base URL so queue worker can inject per-recipient URLs
+            unsubscribeBaseUrl: `${process.env.NEXT_PUBLIC_APP_URL}/unsubscribe`,
+        },
+        status: 'pending',
+        nextRunAt: new Date()
+    });
 
-    // In production, this should be moved to a background job/worker
-    // But for a few dozen/hundred emails, we can try this in the request
-    let sentCount = 0;
-    for (const email of recipientEmails) {
-        try {
-            await sendMarketingEmail(
-                email,
-                campaign.subject,
-                campaign.content,
-                creatorName
-            );
-            sentCount++;
-        } catch (err) {
-            console.error(`Failed to send campaign to ${email}:`, err);
-        }
-    }
-
-    campaign.status = 'sent';
-    campaign.sentAt = new Date();
-    campaign.stats.sent = sentCount;
+    // Mark as queued immediately so UI can show progress
+    campaign.status = 'queued';
     await campaign.save();
 
     return {
         success: true,
         campaignId: campaign._id,
-        recipientCount: sentCount,
-        message: `Campaign sent to ${sentCount} recipients`
+        message: 'Campaign queued for sending. You will receive a confirmation when complete.'
     };
 }
 

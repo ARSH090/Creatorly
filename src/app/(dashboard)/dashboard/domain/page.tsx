@@ -17,6 +17,8 @@ export default function CustomDomainPage() {
     const [username, setUsername] = useState('');
 
     useEffect(() => {
+        if (user?.username) setUsername(user.username);
+
         // Fetch existing custom domain setting
         fetch('/api/creator/profile')
             .then(r => r.json())
@@ -27,9 +29,10 @@ export default function CustomDomainPage() {
                     setStatus(data.domainVerified ? 'verified' : 'idle');
                 }
                 if (data.profile?.username) setUsername(data.profile.username);
+                else if (user?.username) setUsername(user.username);
             })
             .catch(console.error);
-    }, []);
+    }, [user]);
 
     const handleSave = async () => {
         if (!domain.trim()) return;

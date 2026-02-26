@@ -33,6 +33,7 @@ interface CheckoutState {
     };
     coupon: CouponData | null;
     orderBumpAccepted: boolean;
+    activeBumps: any[];
     upsellOffer: any | null;
 
     // Actions
@@ -43,6 +44,7 @@ interface CheckoutState {
     setCustomer: (info: Partial<CheckoutState['customer']>) => void;
     setCoupon: (coupon: CouponData | null) => void;
     setOrderBump: (accepted: boolean) => void;
+    setActiveBumps: (bumps: any[]) => void;
     setUpsellOffer: (offer: any) => void;
     clearCart: () => void;
 }
@@ -59,11 +61,13 @@ export const useCheckoutStore = create<CheckoutState>()(
             },
             coupon: null,
             orderBumpAccepted: false,
+            activeBumps: [],
             upsellOffer: null,
 
             setStep: (step) => set({ step }),
             setCoupon: (coupon) => set({ coupon }),
             setOrderBump: (accepted) => set({ orderBumpAccepted: accepted }),
+            setActiveBumps: (bumps) => set({ activeBumps: bumps }),
             setUpsellOffer: (offer) => set({ upsellOffer: offer }),
 
             addToCart: (item) => set((state) => {

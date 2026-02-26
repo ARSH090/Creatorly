@@ -9,6 +9,21 @@ import { WebhookEventLog } from '@/lib/models/WebhookEventLog';
 import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
 import { Plan } from '@/lib/models/Plan';
+import EmailSequence from '@/lib/models/EmailSequence';
+import SequenceEnrollment from '@/lib/models/SequenceEnrollment';
+import { SocialAccount } from '@/lib/models/SocialAccount';
+import { QueueJob } from '@/lib/models/QueueJob';
+import { decryptTokenWithVersion } from '@/lib/security/encryption';
+
+/** Default free-tier limits used when plan cannot be fetched from DB */
+const DEFAULT_FREE_LIMITS = {
+    maxProducts: 1,
+    maxStorageMb: 100,
+    maxTeamMembers: 0,
+    maxAiGenerations: 0,
+    customDomain: false,
+    canRemoveBranding: false
+};
 
 export async function POST(req: NextRequest) {
     try {
@@ -16,7 +31,9 @@ export async function POST(req: NextRequest) {
         const signature = req.headers.get('x-razorpay-signature');
 
         if (!signature) {
-            return NextResponse.json({ error: 'Protocol violation: Missing signature' }, { status: 400 });
+            const ip = req.headers.get('x-forwarded-for') || 'unknown';
+            console.warn(`[RAZORPAY WEBHOOK] Missing signature from ${ip} — dropping`);
+            return NextResponse.json({ status: 'ignored' }, { status: 200 });
         }
 
         await dbConnect();
@@ -24,7 +41,8 @@ export async function POST(req: NextRequest) {
         const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
         if (!secret) {
             console.error('CRITICAL: Razorpay Webhook Secret not configured');
-            return NextResponse.json({ error: 'System configuration error' }, { status: 500 });
+            // Still return 200 — this is a server config error, not Razorpay's fault
+            return NextResponse.json({ status: 'config_error' }, { status: 200 });
         }
 
         const expectedSignature = crypto
@@ -33,47 +51,62 @@ export async function POST(req: NextRequest) {
             .digest('hex');
 
         if (expectedSignature !== signature) {
-            return NextResponse.json({ error: 'Unauthorized: Invalid protocol signature' }, { status: 401 });
+            const ip = req.headers.get('x-forwarded-for') || 'unknown';
+            console.warn(`[RAZORPAY WEBHOOK] Invalid signature from ${ip} — dropping`);
+            return NextResponse.json({ status: 'ignored' }, { status: 200 });
         }
 
         const event = JSON.parse(body);
         const payload = event.payload;
 
-        // 1. Idempotency Check
+        // BUG-10 FIX: Check idempotency FIRST — before any processing
         const existingEvent = await WebhookEventLog.findOne({ eventId: event.id });
         if (existingEvent) {
-            return NextResponse.json({ status: 'already_processed' });
+            return NextResponse.json({ status: 'already_processed' }, { status: 200 });
         }
+
+        // BUG-10 FIX: Write idempotency log BEFORE processing to prevent double-processing on retry
+        await WebhookEventLog.create({
+            platform: 'razorpay',
+            eventId: event.id,
+            eventType: event.event,
+            payloadHash: crypto.createHash('sha256').update(body).digest('hex'),
+            payload: event,
+            status: 'processing',
+            processed: false,
+            processedAt: undefined
+        });
 
         console.log(`[RAZORPAY WEBHOOK] Processing: ${event.event}`);
 
-        // 2. Event Dispatcher
         switch (event.event) {
+
             case 'subscription.activated': {
                 const subData = payload.subscription.entity;
                 const subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
 
                 if (subscription) {
                     const plan = await Plan.findById(subscription.planId);
+                    const isTrial = subData.start_at > Math.floor(Date.now() / 1000);
 
-                    subscription.status = 'active';
+                    subscription.status = isTrial ? 'trialing' : 'active';
                     subscription.razorpayCustomerId = subData.customer_id;
                     subscription.startDate = new Date(subData.start_at * 1000);
                     subscription.endDate = new Date(subData.end_at * 1000);
+                    if (isTrial) subscription.trialEndsAt = subscription.startDate;
                     await subscription.save();
 
                     const updateData: any = {
-                        subscriptionStatus: 'active'
+                        subscriptionStatus: subscription.status,
+                        subscriptionEndAt: subscription.endDate
                     };
-
                     if (plan) {
                         updateData.subscriptionTier = plan.tier;
-                        // For non-trials, or when trial activates, ensure limits are set
                         updateData.planLimits = plan.limits;
                     }
 
                     await User.findByIdAndUpdate(subscription.userId, updateData);
-                    console.log(`[RAZORPAY WEBHOOK] Subscription activated for user ${subscription.userId}. Tier: ${plan?.tier || 'unknown'}`);
+                    console.log(`[RAZORPAY WEBHOOK] Subscription ${subscription.status} for user ${subscription.userId}. Tier: ${plan?.tier || 'unknown'}`);
                 }
                 break;
             }
@@ -84,7 +117,6 @@ export async function POST(req: NextRequest) {
                 const subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
 
                 if (subscription) {
-                    // Update Subscription
                     subscription.status = 'active';
                     subscription.endDate = new Date(subData.end_at * 1000);
                     subscription.lastPaymentId = paymentData.id;
@@ -92,37 +124,38 @@ export async function POST(req: NextRequest) {
                     await subscription.save();
 
                     // Record Payment
-                    const payment = await Payment.create({
+                    await Payment.create({
                         userId: subscription.userId,
                         subscriptionId: subscription._id,
                         razorpayPaymentId: paymentData.id,
-                        amount: paymentData.amount, // in paise
+                        amount: paymentData.amount,
                         status: 'captured',
                         currency: paymentData.currency
                     });
 
-                    // Generate Invoice
+                    // BUG-15 FIX: Sequential invoice number
+                    const invoiceCount = await Invoice.countDocuments({ userId: subscription.userId });
+                    const user = await User.findById(subscription.userId).select('username subscriptionStatus planLimits');
+                    const invoiceNumber = `INV-${(user?.username || 'USR').toUpperCase()}-${String(invoiceCount + 1).padStart(4, '0')}`;
+
                     await Invoice.create({
                         userId: subscription.userId,
                         subscriptionId: subscription._id,
-                        invoiceNumber: `INV-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+                        invoiceNumber,
                         amount: paymentData.amount / 100,
                         issuedAt: new Date()
                     });
 
-                    const user = await User.findById(subscription.userId);
                     if (user) {
                         const updateData: any = {
                             subscriptionStatus: 'active',
                             subscriptionEndAt: subscription.endDate
                         };
 
-                        // If converting from trial, unlock full limits
                         if (user.subscriptionStatus === 'trialing' || !user.planLimits) {
-                            const planId = subscription.planId || user.activeSubscription?.planId;
-                            const plan = await Plan.findById(planId);
+                            const plan = await Plan.findById(subscription.planId);
                             if (plan) {
-                                updateData.planLimits = plan.limits; // Provision full limits
+                                updateData.planLimits = plan.limits;
                                 updateData.subscriptionTier = plan.tier;
                                 updateData.trialUsed = true;
                                 console.log(`[RAZORPAY WEBHOOK] Trial converted to paid for user ${user._id}. Tier: ${plan.tier}`);
@@ -146,7 +179,53 @@ export async function POST(req: NextRequest) {
                     order.razorpayPaymentId = payment.id;
                     order.paidAt = new Date();
                     await order.save();
+
+                    // Area 3: Post-Purchase Automation (DMs and Emails)
+                    try {
+                        const product = await Product.findById(order.items[0]?.productId);
+                        if (product) {
+                            // 1. Post-Purchase Instagram DM
+                            if (product.postPurchaseDmEnabled && product.postPurchaseDmText && order.metadata?.ig_user_id) {
+                                const socialAccount = await SocialAccount.findOne({ userId: order.creatorId, platform: 'instagram', isActive: true });
+                                if (socialAccount) {
+                                    const accessToken = decryptTokenWithVersion(socialAccount.pageAccessToken, socialAccount.tokenIV, socialAccount.tokenTag, socialAccount.keyVersion);
+                                    await QueueJob.create({
+                                        type: 'dm_delivery',
+                                        payload: {
+                                            recipientId: order.metadata.ig_user_id,
+                                            text: product.postPurchaseDmText,
+                                            accessToken,
+                                            creatorId: order.creatorId.toString(),
+                                            source: 'dm',
+                                            platform: 'instagram'
+                                        }
+                                    });
+                                    console.log(`[RAZORPAY WEBHOOK] Enqueued post-purchase DM for order ${order.orderNumber}`);
+                                }
+                            }
+
+                            // 2. Post-Purchase Email (One-off via Queue)
+                            if (product.postPurchaseEmailEnabled && product.postPurchaseEmailSubject && product.postPurchaseEmailContent) {
+                                await QueueJob.create({
+                                    type: 'one_off_email',
+                                    payload: {
+
+                                        email: order.customerEmail,
+                                        subject: product.postPurchaseEmailSubject,
+                                        content: product.postPurchaseEmailContent,
+                                        creatorId: order.creatorId.toString(),
+                                        source: 'purchase_delivery'
+                                    },
+                                    nextRunAt: new Date()
+                                });
+                                console.log(`[RAZORPAY WEBHOOK] Enqueued post-purchase email for order ${order.orderNumber}`);
+                            }
+                        }
+                    } catch (automationErr) {
+                        console.error('[RAZORPAY WEBHOOK] Post-purchase automation failed:', automationErr);
+                    }
                 }
+
                 break;
             }
 
@@ -154,51 +233,81 @@ export async function POST(req: NextRequest) {
             case 'subscription.expired': {
                 const subData = payload.subscription.entity;
                 const subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
+
                 if (subscription) {
                     subscription.status = event.event === 'subscription.cancelled' ? 'canceled' : 'expired';
                     subscription.autoRenew = false;
                     await subscription.save();
 
+                    // BUG-16 FIX: Downgrade planLimits on cancellation/expiry
+                    const freePlan = await Plan.findOne({ tier: 'free' });
                     await User.findByIdAndUpdate(subscription.userId, {
-                        subscriptionStatus: subscription.status
+                        subscriptionStatus: subscription.status,
+                        subscriptionTier: 'free',
+                        planLimits: freePlan?.limits ?? DEFAULT_FREE_LIMITS
                     });
+
+                    console.log(`[RAZORPAY WEBHOOK] Subscription ${event.event} for user ${subscription.userId}. Downgraded to free.`);
                 }
                 break;
             }
 
             case 'subscription.paused':
+            case 'subscription.pending':
             case 'subscription.halted': {
                 const subData = payload.subscription.entity;
                 const subscription = await Subscription.findOne({ razorpaySubscriptionId: subData.id });
+
                 if (subscription) {
-                    subscription.status = 'past_due';
+                    let statusUpdate: string = 'pending';
+                    if (event.event === 'subscription.halted') statusUpdate = 'halted';
+                    if (event.event === 'subscription.paused') statusUpdate = 'past_due';
+
+                    subscription.status = statusUpdate as any;
+                    if (event.event === 'subscription.pending') {
+                        subscription.failureCount = (subscription.failureCount || 0) + 1;
+                        subscription.lastFailureReason = payload.payment?.entity?.error_description || 'Payment failed';
+                    }
                     await subscription.save();
 
+                    // Dunning notification
+                    if (event.event === 'subscription.pending') {
+                        await QueueJob.create({
+                            type: 'one_off_email',
+                            payload: {
+                                userId: subscription.userId.toString(),
+                                subject: 'Action Required: Your payment failed',
+                                content: `We were unable to process your subscription payment. Reason: ${subscription.lastFailureReason}. We will retry automatically.`,
+                                source: 'dunning'
+                            }
+                        });
+                    }
+
+                    // BUG-11 FIX: Downgrade planLimits when halted or past_due
+                    const freePlan = await Plan.findOne({ tier: 'free' });
                     await User.findByIdAndUpdate(subscription.userId, {
-                        subscriptionStatus: 'past_due'
+                        subscriptionStatus: statusUpdate,
+                        subscriptionTier: (statusUpdate === 'halted' || statusUpdate === 'past_due') ? 'free' : undefined,
+                        planLimits: (statusUpdate === 'halted' || statusUpdate === 'past_due') ? (freePlan?.limits ?? DEFAULT_FREE_LIMITS) : undefined
                     });
+
+                    console.log(`[RAZORPAY WEBHOOK] Subscription ${event.event} for user ${subscription.userId}. Status: ${statusUpdate}`);
                 }
                 break;
             }
         }
 
-        // 3. Log Event for Idempotency
-        await WebhookEventLog.create({
-            platform: 'razorpay',
-            eventId: event.id,
-            eventType: event.event,
-            payloadHash: crypto.createHash('sha256').update(body).digest('hex'),
-            payload: event,
-            status: 'processed',
-            processed: true,
-            processedAt: new Date()
-        });
+        // BUG-10 FIX: Update idempotency log to 'processed' after successful execution
+        await WebhookEventLog.findOneAndUpdate(
+            { eventId: event.id },
+            { status: 'processed', processed: true, processedAt: new Date() }
+        );
 
-        return NextResponse.json({ status: 'ok' });
+        return NextResponse.json({ status: 'ok' }, { status: 200 });
 
     } catch (error: any) {
         console.error('CRITICAL Webhook Process Failure:', error);
-        return NextResponse.json({ error: 'Protocol Execution Error' }, { status: 500 });
+        // BUG-09 FIX: ALWAYS return 200 — never 500 — to prevent Razorpay from retrying
+        return NextResponse.json({ status: 'error_logged' }, { status: 200 });
     }
 }
-

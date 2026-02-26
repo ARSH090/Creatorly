@@ -14,8 +14,10 @@ export default function HeroSection() {
 
     return (
         <section className="relative overflow-hidden min-h-screen flex items-center bg-[#030303]">
-            {/* Background Gradient - Adapted for Dark Mode to match existing theme */}
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/20 via-[#030303] to-purple-950/20" />
+            {/* Background Gradient & Effects */}
+            <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/30 via-[#030303] to-purple-950/30" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none opacity-50" />
+            <div className="absolute top-1/4 right-1/4 w-[400px] h-[400px] bg-purple-500/10 rounded-full blur-[100px] pointer-events-none opacity-30" />
 
             {/* Animated Particles */}
             <div className="absolute inset-0 pointer-events-none">
@@ -88,23 +90,17 @@ export default function HeroSection() {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3, duration: 0.6 }}
-                            className="flex flex-col sm:flex-row gap-4 mb-12"
+                            className="flex flex-col sm:flex-row gap-5 mb-12"
                         >
                             <Link
                                 href="/auth/register"
-                                className="group inline-flex items-center justify-center gap-3 bg-white text-black font-bold py-4 px-8 rounded-full hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-[1.02] transition-all duration-300"
+                                className="group relative inline-flex items-center justify-center gap-3 bg-white text-black font-extrabold py-5 px-10 rounded-2xl hover:shadow-[0_0_30px_rgba(255,255,255,0.4)] hover:scale-[1.03] active:scale-[0.98] transition-all duration-300"
                             >
-                                <span>Start Free for 14 Days</span>
-                                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                <span className="relative z-10 uppercase tracking-tight">Start Free for 14 Days</span>
+                                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform relative z-10" />
                             </Link>
 
-                            <Link
-                                href="/u/demo"
-                                className="inline-flex items-center justify-center gap-3 bg-white/5 text-white font-semibold py-4 px-8 rounded-full border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all backdrop-blur-sm"
-                            >
-                                <Zap className="w-5 h-5 text-indigo-400" />
-                                <span>View Live Demo Store</span>
-                            </Link>
+
                         </motion.div>
 
                         {/* Social Proof */}

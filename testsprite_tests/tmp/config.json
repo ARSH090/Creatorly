@@ -1,0 +1,18 @@
+{
+  "status": "commited",
+  "type": "frontend",
+  "scope": "codebase",
+  "localEndpoint": "http://localhost:3000",
+  "loginUser": "arsh",
+  "loginPassword": "123456",
+  "executionArgs": {
+    "projectName": "insta",
+    "projectPath": "e:\\insta",
+    "testIds": [],
+    "additionalInstruction": "Focus on testing the new storefront customization features: background image upload, profile photo toggle, and product grid/list layout switching. Also verify that the 'Copy Store Link' button works.",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "sk-user-zdXzTG0gr3wflCyiKBVyedlLqhEePnbNeIDh8zFyLjo4-tnW_TqbqMBTxng_LQ1rFCBDHJle5Q4LZC2bsrdn92QNJiqjxmO-guMd24wfaJCB3xMbjmkH4ZX5UokLCleCbiM"
+    }
+  }
+}

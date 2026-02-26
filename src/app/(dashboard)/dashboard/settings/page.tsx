@@ -20,7 +20,7 @@ export default function SettingsPage() {
 
     const fetchSettings = async () => {
         try {
-            const res = await fetch('/api/user/settings');
+            const res = await fetch('/api/creator/settings');
             if (res.ok) {
                 const data = await res.json();
                 setSettings(data);
@@ -43,7 +43,7 @@ export default function SettingsPage() {
                 newSettings[key] = value;
             }
 
-            const res = await fetch('/api/user/settings', {
+            const res = await fetch('/api/creator/settings', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newSettings)
@@ -138,6 +138,7 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="p-8 space-y-8 divide-y divide-white/5">
+                        {/* Auto DM */}
                         <div className="flex items-center justify-between pb-8">
                             <div className="space-y-1">
                                 <h4 className="text-sm font-bold text-white uppercase italic tracking-tight">Auto-DM Status</h4>
@@ -151,28 +152,84 @@ export default function SettingsPage() {
                             </button>
                         </div>
 
-                        <div className="flex items-center justify-between py-8">
-                            <div className="space-y-1">
-                                <h4 className="text-sm font-bold text-white uppercase italic tracking-tight">Google Sheets Data Pulse</h4>
-                                <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">Synchonize leads with your external spreadsheets</p>
-                            </div>
-                            {settings.googleSheetsConnected ? (
-                                <div className="flex items-center gap-3">
-                                    <div className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20 text-[10px] font-black uppercase tracking-widest">
-                                        <CheckCircle2 size={12} />
-                                        Linked
-                                    </div>
-                                    <button className="text-zinc-600 hover:text-rose-400 transition-colors">
-                                        <Settings size={14} />
-                                    </button>
+                        {/* Google Sheets */}
+                        <div className="py-8 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <h4 className="text-sm font-bold text-white uppercase italic tracking-tight">Google Sheets Data Pulse</h4>
+                                    <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">Synchonize leads with your external spreadsheets</p>
                                 </div>
-                            ) : (
-                                <button className="flex items-center gap-2 px-6 py-3 bg-white/5 hover:bg-white/10 text-white rounded-2xl border border-white/10 text-[10px] font-black uppercase tracking-widest transition-all group">
-                                    Link Terminal
-                                    <ExternalLink size={12} className="group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                                <div className="flex items-center gap-2">
+                                    <span className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${settings.googleSheetsConnected ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-zinc-800 text-zinc-500 border-white/5'}`}>
+                                        {settings.googleSheetsConnected ? 'Pulse Active' : 'Disconnected'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <input
+                                    type="text"
+                                    placeholder="Enter your Google Sheet URL..."
+                                    className="flex-1 bg-black border border-white/10 rounded-2xl px-5 py-4 text-white text-sm focus:outline-none focus:border-indigo-500/50 transition-all"
+                                    value={settings.googleSheetUrl || ''}
+                                    onChange={(e) => setSettings({ ...settings, googleSheetUrl: e.target.value })}
+                                />
+                                <button
+                                    onClick={() => updateSetting('googleSheetUrl', settings.googleSheetUrl)}
+                                    className="bg-white text-black px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-zinc-200 transition-colors"
+                                >
+                                    Connect
                                 </button>
-                            )}
+                            </div>
                         </div>
+
+                        {/* Webhook (Data Pulse) */}
+                        <div className="py-8 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <h4 className="text-sm font-bold text-white uppercase italic tracking-tight">Neural Webhook (Beta)</h4>
+                                    <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">Push events to your custom endpoints in real-time</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3">
+                                <input
+                                    type="text"
+                                    placeholder="https://your-api.com/webhook"
+                                    className="flex-1 bg-black border border-white/10 rounded-2xl px-5 py-4 text-white text-sm font-mono focus:outline-none focus:border-amber-500/50 transition-all"
+                                    value={settings.webhookUrl || ''}
+                                    onChange={(e) => setSettings({ ...settings, webhookUrl: e.target.value })}
+                                />
+                                <button
+                                    onClick={() => updateSetting('webhookUrl', settings.webhookUrl)}
+                                    className="bg-amber-500 text-black px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] hover:bg-amber-400 transition-colors"
+                                >
+                                    Test
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* System Logs / Terminal */}
+                <div className="bg-black border border-white/5 rounded-[2.5rem] overflow-hidden">
+                    <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <h3 className="text-xs font-black text-emerald-500 uppercase tracking-[0.3em]">System Terminal</h3>
+                        </div>
+                        <div className="flex gap-1.5">
+                            <div className="w-2 h-2 rounded-full bg-zinc-800" />
+                            <div className="w-2 h-2 rounded-full bg-zinc-800" />
+                            <div className="w-2 h-2 rounded-full bg-zinc-800" />
+                        </div>
+                    </div>
+                    <div className="p-8 font-mono text-[10px] text-zinc-400 h-48 overflow-y-auto space-y-2 bg-[#050505]">
+                        <p><span className="text-emerald-500">[SYSTEM]</span> Authentication sequence established...</p>
+                        <p><span className="text-emerald-500">[SYSTEM]</span> Instagram Engine: <span className="text-white">STANDBY</span></p>
+                        <p><span className="text-zinc-600">[DEBUG]</span> Fetching user configuration from shard-0...</p>
+                        <p><span className="text-emerald-500">[SYSTEM]</span> Neural link initialized at path /settings</p>
+                        <p><span className="text-zinc-500 transition-opacity animate-pulse">_</span></p>
                     </div>
                 </div>
 

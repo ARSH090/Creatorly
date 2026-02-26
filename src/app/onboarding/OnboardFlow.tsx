@@ -5,16 +5,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useUser } from '@clerk/nextjs';
 import UsernameStep from './steps/UsernameStep';
 import DetailsStep from './steps/DetailsStep';
-import OTPStep from './steps/OTPStep';
 import PlanStep from './steps/PlanStep';
 import PaymentStep from './steps/PaymentStep';
 
+// 4-step onboarding flow: Profile -> Store -> Plan -> Payment
 const steps = [
-    { id: 1, title: 'Username' },
-    { id: 2, title: 'Details' },
-    { id: 3, title: 'OTP' },
-    { id: 4, title: 'Plan' },
-    { id: 5, title: 'Payment' }
+    { id: 1, title: 'Profile' },
+    { id: 2, title: 'Store' },
+    { id: 3, title: 'Plan' },
+    { id: 4, title: 'Payment' }
 ];
 
 export default function OnboardFlow() {
@@ -24,10 +23,7 @@ export default function OnboardFlow() {
         username: '',
         fullName: '',
         email: '',
-        phone: '',
-        password: '',
-        phoneHash: '',
-        selectedPlan: null,
+        selectedPlan: null as any,
         billingCycle: 'monthly' as 'monthly' | 'yearly',
         isGoogle: false
     });
@@ -48,9 +44,11 @@ export default function OnboardFlow() {
     useEffect(() => {
         const savedData = sessionStorage.getItem('creatorly_onboarding');
         if (savedData) {
-            const parsed = JSON.parse(savedData);
-            setFormData(prev => ({ ...prev, ...parsed.data }));
-            setCurrentStep(parsed.step || 1);
+            try {
+                const parsed = JSON.parse(savedData);
+                setFormData(prev => ({ ...prev, ...parsed.data }));
+                setCurrentStep(parsed.step || 1);
+            } catch { /* ignore */ }
         }
     }, []);
 
@@ -67,84 +65,67 @@ export default function OnboardFlow() {
     const progress = (currentStep / steps.length) * 100;
 
     return (
-        <div className="max-w-xl mx-auto px-6 pt-12">
-            {/* Progress Bar */}
-            <div className="mb-12">
-                <div className="flex justify-between items-center mb-4">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-400">
-                        Step {currentStep} of {steps.length}
-                    </span>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                        {steps[currentStep - 1].title}
-                    </span>
+        <div className="min-h-screen bg-white">
+            <div className="max-w-md mx-auto px-6 pt-10 pb-16">
+                {/* Progress Bar */}
+                <div className="mb-10">
+                    <div className="h-1 w-full bg-zinc-100 rounded-full overflow-hidden">
+                        <motion.div
+                            className="h-full bg-indigo-600"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ type: 'spring', stiffness: 120, damping: 22 }}
+                        />
+                    </div>
                 </div>
-                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+
+                {/* Steps Content */}
+                <AnimatePresence mode="wait">
                     <motion.div
-                        className="h-full bg-indigo-500"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        transition={{ type: "spring", stiffness: 100, damping: 20 }}
-                    />
-                </div>
+                        key={currentStep}
+                        initial={{ opacity: 0, x: 24 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -24 }}
+                        transition={{ duration: 0.25 }}
+                    >
+                        {currentStep === 1 && (
+                            <UsernameStep
+                                value={formData.username}
+                                onChange={(val) => setFormData(p => ({ ...p, username: val }))}
+                                onNext={nextStep}
+                            />
+                        )}
+
+                        {currentStep === 2 && (
+                            <DetailsStep
+                                data={formData}
+                                onChange={(updates) => setFormData(p => ({ ...p, ...updates }))}
+                                onNext={nextStep}
+                                onBack={prevStep}
+                            />
+                        )}
+
+                        {currentStep === 3 && (
+                            <PlanStep
+                                selectedPlan={formData.selectedPlan}
+                                billingCycle={formData.billingCycle}
+                                onSelect={(plan, cycle) => {
+                                    setFormData(p => ({ ...p, selectedPlan: plan, billingCycle: cycle }));
+                                    nextStep();
+                                }}
+                                onBack={prevStep}
+                            />
+                        )}
+
+                        {currentStep === 4 && (
+                            <PaymentStep
+                                data={formData}
+                                onBack={prevStep}
+                            />
+                        )}
+                    </motion.div>
+                </AnimatePresence>
             </div>
-
-            {/* Steps Content */}
-            <AnimatePresence mode="wait">
-                <motion.div
-                    key={currentStep}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.3 }}
-                >
-                    {currentStep === 1 && (
-                        <UsernameStep
-                            value={formData.username}
-                            onChange={(val) => setFormData(p => ({ ...p, username: val }))}
-                            onNext={nextStep}
-                        />
-                    )}
-
-                    {currentStep === 2 && (
-                        <DetailsStep
-                            data={formData}
-                            onChange={(updates: Partial<typeof formData>) => setFormData(p => ({ ...p, ...updates }))}
-                            onNext={nextStep}
-                            onBack={prevStep}
-                        />
-                    )}
-
-                    {currentStep === 3 && (
-                        <OTPStep
-                            phone={formData.phone}
-                            onVerified={(hash: string) => {
-                                setFormData(p => ({ ...p, phoneHash: hash }));
-                                nextStep();
-                            }}
-                            onBack={prevStep}
-                        />
-                    )}
-
-                    {currentStep === 4 && (
-                        <PlanStep
-                            selectedPlan={formData.selectedPlan}
-                            billingCycle={formData.billingCycle}
-                            onSelect={(plan: any, cycle: 'monthly' | 'yearly') => {
-                                setFormData(p => ({ ...p, selectedPlan: plan, billingCycle: cycle }));
-                                nextStep();
-                            }}
-                            onBack={prevStep}
-                        />
-                    )}
-
-                    {currentStep === 5 && (
-                        <PaymentStep
-                            data={formData}
-                            onBack={prevStep}
-                        />
-                    )}
-                </motion.div>
-            </AnimatePresence>
         </div>
     );
 }

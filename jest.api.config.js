@@ -7,7 +7,9 @@ const config = {
         '**/__tests__/api/**/*.test.[jt]s',
         '**/__tests__/security/**/*.test.[jt]s',
         '**/__tests__/performance/**/*.test.[jt]s',
+        '**/__tests__/unit/**/*.test.[jt]s',
     ],
+
     moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
     },

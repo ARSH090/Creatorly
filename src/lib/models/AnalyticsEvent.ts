@@ -61,6 +61,11 @@ const AnalyticsEventSchema: Schema = new Schema({
 
 // TTL Index for analytics data (keep for 90 days to avoid DB bloat)
 AnalyticsEventSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 90 });
+// ─── Performance indexes ──────────────────────────────────────────────────────
+// Dashboard time-series: creatorId + eventType + createdAt (compound covers all dashboard chart queries)
+AnalyticsEventSchema.index({ creatorId: 1, eventType: 1, createdAt: -1 });
+// UTM attribution queries
+AnalyticsEventSchema.index({ creatorId: 1, utm_source: 1, createdAt: -1 });
 
 const AnalyticsEvent: Model<IAnalyticsEvent> = mongoose.models.AnalyticsEvent || mongoose.model<IAnalyticsEvent>('AnalyticsEvent', AnalyticsEventSchema);
 export { AnalyticsEvent };

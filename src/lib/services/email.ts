@@ -517,3 +517,48 @@ export async function sendBookingConfirmationEmail(
     html
   });
 }
+
+export async function sendTrialReminderEmail(
+  email: string,
+  opts: { daysLeft: number; name?: string }
+) {
+  const { daysLeft, name = 'there' } = opts;
+  const isLastDay = daysLeft <= 1;
+
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Inter', -apple-system, sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
+          .badge { display: inline-block; background: ${isLastDay ? '#ef4444' : '#f59e0b'}; color: #fff; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; padding: 4px 12px; border-radius: 100px; margin-bottom: 24px; }
+          .header { font-size: 26px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 12px; }
+          .subheader { color: #888; font-size: 15px; line-height: 1.6; margin-bottom: 32px; }
+          .button { display: block; background: #6366f1; color: #fff; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 0.1em; margin-top: 8px; }
+          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.2em; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="badge">${isLastDay ? 'Final Reminder' : `${daysLeft} Days Left`}</div>
+          <div class="header">${isLastDay ? 'Your Trial Ends Tomorrow' : 'Your Free Trial Is Almost Over'}</div>
+          <p class="subheader">
+            Hey ${name}! Your Creatorly free trial ${isLastDay ? 'ends tomorrow' : `has ${daysLeft} days left`}.
+            After your trial, your subscription will automatically begin. To change plans or cancel, visit billing before your trial ends.
+          </p>
+          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/dashboard/billing" class="button">Manage My Subscription</a>
+          <div class="footer">&copy; 2026 Creatorly</div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: isLastDay
+      ? '⏰ Final Reminder: Your Creatorly trial ends tomorrow'
+      : `⚡ ${daysLeft} days left on your Creatorly trial`,
+    html,
+  });
+}

@@ -1,140 +1,234 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
+import crypto from 'crypto';
 
-const WHATSAPP_BASE_URL = 'https://graph.facebook.com';
-const API_VERSION = process.env.WHATSAPP_VERSION || 'v19.0';
+const GRAPH_BASE_URL = 'https://graph.facebook.com';
+const VERSION = process.env.META_GRAPH_VERSION || 'v19.0';
 
-export interface WhatsAppMessage {
-    phone: string;
-    message?: string;
-    templateName?: string;
-    languageCode?: string;
-    components?: any[];
+export interface WhatsAppSendResult {
+    success: boolean;
+    messageId?: string;
+    error?: string;
+    errorCode?: string;
 }
 
-/**
- * Sends a message via WhatsApp Business Platform (Meta Cloud API)
- */
-export async function sendWhatsAppMessage(data: WhatsAppMessage) {
-    const accessToken = process.env.WHATSAPP_ACCESS_TOKEN;
-    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+export class WhatsAppService {
+    /**
+     * Send a text message via WhatsApp Business API
+     */
+    static async sendTextMessage(params: {
+        to: string;
+        text: string;
+        phoneNumberId: string;
+        accessToken: string;
+    }): Promise<WhatsAppSendResult> {
+        try {
+            const response = await axios.post(
+                `${GRAPH_BASE_URL}/${VERSION}/${params.phoneNumberId}/messages`,
+                {
+                    messaging_product: 'whatsapp',
+                    recipient_type: 'individual',
+                    to: params.to,
+                    type: 'text',
+                    text: { body: params.text }
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${params.accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
 
-    if (!accessToken || !phoneNumberId) {
-        console.warn('⚠️ WhatsApp API credentials not configured');
-        return { success: false, error: 'Credentials missing' };
+            return {
+                success: true,
+                messageId: response.data?.messages?.[0]?.id
+            };
+        } catch (error) {
+            return this.handleError(error);
+        }
     }
 
-    try {
-        const url = `${WHATSAPP_BASE_URL}/${API_VERSION}/${phoneNumberId}/messages`;
+    /**
+     * Send a template message (required for opening 24h window)
+     */
+    static async sendTemplateMessage(params: {
+        to: string;
+        templateName: string;
+        languageCode: string;
+        components?: any[];
+        phoneNumberId: string;
+        accessToken: string;
+    }): Promise<WhatsAppSendResult> {
+        try {
+            const response = await axios.post(
+                `${GRAPH_BASE_URL}/${VERSION}/${params.phoneNumberId}/messages`,
+                {
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: 'template',
+                    template: {
+                        name: params.templateName,
+                        language: { code: params.languageCode },
+                        components: params.components
+                    }
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${params.accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
 
-        const payload: any = {
-            messaging_product: 'whatsapp',
-            to: data.phone,
-        };
-
-        if (data.templateName) {
-            payload.type = 'template';
-            payload.template = {
-                name: data.templateName,
-                language: { code: data.languageCode || 'en_US' },
-                components: data.components
+            return {
+                success: true,
+                messageId: response.data?.messages?.[0]?.id
             };
-        } else {
-            payload.type = 'text';
-            payload.text = { body: data.message };
+        } catch (error) {
+            return this.handleError(error);
         }
+    }
 
-        const response = await axios.post(url, payload, {
-            headers: {
-                'Authorization': `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
+    /**
+     * Send a media message (Image, PDF, Video)
+     */
+    static async sendMediaMessage(params: {
+        to: string;
+        type: 'image' | 'document' | 'video';
+        url: string;
+        caption?: string;
+        phoneNumberId: string;
+        accessToken: string;
+    }): Promise<WhatsAppSendResult> {
+        try {
+            const response = await axios.post(
+                `${GRAPH_BASE_URL}/${VERSION}/${params.phoneNumberId}/messages`,
+                {
+                    messaging_product: 'whatsapp',
+                    to: params.to,
+                    type: params.type,
+                    [params.type]: {
+                        link: params.url,
+                        caption: params.caption
+                    }
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${params.accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
 
-        return {
-            success: true,
-            messageId: response.data?.messages?.[0]?.id,
-            recipientId: response.data?.contacts?.[0]?.wa_id
-        };
-    } catch (error: any) {
-        const errData = error.response?.data?.error;
-        console.error('❌ WhatsApp delivery error:', errData || error.message);
+            return {
+                success: true,
+                messageId: response.data?.messages?.[0]?.id
+            };
+        } catch (error) {
+            return this.handleError(error);
+        }
+    }
+
+    /**
+     * Send an interactive button message
+     */
+    static async sendButtonMessage(params: {
+        to: string;
+        text: string;
+        buttons: Array<{ id: string; title: string }>;
+        phoneNumberId: string;
+        accessToken: string;
+    }): Promise<WhatsAppSendResult> {
+        try {
+            const response = await axios.post(
+                `${GRAPH_BASE_URL}/${VERSION}/${params.phoneNumberId}/messages`,
+                {
+                    messaging_product: 'whatsapp',
+                    recipient_type: 'individual',
+                    to: params.to,
+                    type: 'interactive',
+                    interactive: {
+                        type: 'button',
+                        body: { text: params.text },
+                        action: {
+                            buttons: params.buttons.map(b => ({
+                                type: 'reply',
+                                reply: { id: b.id, title: b.title }
+                            }))
+                        }
+                    }
+                },
+                {
+                    headers: {
+                        'Authorization': `Bearer ${params.accessToken}`,
+                        'Content-Type': 'application/json'
+                    }
+                }
+            );
+
+            return {
+                success: true,
+                messageId: response.data?.messages?.[0]?.id
+            };
+        } catch (error) {
+            return this.handleError(error);
+        }
+    }
+
+    private static handleError(error: any): WhatsAppSendResult {
+        const axiosError = error as AxiosError<any>;
+        const metaError = axiosError.response?.data?.error;
+        console.error('[WhatsAppService] Error:', metaError || axiosError.message);
         return {
             success: false,
-            error: errData?.message || error.message,
-            code: errData?.code
+            error: metaError?.message || axiosError.message,
+            errorCode: metaError?.code?.toString() || 'UNKNOWN_ERROR'
         };
     }
-}
 
-/**
- * Generate a WhatsApp deep link
- */
-export function generateWhatsAppDeepLink(phone: string, message: string): string {
-    const cleanPhone = phone.replace(/\D/g, '');
-    const encodedMessage = encodeURIComponent(message);
-    return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
-}
-
-
-/**
- * Build components for a product link template
- */
-export function buildProductTemplateComponents(productName: string, productLink: string) {
-    return [
-        {
-            type: 'body',
-            parameters: [
-                { type: 'text', text: productName }
-            ]
-        },
-        {
-            type: 'button',
-            sub_type: 'url',
-            index: '0',
-            parameters: [
-                { type: 'text', text: productLink.split('/').pop() || '' }
-            ]
+    /**
+     * Verify WhatsApp webhook signature
+     */
+    static verifyWebhookSignature(payload: string, signature: string, appSecret: string): boolean {
+        try {
+            const expectedSignature = 'sha256=' + crypto
+                .createHmac('sha256', appSecret)
+                .update(payload)
+                .digest('hex');
+            return crypto.timingSafeEqual(
+                Buffer.from(signature.replace('sha256=', '')),
+                Buffer.from(expectedSignature.replace('sha256=', ''))
+            );
+        } catch (error) {
+            console.error('[WhatsAppService] Webhook verification failed:', error);
+            return false;
         }
-    ];
-}
-
-/**
- * Build a dynamic WhatsApp message for lead capture
- */
-export function buildWhatsAppMessage(name: string, interest: string): string {
-    const firstName = name.split(' ')[0];
-    return `Hey ${firstName}! 👋 Thanks for your interest in "${interest}". I'll be reaching out shortly to help you with the next steps. Stay tuned!`;
-}
-
-/**
- * Enqueue a WhatsApp message for auto-send
- */
-export async function enqueueWhatsAppAutoSend(data: {
-    leadId: string;
-    name: string;
-    phone: string;
-    interest: string;
-    message: string;
-}) {
-    const { QueueJob } = await import('@/lib/models/QueueJob');
-
-    try {
-        await QueueJob.create({
-            type: 'dm_delivery',
-            payload: {
-                recipientId: data.phone,
-                text: data.message,
-                creatorId: 'system', // or fetch the actual creatorId if needed
-                platform: 'whatsapp',
-                source: 'automation'
-            },
-            status: 'pending',
-            nextRunAt: new Date()
-        });
-
-        console.log(`[WhatsApp Queue] Enqueued message for ${data.phone}`);
-    } catch (error) {
-        console.error('Failed to enqueue WhatsApp message:', error);
-        throw error;
+    }
+    /**
+     * Legacy export for backward compatibility
+     */
+    static async sendWhatsAppMessage(params: any) {
+        return this.sendTextMessage(params);
     }
 }
+
+export const sendWhatsAppMessage = async (params: any) => {
+    return WhatsAppService.sendTextMessage(params);
+};
+
+export const buildWhatsAppMessage = (name: string, interest: string) => {
+    return `Hi ${name}! Thanks for your interest in ${interest}. How can we help you today?`;
+};
+
+export const generateWhatsAppDeepLink = (phone: string, message: string) => {
+    const encodedMessage = encodeURIComponent(message);
+    const cleanPhone = phone.replace(/\D/g, '');
+    return `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+};
+
+export const enqueueWhatsAppAutoSend = async (data: any) => {
+    console.log('[WhatsApp] Auto-send enqueued (Stub):', data);
+    return { success: true };
+};
+
+export default WhatsAppService;

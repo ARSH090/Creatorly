@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, Flame, Zap, Briefcase, Loader2, ArrowLeft } from 'lucide-react';
+import { Check } from 'lucide-react';
 
 interface PlanStepProps {
     selectedPlan: any;
@@ -34,38 +34,50 @@ export default function PlanStep({ selectedPlan, billingCycle, onSelect, onBack 
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center py-20 space-y-4">
-                <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
-                <p className="text-xs font-black uppercase tracking-widest text-zinc-600">Loading premium plans...</p>
+                <div className="w-10 h-10 rounded-full border-4 border-zinc-100 border-t-indigo-600 animate-spin" />
+                <p className="text-sm font-bold text-zinc-400">Loading plans...</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
             <div className="text-center space-y-4">
-                <h2 className="text-3xl font-black text-white italic tracking-tight">
-                    Pick your plan, start earning today 💸
+                <h2 className="text-3xl font-black text-zinc-900 tracking-tight leading-tight">
+                    Pick your plan, start <br /> earning today 💸
                 </h2>
 
-                {/* Toggle */}
-                <div className="inline-flex items-center p-1 bg-white/5 border border-white/10 rounded-2xl">
+                <div className="space-y-3 text-left max-w-xs mx-auto">
+                    <div className="flex items-center gap-2 text-zinc-900 font-bold text-sm">
+                        <Check className="text-indigo-600" size={18} strokeWidth={3} />
+                        <span>Save thousands by choosing Creatorly</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-zinc-900 font-bold text-sm">
+                        <Check className="text-indigo-600" size={18} strokeWidth={3} />
+                        <span>All-In-One store, easy to set up</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Billing Cycle Toggle */}
+            <div className="flex justify-center mb-6">
+                <div className="bg-zinc-100 p-1 rounded-xl inline-flex gap-1 shadow-inner relative">
                     <button
                         onClick={() => setCycle('monthly')}
-                        className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${cycle === 'monthly' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
-                            }`}
+                        className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all z-10 ${cycle === 'monthly' ? 'text-indigo-600' : 'text-zinc-400 hover:text-zinc-600'}`}
                     >
                         Monthly
                     </button>
                     <button
                         onClick={() => setCycle('yearly')}
-                        className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all relative ${cycle === 'yearly' ? 'bg-indigo-600 text-white shadow-lg' : 'text-zinc-500 hover:text-zinc-300'
-                            }`}
+                        className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all z-10 ${cycle === 'yearly' ? 'text-indigo-600' : 'text-zinc-400 hover:text-zinc-600'}`}
                     >
                         Yearly
-                        <span className="absolute -top-3 -right-3 bg-emerald-500 text-[8px] px-2 py-0.5 rounded-full text-white ring-2 ring-[#030303]">
-                            SAVE 20%
-                        </span>
                     </button>
+                    {/* Sliding Background */}
+                    <div
+                        className={`absolute top-1 bottom-1 w-[calc(50%-4px)] bg-white rounded-lg shadow-sm transition-all duration-300 ${cycle === 'monthly' ? 'left-1' : 'left-[50%]'}`}
+                    />
                 </div>
             </div>
 
@@ -74,70 +86,54 @@ export default function PlanStep({ selectedPlan, billingCycle, onSelect, onBack 
                     <div
                         key={plan.id}
                         onClick={() => onSelect(plan, cycle)}
-                        className={`relative p-6 bg-white/3 border-2 rounded-3xl cursor-pointer transition-all hover:bg-white/5 group ${selectedPlan?.id === plan.id ? 'border-indigo-500 bg-indigo-500/5' : 'border-white/5'
-                            }`}
+                        className={`relative p-5 bg-white border-2 rounded-2xl cursor-pointer transition-all flex items-center gap-4 ${selectedPlan?.id === plan.id ? 'border-indigo-600 ring-4 ring-indigo-600/10' : 'border-zinc-200 hover:border-zinc-300'} ${plan.id === 'pro' ? 'shadow-lg shadow-indigo-600/5' : ''}`}
                     >
                         {plan.badge && (
-                            <div className="absolute -top-3 left-6 px-3 py-1 bg-indigo-600 text-[8px] font-black uppercase tracking-widest text-white rounded-full flex items-center gap-1 shadow-lg shadow-indigo-500/20">
-                                <Flame size={10} fill="currentColor" /> {plan.badge}
+                            <div className="absolute -top-3 right-4 bg-indigo-600 text-[10px] font-black uppercase tracking-widest text-white px-3 py-1 rounded-full shadow-lg">
+                                {plan.badge}
                             </div>
                         )}
-
-                        <div className="flex justify-between items-start mb-6">
-                            <div>
-                                <h3 className="text-xl font-black text-white italic group-hover:text-indigo-400 transition-colors uppercase tracking-tight">
-                                    {plan.name}
-                                </h3>
-                                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-widest">{plan.description || 'Professional features'}</p>
-                            </div>
-                            <div className="text-right">
-                                <div className="text-2xl font-black text-white italic tracking-tighter">
-                                    {cycle === 'monthly' ? plan.monthly.display : plan.yearly.display}
-                                </div>
-                                <div className="text-[9px] text-zinc-600 font-black uppercase tracking-widest font-mono italic">
-                                    / {cycle === 'monthly' ? 'month' : 'year'}
-                                </div>
-                            </div>
+                        <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${selectedPlan?.id === plan.id ? 'border-indigo-600' : 'border-zinc-300'}`}>
+                            {selectedPlan?.id === plan.id && <div className="w-3 h-3 bg-indigo-600 rounded-full" />}
                         </div>
-
-                        <div className="space-y-3">
-                            {plan.features.slice(0, 4).map((feature: any, i: number) => (
-                                <div key={i} className="flex items-center gap-3 text-xs leading-none">
-                                    <div className={`p-1 rounded-full ${feature.included ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
-                                        <Check size={10} />
-                                    </div>
-                                    <span className={feature.included ? 'text-zinc-300 font-bold uppercase tracking-widest text-[9px]' : 'text-zinc-600 line-through font-bold uppercase tracking-widest text-[9px]'}>
-                                        {feature.name} {feature.value && <span className="text-white ml-1">({feature.value})</span>}
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-
-                        {selectedPlan?.id === plan.id && (
-                            <div className="mt-6 p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-2xl">
-                                <p className="text-center text-[10px] font-black text-indigo-400 uppercase tracking-widest flex items-center justify-center gap-2">
-                                    <Zap size={12} fill="currentColor" /> Selected — Due today ₹0 🙌
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                                <h3 className="text-lg font-black text-zinc-900">{plan.name}</h3>
+                                {plan.id === 'pro' && <span className="text-indigo-600 text-[10px] font-black uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded-full">Best Value</span>}
+                            </div>
+                            <p className="text-zinc-500 font-bold text-sm">
+                                {cycle === 'monthly'
+                                    ? `₹0 for 14 days, then ${plan.monthly.display}/mo`
+                                    : `₹0 for 14 days, then ${plan.yearly.display}/yr`}
+                            </p>
+                            {cycle === 'yearly' && plan.yearly.savings && (
+                                <p className="text-emerald-600 text-[10px] font-black uppercase tracking-widest mt-1">
+                                    {plan.yearly.savings}
                                 </p>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 ))}
             </div>
 
-            <div className="pt-4 space-y-4">
-                <button
-                    onClick={onBack}
-                    className="w-full py-4 text-zinc-600 hover:text-zinc-400 font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-2"
-                >
-                    <ArrowLeft size={14} /> Back to details
-                </button>
+            <div className="text-center py-4 bg-zinc-50 rounded-2xl border border-zinc-100">
+                <p className="text-zinc-500 font-bold text-sm uppercase tracking-widest mb-1">Due today</p>
+                <p className="text-zinc-900 font-black text-3xl tracking-tighter">
+                    ₹0 <span className="text-zinc-400 text-lg ml-1">🙌</span>
+                </p>
+                <p className="text-zinc-400 text-[10px] font-bold mt-1 tracking-wider uppercase">14-Day Free Trial Starts Now</p>
+            </div>
 
-                <div className="text-center p-4 bg-white/2 border border-white/5 rounded-3xl">
-                    <p className="text-[9px] text-zinc-600 font-black uppercase tracking-[0.2em] leading-relaxed">
-                        Free for 14 days • Cancel anytime <br />
-                        <span className="text-indigo-500/50 italic font-medium">Safe & Secure Payment via Razorpay</span>
-                    </p>
-                </div>
+            <div className="pt-4">
+                <button
+                    onClick={() => {
+                        if (selectedPlan) onSelect(selectedPlan, cycle);
+                    }}
+                    disabled={!selectedPlan}
+                    className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-bold text-lg shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {selectedPlan ? 'Start 14-Day Free Trial' : 'Select a Plan'}
+                </button>
             </div>
         </div>
     );

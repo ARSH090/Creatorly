@@ -1,39 +1,88 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
+import Order from '@/lib/models/Order';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
-import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { successResponse, errorResponse } from '@/types/api';
+import { startOfDay, startOfMonth } from 'date-fns';
 
-/**
- * GET /api/creator/products/stats
- * Get product counts by status
- */
 async function handler(req: NextRequest, user: any) {
-    await connectToDatabase();
+    try {
+        await connectToDatabase();
 
-    const stats = await Product.aggregate([
-        {
-            $match: { creatorId: user._id }
-        },
-        {
-            $group: {
-                _id: '$status',
-                count: { $sum: 1 }
-            }
-        }
-    ]);
+        const now = new Date();
+        const todayStart = startOfDay(now);
+        const monthStart = startOfMonth(now);
 
-    const statsMap = stats.reduce((acc, s) => {
-        acc[s._id] = s.count;
-        return acc;
-    }, {} as Record<string, number>);
+        const [productStats, revenueStats] = await Promise.all([
+            Product.aggregate([
+                { $match: { creatorId: user._id, isArchived: { $ne: true } } },
+                {
+                    $group: {
+                        _id: null,
+                        totalProducts: { $sum: 1 },
+                        publishedProducts: {
+                            $sum: { $cond: [{ $eq: ["$status", "published"] }, 1, 0] }
+                        },
+                        totalSales: { $sum: "$totalSales" },
+                        avgRating: { $avg: "$avgRating" }
+                    }
+                }
+            ]),
+            Order.aggregate([
+                {
+                    $match: {
+                        creatorId: user._id,
+                        status: { $in: ['completed', 'success'] }
+                    }
+                },
+                {
+                    $group: {
+                        _id: null,
+                        allTimeRevenue: { $sum: "$total" },
+                        todayRevenue: {
+                            $sum: {
+                                $cond: [{ $gte: ["$createdAt", todayStart] }, "$total", 0]
+                            }
+                        },
+                        monthlyRevenue: {
+                            $sum: {
+                                $cond: [{ $gte: ["$createdAt", monthStart] }, "$total", 0]
+                            }
+                        }
+                    }
+                }
+            ])
+        ]);
 
-    return {
-        total: stats.reduce((sum, s) => sum + s.count, 0),
-        draft: statsMap.draft || 0,
-        published: statsMap.published || 0,
-        archived: statsMap.archived || 0
-    };
+        const stats = productStats[0] || {
+            totalProducts: 0,
+            publishedProducts: 0,
+            totalSales: 0,
+            avgRating: 0
+        };
+
+        const revenue = revenueStats[0] || {
+            allTimeRevenue: 0,
+            todayRevenue: 0,
+            monthlyRevenue: 0
+        };
+
+        // Combine and convert Paise to Rupees (assuming 100 paise = 1 INR)
+        const finalStats = {
+            ...stats,
+            allTimeRevenue: (revenue.allTimeRevenue || 0) / 100,
+            todayRevenue: (revenue.todayRevenue || 0) / 100,
+            monthlyRevenue: (revenue.monthlyRevenue || 0) / 100,
+            totalSales: stats.totalSales || 0 // Already aggregated from products
+        };
+
+        return NextResponse.json(finalStats);
+    } catch (error: any) {
+        console.error('Creator Products Stats Error:', error);
+        return NextResponse.json(errorResponse('Failed to fetch stats', error.message), { status: 500 });
+    }
 }
 
-export const GET = withCreatorAuth(withErrorHandler(handler));
+export const GET = withCreatorAuth(handler);
+

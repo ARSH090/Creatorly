@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import NextImage from 'next/image';
 import {
     ExternalLink, Globe, MessageCircle, Mail, Camera, Play,
     Calendar, Send, Twitter, Linkedin, Music2, Star, Tag,
@@ -109,8 +110,15 @@ export default function LinksSection({ links, theme, creatorId }: LinksSectionPr
                             style={{ backgroundColor: accentColor + '18' }}
                         >
                             {link.thumbnail ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={link.thumbnail} alt="" className="w-full h-full object-cover" />
+                                <div className="relative w-full h-full">
+                                    <NextImage
+                                        src={link.thumbnail}
+                                        alt=""
+                                        className="object-cover"
+                                        fill
+                                        sizes="44px"
+                                    />
+                                </div>
                             ) : (
                                 <IconComp className="w-5 h-5" style={{ color: accentColor }} aria-hidden="true" />
                             )}

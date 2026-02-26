@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import { getMongoUser } from '@/lib/auth/get-user';
-import React from 'react';
+import { getCached, invalidateCache } from '@/lib/cache';
 import mongoose from 'mongoose';
 
 // FORCE DYNAMIC for these routes as they depend on request data/auth
@@ -46,15 +46,21 @@ export async function GET(req: NextRequest) {
         }
 
         const skip = (page - 1) * limit;
+        const cacheKey = `products:${user._id}:${page}:${limit}:${status || 'all'}:${productType || 'all'}:${sortBy}`;
 
-        const products = await Product.find(query)
-            .sort(sortBy)
-            .skip(skip)
-            .limit(limit)
-            .populate('categoryId', 'name') // Optional population
-            .lean();
-
-        const total = await Product.countDocuments(query);
+        const { products, total } = await getCached(cacheKey, 60, async () => {
+            const [products, total] = await Promise.all([
+                Product.find(query)
+                    .sort(sortBy)
+                    .skip(skip)
+                    .limit(limit)
+                    .select('title pricing status productType categoryId createdAt slug thumbnail image isActive')
+                    .populate('categoryId', 'name')
+                    .lean(),
+                Product.countDocuments(query)
+            ]);
+            return { products, total };
+        });
 
         return NextResponse.json({
             products,
@@ -105,6 +111,12 @@ export async function POST(req: NextRequest) {
             createdAt: new Date(),
             updatedAt: new Date()
         });
+
+        // Invalidate caches
+        await Promise.all([
+            invalidateCache(`storefront:${user.username.toLowerCase()}`),
+            invalidateCache(`products:list:${creatorId}`) // Partial invalidation for default view
+        ]).catch(err => console.error('Cache invalidation error:', err));
 
         return NextResponse.json({ product }, { status: 201 });
 

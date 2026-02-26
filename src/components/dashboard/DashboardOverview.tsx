@@ -118,30 +118,35 @@ export default function DashboardOverview() {
             <WelcomeTour run={showTour} onClose={handleTourClose} />
 
             {/* Welcome Card */}
-            <div className="bg-gradient-to-r from-indigo-900/50 to-purple-900/50 rounded-3xl p-8 border border-indigo-500/20 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/20 blur-[100px] rounded-full -mr-16 -mt-16" />
+            <div className="bg-[#0A0A0A]/40 rounded-[2.5rem] p-10 md:p-12 border border-white/[0.03] backdrop-blur-3xl relative overflow-hidden group shadow-2xl">
+                {/* Dynamic Glow Effect */}
+                <div className="absolute -top-24 -right-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none group-hover:bg-indigo-500/15 transition-all duration-700" />
+                <div className="absolute -bottom-24 -left-24 w-72 h-72 bg-purple-500/5 rounded-full blur-[80px] pointer-events-none" />
 
-                <div className="flex flex-col md:flex-row items-center justify-between relative z-10 gap-6">
-                    <div>
-                        <div className="flex items-center gap-2 mb-4">
-                            <div className={`w-2 h-2 rounded-full ${analytics?.store?.isLive ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`} />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">
-                                {analytics?.store?.isLive ? 'Store Live' : 'Store Offline'}
+                <div className="flex flex-col md:flex-row items-center justify-between relative z-10 gap-8">
+                    <div className="text-center md:text-left">
+                        <div className="flex items-center justify-center md:justify-start gap-3 mb-6">
+                            <div className={`w-2.5 h-2.5 rounded-full ${analytics?.store?.isLive ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)] animate-pulse' : 'bg-zinc-700'}`} />
+                            <span className="text-[11px] font-black uppercase tracking-[0.25em] text-zinc-500">
+                                {analytics?.store?.isLive ? 'Your Store is Live' : 'Store is Offline'}
                             </span>
                         </div>
-                        <h2 className="text-3xl font-bold text-white mb-2">Welcome back, {user?.firstName || 'Creator'}! 👋</h2>
-                        <p className="text-zinc-300 max-w-lg">
-                            Your store earned <span className="text-white font-bold">₹{analytics?.revenue?.total || 0}</span>.
-                            The Indian creator economy is booming, and you're leading the charge.
+                        <h2 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight leading-tight">
+                            Welcome back, <span className="bg-gradient-to-r from-white via-white to-zinc-500 bg-clip-text text-transparent">{user?.firstName || 'Creator'}</span>! 👋
+                        </h2>
+                        <p className="text-zinc-400 text-lg max-w-xl leading-relaxed font-medium">
+                            Your creator hub is performing well. You've earned <span className="text-white font-bold">₹{analytics?.revenue?.total || 0}</span> this period. Keep building your brand.
                         </p>
                     </div>
-                    {/* Simplified Payout Widget */}
-                    <div className="w-full md:w-auto bg-black/20 backdrop-blur-md rounded-2xl p-6 border border-white/10 min-w-[200px]">
-                        <div className="text-right">
-                            <p className="text-xs font-bold text-zinc-400 uppercase tracking-widest mb-1">Balance</p>
-                            <p className="text-3xl font-black text-white">₹{analytics?.revenue?.total || 0}</p>
-                            <div className="flex justify-end gap-2 mt-2">
-                                <span className={`text-[10px] px-2 py-0.5 rounded font-bold ${analytics?.store?.isLive ? 'bg-emerald-500/20 text-green-400' : 'bg-zinc-500/20 text-zinc-400'}`}>
+
+                    {/* Balance Widget */}
+                    <div className="w-full md:w-auto bg-white/[0.02] border border-white/[0.05] backdrop-blur-2xl rounded-3xl p-8 min-w-[280px] shadow-xl">
+                        <div className="text-center md:text-right">
+                            <p className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] mb-2">Available Balance</p>
+                            <p className="text-4xl font-black text-white tracking-tighter mb-4">₹{analytics?.revenue?.total || 0}</p>
+                            <div className="flex justify-center md:justify-end">
+                                <span className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${analytics?.store?.isLive ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-zinc-500/10 text-zinc-500 border border-zinc-500/20'}`}>
+                                    <Globe size={12} />
                                     {analytics?.store?.isLive ? 'Active' : 'Inactive'}
                                 </span>
                             </div>
@@ -153,23 +158,27 @@ export default function DashboardOverview() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {stats.map((stat, index) => (
-                    <div key={index} className={`bg-zinc-900/50 rounded-2xl p-6 border ${stat.borderColor} group hover:bg-zinc-900 transition-all`}>
-                        <div className="flex items-center justify-between mb-4">
-                            <div className={`p-3 rounded-xl ${stat.bgColor}`}>
+                    <motion.div
+                        key={index}
+                        whileHover={{ y: -4 }}
+                        className="bg-[#0A0A0A]/40 backdrop-blur-3xl rounded-[2rem] p-7 border border-white/[0.03] group hover:border-white/[0.08] transition-all shadow-xl"
+                    >
+                        <div className="flex items-center justify-between mb-6">
+                            <div className={`p-3.5 rounded-2xl ${stat.bgColor} border ${stat.borderColor} group-hover:scale-110 transition-transform duration-500`}>
                                 <stat.icon className={`w-5 h-5 ${stat.color}`} />
                             </div>
-                            <div className={`flex items-center gap-1 ${stat.change >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full ${stat.change >= 0 ? 'bg-emerald-500/10 text-emerald-400' : 'bg-red-500/10 text-red-400'} text-[10px] font-black`}>
                                 {stat.change >= 0 ? (
-                                    <TrendingUp className="w-3 h-3" />
+                                    <TrendingUp className="w-3.5 h-3.5" />
                                 ) : (
-                                    <TrendingDown className="w-3 h-3" />
+                                    <TrendingDown className="w-3.5 h-3.5" />
                                 )}
-                                <span className="text-xs font-bold">{Math.abs(stat.change)}%</span>
+                                <span>{Math.abs(stat.change)}%</span>
                             </div>
                         </div>
-                        <p className="text-3xl font-bold text-white mb-1">{stat.value}</p>
-                        <p className="text-xs font-medium text-zinc-500 uppercase tracking-widest">{stat.title}</p>
-                    </div>
+                        <p className="text-3xl font-black text-white mb-2 tracking-tight group-hover:translate-x-1 transition-transform">{stat.value}</p>
+                        <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.2em]">{stat.title}</p>
+                    </motion.div>
                 ))}
             </div>
 
@@ -212,7 +221,7 @@ export default function DashboardOverview() {
                     <div className="grid grid-cols-2 gap-4">
                         <Link href="/dashboard/projects/new" className="p-4 bg-white/5 rounded-2xl border border-white/5 hover:bg-white/10 transition-all text-center group">
                             <Plus className="w-5 h-5 text-zinc-400 mx-auto mb-2 group-hover:text-white transition-colors" />
-                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest group-hover:text-white transition-colors">Add Product</span>
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest group-hover:text-white transition-colors">Add Project</span>
                         </Link>
                         <Link href="/dashboard/billing" className="p-4 bg-indigo-500/10 rounded-2xl border border-indigo-500/20 hover:bg-indigo-500/20 transition-all text-center group">
                             <Zap className="w-5 h-5 text-indigo-400 mx-auto mb-2 group-hover:scale-110 transition-transform" />

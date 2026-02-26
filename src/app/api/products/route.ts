@@ -46,33 +46,34 @@ export const POST = withCreatorAuth(async (req, user) => {
 
 
         // 2. Map Validated Data to Product Schema
+        const productName = data.name || data.title || 'Untitled';
         const productData = {
             creatorId: user._id,
-            title: data.name,
-            slug: data.name.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '') + '-' + Math.random().toString(36).substring(2, 7),
+            title: productName,
+            slug: productName.toLowerCase().replace(/ /g, '-').replace(/[^\w-]+/g, '') + '-' + Math.random().toString(36).substring(2, 7),
             description: sanitizeHTML(data.description || ''),
             pricing: {
-                basePrice: data.price,
+                basePrice: data.price || 0,
                 currency: data.currency || 'INR',
                 taxInclusive: false
             },
             paymentType: 'one_time',
             category: data.category,
             image: data.image,
-            type: data.type,
+            productType: data.productType || 'digital_download',
             status: data.isPublic ? 'active' : 'draft',
-            isActive: data.isPublic,
+            isActive: !!data.isPublic,
             files: data.files || [],
             accessRules: {
                 immediateAccess: true,
                 requiresApproval: false
             },
             seo: {
-                metaTitle: data.name,
+                metaTitle: productName,
                 metaDescription: (data.description || '').slice(0, 160),
                 keywords: []
             },
-            isFeatured: data.isFeatured || data.isFeaturedInCollections,
+            isFeatured: !!(data.isFeatured || data.isFeaturedInCollections),
 
             // Variants
             hasVariants: data.hasVariants,

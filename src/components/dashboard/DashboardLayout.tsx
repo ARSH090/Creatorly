@@ -5,12 +5,13 @@ import {
     LayoutDashboard, Package, ShoppingCart, TrendingUp,
     Users, Wallet, Settings, Bell, LogOut, ChevronRight,
     Sparkles, Plus, Share2, Menu, X, User, CreditCard, Folder, LifeBuoy,
-    Mail, Globe, Zap
+    Mail, Globe, Zap, CalendarDays, FolderKanban, Link as LinkIcon
 } from "lucide-react";
 import { useUser, useClerk, useAuth } from "@clerk/nextjs";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "react-hot-toast";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const { user } = useUser();
@@ -54,13 +55,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
         { name: 'My Profile', icon: User, href: '/dashboard/profile' },
         { name: 'Storefront', icon: Sparkles, href: '/dashboard/storefront' },
+        {
+            name: 'Products',
+            icon: Package,
+            href: '/dashboard/products',
+            badge: stats?.publishedProducts > 0 ? stats.publishedProducts.toString() : undefined
+        },
         { name: 'Custom Domain', icon: Globe, href: '/dashboard/domain', featureCode: 'customDomain' },
-        { name: 'Billing', icon: CreditCard, href: '/dashboard/billing' },
-        { name: 'Projects', icon: Folder, href: '/dashboard/projects' },
+        { name: 'AutoDM Hub', icon: Zap, href: '/dashboard/automation', featureCode: 'automation' },
+        {
+            name: 'Schedulify',
+            icon: CalendarDays,
+            href: '/dashboard/schedulify',
+            badge: 'NEW'
+        },
         { name: 'Orders', icon: ShoppingCart, href: '/dashboard/orders' },
+        {
+            name: 'Projects',
+            icon: FolderKanban,
+            href: '/dashboard/projects',
+            badge: stats?.activeProjects > 0 ? stats.activeProjects.toString() : undefined
+        },
         { name: 'Analytics', icon: TrendingUp, href: '/dashboard/analytics', featureCode: 'analytics' },
         { name: 'Marketing', icon: Mail, href: '/dashboard/email', featureCode: 'marketing' },
-        { name: 'AutoDM Hub', icon: Zap, href: '/dashboard/automation', featureCode: 'automation' },
         { name: 'Team', icon: Users, href: '/dashboard/team', featureCode: 'teamMembers' },
         { name: 'Settings', icon: Settings, href: '/dashboard/settings' },
         { name: 'Support', icon: LifeBuoy, href: '/dashboard/support' },
@@ -74,26 +91,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
         <div className="min-h-screen bg-[#030303] text-zinc-400 font-sans selection:bg-indigo-500/30">
             {/* Sticky Header */}
-            <header className="sticky top-0 z-50 bg-[#030303]/80 backdrop-blur-xl border-b border-white/5">
-                <div className="px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
+            <header className="sticky top-0 z-50 bg-[#030303]/80 backdrop-blur-2xl border-b border-white/[0.03]">
+                <div className="px-6 sm:px-8">
+                    <div className="flex items-center justify-between h-20">
                         {/* Left: Brand & Mobile Menu Toggle */}
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-6">
                             <button
-                                className="lg:hidden p-2 text-zinc-400 hover:text-white"
+                                className="lg:hidden p-2 text-zinc-500 hover:text-white transition-colors"
                                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                             >
                                 <Menu className="w-6 h-6" />
                             </button>
 
-                            <Link href="/dashboard" className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center shadow-[0_0_15px_rgba(99,102,241,0.3)]">
-                                    <Sparkles className="w-4 h-4 text-white fill-white" />
+                            <Link href="/dashboard" className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                                    <Sparkles className="w-5 h-5 text-white fill-white" />
                                 </div>
-                                <span className="text-xl font-bold text-white tracking-tight hidden sm:block">Creatorly</span>
+                                <span className="text-2xl font-bold text-white tracking-tighter hidden sm:block">Creatorly</span>
                             </Link>
 
-                            {/* Quick Stats - Desktop Only */}
                             <div className="hidden md:flex items-center gap-6 ml-8 pl-8 border-l border-white/5">
                                 <div className="flex items-center gap-2">
                                     <div className={`w-2 h-2 rounded-full ${stats?.isLive ? 'bg-emerald-500 animate-pulse' : 'bg-zinc-600'}`} />
@@ -101,6 +117,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                         {stats?.isLive ? 'Store Live' : 'Store Offline'}
                                     </span>
                                 </div>
+
+                                {stats?.profile?.username && (
+                                    <button
+                                        onClick={() => {
+                                            const url = `${window.location.origin}/u/${stats.profile.username}`;
+                                            navigator.clipboard.writeText(url);
+                                            toast.success('Store link copied!');
+                                        }}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-white/5 hover:bg-white/10 rounded-full border border-white/5 transition-all group"
+                                    >
+                                        <LinkIcon className="w-3 h-3 text-indigo-400" />
+                                        <span className="text-[10px] font-bold text-zinc-400 group-hover:text-white transition-colors">Copy Store Link</span>
+                                    </button>
+                                )}
 
                                 {stats && (
                                     <>
@@ -176,8 +206,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
                 {/* Sidebar - Desktop */}
-                <aside className="hidden lg:flex w-64 flex-col border-r border-white/5 bg-[#050505] overflow-y-auto">
-                    <nav className="p-4 space-y-1 flex-1">
+                <aside className="hidden lg:flex w-72 flex-col border-r border-white/[0.03] bg-[#050505] overflow-y-auto">
+                    <nav className="p-6 space-y-1.5 flex-1">
                         {navigation.map((item) => {
                             const isActive = pathname === item.href;
                             const isLocked = item.featureCode && stats?.subscription && (
@@ -189,19 +219,33 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 <Link
                                     key={item.name}
                                     href={isLocked ? '/dashboard/billing' : item.href}
-                                    className={`flex items-center justify-between p-3 rounded-xl transition-all group ${isActive
-                                        ? 'bg-indigo-500/10 text-white border border-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.1)]'
-                                        : 'text-zinc-500 hover:text-white hover:bg-white/5'
-                                        } ${isLocked ? 'opacity-60 grayscale-[0.5]' : ''}`}
+                                    className={`flex items-center justify-between px-4 py-3.5 rounded-2xl transition-all group relative overflow-hidden ${isActive
+                                        ? 'bg-white/[0.03] text-white'
+                                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.01]'
+                                        } ${isLocked ? 'opacity-50' : ''}`}
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <item.icon className={`w-5 h-5 ${isActive ? 'text-indigo-400' : 'text-zinc-600 group-hover:text-zinc-400'}`} />
-                                        <span className="font-medium text-sm">{item.name}</span>
+                                    {isActive && (
+                                        <motion.div
+                                            layoutId="active-nav"
+                                            className="absolute left-0 w-1 h-5 bg-indigo-500 rounded-r-full"
+                                        />
+                                    )}
+                                    <div className="flex items-center gap-3.5">
+                                        <item.icon className={`w-[18px] h-[18px] transition-colors ${isActive ? 'text-indigo-400' : 'text-zinc-600 group-hover:text-zinc-400'}`} />
+                                        <span className="font-semibold text-[13px] tracking-tight">{item.name}</span>
                                     </div>
 
-                                    <div className="flex items-center gap-2">
-                                        {isLocked && <Zap className="w-3 h-3 text-indigo-500" />}
-                                    </div>
+                                    {item.badge && (
+                                        <span className="ml-auto bg-indigo-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-tighter shadow-sm shadow-indigo-500/20">
+                                            {item.badge}
+                                        </span>
+                                    )}
+
+                                    {isLocked && !item.badge && (
+                                        <div className="w-5 h-5 rounded-lg bg-indigo-500/10 flex items-center justify-center">
+                                            <Zap className="w-2.5 h-2.5 text-indigo-400 fill-indigo-400" />
+                                        </div>
+                                    )}
                                 </Link>
                             );
                         })}

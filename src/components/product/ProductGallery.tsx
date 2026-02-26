@@ -7,12 +7,14 @@ import { ChevronLeft, ChevronRight, Play, Maximize2 } from 'lucide-react';
 interface ProductGalleryProps {
     mainImage: string;
     files?: Array<{ name: string, url: string, mimeType?: string }>;
+    gallery?: string[];
 }
 
-export default function ProductGallery({ mainImage, files = [] }: ProductGalleryProps) {
+export default function ProductGallery({ mainImage, files = [], gallery = [] }: ProductGalleryProps) {
     const [activeIndex, setActiveIndex] = useState(0);
     const media = [
         { url: mainImage, type: 'image' },
+        ...gallery.map(url => ({ url, type: 'image' })),
         ...files.filter(f => f.mimeType?.startsWith('image/') || f.mimeType?.startsWith('video/'))
             .map(f => ({ url: f.url, type: f.mimeType?.startsWith('video/') ? 'video' : 'image' }))
     ];

@@ -37,7 +37,7 @@ async function postHandler(req: NextRequest, user: any) {
     }
 
     const body = await req.json();
-    const { name, triggerType, steps, isActive } = body;
+    const { name, triggerType, triggerProductId, steps, isActive } = body;
 
     if (!name || !triggerType || !steps || !Array.isArray(steps)) {
         throw new Error('Invalid sequence data');
@@ -47,6 +47,7 @@ async function postHandler(req: NextRequest, user: any) {
         creatorId: user._id,
         name,
         triggerType,
+        triggerProductId: triggerProductId || undefined,
         steps,
         isActive: isActive || false,
         stats: { enrollments: 0, completed: 0 }

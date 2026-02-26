@@ -3,6 +3,10 @@ import { mongoSecurityOptions } from '@/lib/security/database-security';
 
 const MONGODB_URI = process.env.MONGODB_URI;
 
+if (!MONGODB_URI) {
+    throw new Error('Please define the MONGODB_URI environment variable inside .env.local');
+}
+
 /**
  * Global is used here to maintain a cached connection across hot reloads
  * in development. This prevents connections from growing exponentially
@@ -15,54 +19,28 @@ if (!cached) {
 }
 
 export async function connectToDatabase() {
-    // Check for MONGODB_URI at connection time, not module load time
-    if (!MONGODB_URI) {
-        console.error('❌ MONGODB_URI is not defined in environment variables');
-        throw new Error('Please define MONGODB_URI in your environment variables');
+    if (cached.conn) {
+        return cached.conn;
     }
 
-    const maxRetries = 3;
-    let retries = 0;
+    if (!cached.promise) {
+        const opts = {
+            ...mongoSecurityOptions,
+            bufferCommands: false,
+            maxPoolSize: 10,
+        };
 
-    while (retries < maxRetries) {
-        try {
-            if (cached.conn) {
-                return cached.conn;
-            }
+        cached.promise = mongoose.connect(MONGODB_URI!, opts).then((mongoose) => {
+            console.log('✅ MongoDB connected successfully (singleton)');
+            return mongoose;
+        });
+    }
 
-            if (!cached.promise) {
-                const opts: any = {
-                    ...mongoSecurityOptions,
-                    bufferCommands: false,
-                    maxPoolSize: 10,
-                    serverSelectionTimeoutMS: 5000,
-                    socketTimeoutMS: 45000,
-                    family: 4,
-                };
-
-                console.log(`📡 Attempting MongoDB connection (Attempt ${retries + 1}/${maxRetries})...`);
-                cached.promise = mongoose.connect(MONGODB_URI, opts).then((mongoose) => {
-                    console.log('✅ MongoDB connected successfully');
-                    return mongoose;
-                });
-            }
-
-            cached.conn = await cached.promise;
-            return cached.conn;
-        } catch (e) {
-            retries++;
-            console.error(`❌ MongoDB connection attempt ${retries} failed:`, e);
-            cached.promise = null;
-
-            if (retries >= maxRetries) {
-                throw e;
-            }
-
-            // Exponential backoff: 1s, 2s, 4s
-            const delay = Math.pow(2, retries) * 1000;
-            console.log(`Waiting ${delay}ms before next retry...`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-        }
+    try {
+        cached.conn = await cached.promise;
+    } catch (e) {
+        cached.promise = null;
+        throw e;
     }
 
     return cached.conn;

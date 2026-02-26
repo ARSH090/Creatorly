@@ -24,8 +24,10 @@ export default function ProductGrid({ products, purchasedProductIds, creator, th
         );
     }
 
+    const isList = theme.productLayout === 'list';
+
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className={isList ? "flex flex-col gap-6" : "grid grid-cols-1 md:grid-cols-2 gap-8"}>
             {products.map((product) => (
                 <ProductCard
                     key={product.id}
@@ -33,6 +35,7 @@ export default function ProductGrid({ products, purchasedProductIds, creator, th
                     creator={creator}
                     theme={theme}
                     hasAccess={purchasedProductIds.includes(product.id)}
+                    layout={theme.productLayout}
                 />
             ))}
         </div>

@@ -1,157 +1,144 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Smartphone, ShieldCheck, Timer, RefreshCw, ArrowLeft } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Loader2, ShieldCheck } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { useUser } from '@clerk/nextjs';
 
 interface OTPStepProps {
-    phone: string;
-    onVerified: (hash: string) => void;
+    onNext: () => void;
     onBack: () => void;
 }
 
-export default function OTPStep({ phone, onVerified, onBack }: OTPStepProps) {
-    const [otp, setOtp] = useState(['', '', '', '', '', '']);
-    const [error, setError] = useState('');
+export default function OTPStep({ onNext, onBack }: OTPStepProps) {
+    const [otp, setOtp] = useState('');
+    const [timer, setTimer] = useState(0);
     const [loading, setLoading] = useState(false);
-    const [countdown, setCountdown] = useState(30);
-    const inputs = useRef<HTMLInputElement[]>([]);
+    const { user } = useUser();
+    const email = user?.primaryEmailAddress?.emailAddress || '';
 
     useEffect(() => {
-        // Initial OTP send
-        sendOTP();
-    }, []);
-
-    useEffect(() => {
-        if (countdown > 0) {
-            const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-            return () => clearTimeout(timer);
+        if (timer > 0) {
+            const t = setTimeout(() => setTimer(timer - 1), 1000);
+            return () => clearTimeout(t);
         }
-    }, [countdown]);
+    }, [timer]);
 
-    const sendOTP = async () => {
-        setError('');
+    const handleSendCode = async () => {
+        if (!user || !email) return;
+        try {
+            // Prepare email verification via Clerk
+            const emailObj = user.primaryEmailAddress;
+            if (emailObj) {
+                await emailObj.prepareVerification({ strategy: 'email_code' });
+                setTimer(60);
+                toast.success('Verification code sent to your email');
+            }
+        } catch (error: any) {
+            toast.error(error.message || 'Failed to send code');
+        }
+    };
+
+    const handleVerify = async () => {
+        if (otp.length < 6 || !user) return;
         setLoading(true);
         try {
-            const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
-            const res = await fetch('/api/onboarding/send-otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: formattedPhone })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Failed to send OTP');
-            setCountdown(30);
-        } catch (err: any) {
-            setError(err.message);
+            // Verify email via Clerk
+            const emailAddress = user.primaryEmailAddress;
+            if (emailAddress) {
+                await emailAddress.attemptVerification({ code: otp });
+                toast.success('Email verified!');
+                onNext();
+            }
+        } catch (error: any) {
+            toast.error(error.message || 'Invalid code');
         } finally {
             setLoading(false);
         }
     };
 
-    const verifyOTP = async (code: string) => {
-        setError('');
-        setLoading(true);
-        try {
-            const formattedPhone = phone.startsWith('+91') ? phone : `+91${phone}`;
-            const res = await fetch('/api/onboarding/verify-otp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: formattedPhone, otp: code })
-            });
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.error || 'Invalid code');
-            onVerified(data.phoneHash);
-        } catch (err: any) {
-            setError(err.message);
-            setOtp(['', '', '', '', '', '']);
-            inputs.current[0].focus();
-        } finally {
-            setLoading(false);
+    // Auto-submit on 6 digits
+    useEffect(() => {
+        if (otp.length === 6) {
+            handleVerify();
         }
-    };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [otp]);
 
-    const handleChange = (index: number, value: string) => {
-        if (!/^\d*$/.test(value)) return;
-        const newOtp = [...otp];
-        newOtp[index] = value.slice(-1);
-        setOtp(newOtp);
-
-        if (value && index < 5) {
-            inputs.current[index + 1].focus();
+    // Initial send
+    useEffect(() => {
+        if (email && timer === 0) {
+            handleSendCode();
         }
-
-        if (newOtp.every(digit => digit !== '')) {
-            verifyOTP(newOtp.join(''));
-        }
-    };
-
-    const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
-        if (e.key === 'Backspace' && !otp[index] && index > 0) {
-            inputs.current[index - 1].focus();
-        }
-    };
-
-    const maskedPhone = `+91 XXXXXX${phone.slice(-4)}`;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [email]);
 
     return (
-        <div className="space-y-8">
-            <div className="text-center space-y-2">
-                <div className="mx-auto w-16 h-16 bg-indigo-500/10 rounded-full flex items-center justify-center text-indigo-400 mb-4 ring-4 ring-indigo-500/5">
-                    <ShieldCheck size={32} />
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="text-center space-y-4">
+                <div className="mx-auto w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-600 mb-4 ring-4 ring-indigo-50">
+                    <Mail size={32} />
                 </div>
-                <h2 className="text-3xl font-black text-white italic tracking-tight underline decoration-indigo-500 decoration-4 underline-offset-8">
-                    Verify Mobile
+                <h2 className="text-3xl font-black text-zinc-900 tracking-tight">
+                    Verify Your Email
                 </h2>
-                <p className="text-zinc-500 text-xs font-bold uppercase tracking-widest pt-4">
-                    Code sent to <span className="text-white">{maskedPhone}</span>
+                <p className="text-zinc-500 text-base font-medium">
+                    We&apos;ve sent a 6-digit code to <br />
+                    <span className="text-indigo-600 font-bold">{email}</span>
                 </p>
             </div>
 
             <div className="space-y-6">
-                <div className="flex justify-center gap-3">
-                    {otp.map((digit, i) => (
-                        <input
-                            key={i}
-                            ref={(el) => { if (el) inputs.current[i] = el; }}
-                            type="text"
-                            inputMode="numeric"
-                            maxLength={1}
-                            className={`w-12 h-16 bg-white/3 border-2 rounded-xl text-center text-2xl font-black text-white outline-none transition-all ${digit ? 'border-indigo-500/50 bg-indigo-500/5' : 'border-white/5 focus:border-indigo-500/30'
-                                } ${error ? 'border-rose-500/50' : ''}`}
-                            value={digit}
-                            onChange={(e) => handleChange(i, e.target.value)}
-                            onKeyDown={(e) => handleKeyDown(i, e)}
-                            disabled={loading}
-                        />
-                    ))}
+                <div className="relative">
+                    <input
+                        type="text"
+                        maxLength={6}
+                        className="w-full px-5 py-5 bg-white border-2 border-zinc-200 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-600/10 rounded-[2rem] outline-none transition-all font-bold text-4xl text-center tracking-[0.5em] text-zinc-900 placeholder-zinc-100"
+                        placeholder="000000"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                        disabled={loading}
+                    />
                 </div>
 
-                {error && <p className="text-[10px] text-rose-500 font-bold text-center uppercase tracking-widest animate-pulse">✗ {error}</p>}
-                {loading && <p className="text-[10px] text-indigo-400 font-bold text-center uppercase tracking-widest animate-pulse">Verifying code...</p>}
-
-                <div className="text-center">
-                    {countdown > 0 ? (
-                        <p className="text-[10px] text-zinc-600 font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-                            <Timer size={12} /> Resend in {countdown}s
-                        </p>
-                    ) : (
-                        <button
-                            onClick={sendOTP}
-                            disabled={loading}
-                            className="text-[10px] text-indigo-400 hover:text-indigo-300 font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2 mx-auto"
-                        >
-                            <RefreshCw size={12} /> Resend OTP
-                        </button>
-                    )}
+                <div className="flex justify-between items-center px-4">
+                    <button
+                        onClick={handleSendCode}
+                        disabled={timer > 0 || loading}
+                        className="text-sm font-bold text-indigo-600 hover:text-indigo-700 disabled:text-zinc-300 transition-colors"
+                    >
+                        {timer > 0 ? `Resend in ${timer}s` : 'Resend Code'}
+                    </button>
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-400">
+                        <ShieldCheck size={14} />
+                        Secured by Clerk
+                    </div>
                 </div>
             </div>
 
-            <button
-                onClick={onBack}
-                className="w-full py-4 text-zinc-500 hover:text-zinc-300 font-black text-xs uppercase tracking-[0.2em] transition-colors flex items-center justify-center gap-2"
-            >
-                <ArrowLeft size={16} /> Back to details
-            </button>
+            <div className="space-y-4 pt-4">
+                <button
+                    onClick={handleVerify}
+                    disabled={loading || otp.length < 6}
+                    className="w-full py-5 bg-indigo-600 text-white rounded-[2rem] font-bold text-lg shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-3"
+                >
+                    {loading ? (
+                        <>
+                            <Loader2 className="w-5 h-5 animate-spin" />
+                            Verifying...
+                        </>
+                    ) : (
+                        'Verify'
+                    )}
+                </button>
+
+                <button
+                    onClick={onBack}
+                    className="w-full py-4 text-zinc-400 hover:text-zinc-600 font-bold text-sm transition-all flex items-center justify-center gap-2"
+                >
+                    Go back
+                </button>
+            </div>
         </div>
     );
 }

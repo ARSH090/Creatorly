@@ -4,6 +4,7 @@ import { Coupon } from '@/lib/models/Coupon';
 import { AdminLog } from '@/lib/models/AdminLog';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { syncRazorpayOffer } from '@/lib/payments/razorpay';
 
 async function getHandler(req: NextRequest) {
   await dbConnect();
@@ -42,8 +43,6 @@ async function getHandler(req: NextRequest) {
   });
 }
 
-import { syncRazorpayOffer } from '@/lib/payments/razorpay';
-
 async function postHandler(req: NextRequest, user: any) {
   const body = await req.json();
   await dbConnect();
@@ -58,7 +57,7 @@ async function postHandler(req: NextRequest, user: any) {
     return new NextResponse('Coupon code already exists', { status: 400 });
   }
 
-  // Sync with Razorpay
+  // Sync with Razorpay (best-effort — coupon is still created if this fails)
   let razorpayOfferId = undefined;
   try {
     const rpOffer = await syncRazorpayOffer({
@@ -72,16 +71,16 @@ async function postHandler(req: NextRequest, user: any) {
     });
     razorpayOfferId = rpOffer.id;
   } catch (error: any) {
-    console.error('Razorpay offer sync failed:', error);
-    // Continue for now, or fail? Plan API fails, so let's fail here too for consistency.
-    return NextResponse.json({ error: 'Failed to sync coupon with payment gateway', details: error.message }, { status: 502 });
+    console.error('Razorpay offer sync failed (continuing without gateway sync):', error?.message || error);
+    // Continue — coupon will work locally without a Razorpay offer ID
   }
 
   const coupon = await Coupon.create({
     ...body,
+    maxUses: body.usageLimit,
     creatorId: user._id, // Admin created
     razorpayOfferId,
-    usageCount: 0
+    usedCount: 0
   });
 
   await AdminLog.create({

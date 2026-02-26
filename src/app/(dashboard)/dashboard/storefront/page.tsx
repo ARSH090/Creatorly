@@ -7,8 +7,8 @@ import {
     ArrowUp, ArrowDown, Trash2, Plus, Zap, Upload, Loader2,
     MessageCircle, Camera, Play, Mail, Calendar, Send,
     Twitter, Linkedin, Music2, ExternalLink, Globe,
-    Star, Tag, Clock, ToggleLeft, ToggleRight, GripVertical,
-    Monitor
+    Tag, Clock, ToggleLeft, ToggleRight, GripVertical,
+    Monitor, Link as LinkIcon, Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -117,6 +117,33 @@ export default function StorefrontBuilder() {
     const [showMobilePreview, setShowMobilePreview] = useState(false);
     const [uploadingThumbnailIdx, setUploadingThumbnailIdx] = useState<number | null>(null);
     const thumbnailInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const bgInputRef = useRef<HTMLInputElement>(null);
+
+    // ... (rest of the state)
+
+    const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        try {
+            toast.loading('Uploading background...');
+            const presignRes = await fetch('/api/creator/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ filename: file.name, contentType: file.type, fileSize: file.size }),
+            });
+            if (!presignRes.ok) throw new Error('Failed to get upload URL');
+            const { uploadUrl, publicUrl } = await presignRes.json();
+            await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
+            setTheme(prev => ({ ...prev, backgroundImage: publicUrl }));
+            toast.dismiss();
+            toast.success('Background updated!');
+        } catch (err: any) {
+            toast.dismiss();
+            toast.error(err.message || 'Upload failed');
+        } finally {
+            if (bgInputRef.current) bgInputRef.current.value = '';
+        }
+    };
 
     const [theme, setTheme] = useState({
         primaryColor: '#6366f1',
@@ -127,7 +154,12 @@ export default function StorefrontBuilder() {
         fontFamily: 'Outfit',
         buttonStyle: 'rounded',
         backgroundImage: '',
+        productLayout: 'grid',
+        buttonColor: '#6366f1',
+        buttonTextColor: '#ffffff',
     });
+
+    const [showProfilePhoto, setShowProfilePhoto] = useState(true);
 
     const [layout, setLayout] = useState([
         { id: 'hero', enabled: true },
@@ -162,6 +194,9 @@ export default function StorefrontBuilder() {
                 })));
                 if (data.storefrontData?.testimonials) setTestimonials(data.storefrontData.testimonials);
                 if (data.storefrontData?.faqs) setFaqs(data.storefrontData.faqs);
+                if (data.storefrontData?.showProfilePhoto !== undefined) {
+                    setShowProfilePhoto(data.storefrontData.showProfilePhoto);
+                }
             } catch (err) {
                 console.error('fetchProfile', err);
             }
@@ -239,7 +274,7 @@ export default function StorefrontBuilder() {
             const res = await fetch('/api/creator/profile', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ theme, layout, links, testimonials, faqs }),
+                body: JSON.stringify({ theme, layout, links, testimonials, faqs, showProfilePhoto }),
             });
             if (!res.ok) throw new Error('Save failed');
             toast.success('Storefront saved!');
@@ -265,12 +300,31 @@ export default function StorefrontBuilder() {
                         <Monitor className="w-4 h-4 text-indigo-400" /> Storefront Editor
                     </h2>
                     <div className="flex gap-2">
+                        {/* ── New drag-and-drop block builder ── */}
+                        <a
+                            href="/dashboard/storefront/editor"
+                            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:opacity-90 text-white text-xs font-black rounded-xl transition-all shadow-lg shadow-indigo-500/20"
+                        >
+                            <span>✨</span> New Builder
+                        </a>
+
                         <button
                             onClick={() => setShowMobilePreview(!showMobilePreview)}
                             className="md:hidden p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
                             title="Toggle preview"
                         >
                             <Monitor className="w-4 h-4 text-indigo-400" />
+                        </button>
+                        <button
+                            onClick={() => {
+                                const url = `${window.location.origin}/u/${effectiveUsername}`;
+                                navigator.clipboard.writeText(url);
+                                toast.success('Link copied to clipboard!');
+                            }}
+                            className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+                            title="Copy store link"
+                        >
+                            <LinkIcon className="w-4 h-4 text-indigo-400" />
                         </button>
                         <button
                             onClick={() => window.open(`/u/${effectiveUsername}`, '_blank')}
@@ -335,6 +389,8 @@ export default function StorefrontBuilder() {
                                         { label: 'Secondary', key: 'secondaryColor' },
                                         { label: 'Background', key: 'backgroundColor' },
                                         { label: 'Text Color', key: 'textColor' },
+                                        { label: 'Button Color', key: 'buttonColor' },
+                                        { label: 'Btn Text', key: 'buttonTextColor' },
                                     ].map(({ label, key }) => (
                                         <div key={key} className="flex items-center justify-between p-3 bg-white/[0.03] rounded-xl border border-white/5">
                                             <span className="text-sm text-zinc-400">{label}</span>
@@ -354,24 +410,82 @@ export default function StorefrontBuilder() {
                                 </div>
                             </section>
 
+                            {/* Visibility Toggles */}
+                            <section className="space-y-4">
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                    <Eye className="w-3 h-3" /> Visibility
+                                </h3>
+                                <div className="space-y-2">
+                                    <button
+                                        onClick={() => setShowProfilePhoto(!showProfilePhoto)}
+                                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${showProfilePhoto ? 'border-indigo-500/30 bg-indigo-500/5 text-white' : 'border-white/5 bg-white/5 text-zinc-500'}`}
+                                    >
+                                        <span className="text-xs font-bold">Show Profile Photo</span>
+                                        {showProfilePhoto ? <ToggleRight className="w-5 h-5 text-indigo-500" /> : <ToggleLeft className="w-5 h-5" />}
+                                    </button>
+                                </div>
+                            </section>
+
+                            {/* Layout Toggle */}
+                            <section className="space-y-4">
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                    <Layout className="w-3 h-3" /> Product Layout
+                                </h3>
+                                <div className="grid grid-cols-2 gap-2">
+                                    {[
+                                        { value: 'grid', label: 'Grid View' },
+                                        { value: 'list', label: 'List View' }
+                                    ].map(l => (
+                                        <button
+                                            key={l.value}
+                                            onClick={() => setTheme(prev => ({ ...prev, productLayout: l.value as any }))}
+                                            className={`p-3 rounded-xl border text-xs font-bold transition-all ${theme.productLayout === l.value
+                                                ? 'border-indigo-500 bg-indigo-500/10 text-white'
+                                                : 'border-white/5 bg-white/[0.03] text-zinc-500 hover:border-white/10'
+                                                }`}
+                                        >
+                                            {l.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+
                             {/* Background image */}
                             <section className="space-y-3">
                                 <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                                     <ImageIcon className="w-3 h-3" /> Background Image
                                 </h3>
-                                <input
-                                    type="url"
-                                    value={theme.backgroundImage}
-                                    onChange={e => setTheme(prev => ({ ...prev, backgroundImage: e.target.value }))}
-                                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50"
-                                    placeholder="https://example.com/bg.jpg"
-                                />
+
+                                <div className="flex items-center gap-3">
+                                    <input
+                                        type="url"
+                                        value={theme.backgroundImage}
+                                        onChange={e => setTheme(prev => ({ ...prev, backgroundImage: e.target.value }))}
+                                        className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50"
+                                        placeholder="https://example.com/bg.jpg"
+                                    />
+                                    <button
+                                        onClick={() => bgInputRef.current?.click()}
+                                        className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-colors group flex-shrink-0"
+                                        title="Upload background"
+                                    >
+                                        <Upload className="w-4 h-4 text-zinc-500 group-hover:text-indigo-400" />
+                                    </button>
+                                    <input
+                                        type="file"
+                                        ref={bgInputRef}
+                                        onChange={handleBackgroundUpload}
+                                        className="hidden"
+                                        accept="image/*"
+                                    />
+                                </div>
+
                                 {theme.backgroundImage && (
                                     <button
                                         onClick={() => setTheme(prev => ({ ...prev, backgroundImage: '' }))}
-                                        className="text-[10px] text-zinc-600 hover:text-rose-400 transition-colors"
+                                        className="text-[10px] text-zinc-600 hover:text-rose-400 transition-colors flex items-center gap-1"
                                     >
-                                        ✕ Clear image
+                                        <Trash2 className="w-3 h-3" /> Clear background
                                     </button>
                                 )}
                             </section>

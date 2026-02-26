@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
 import { Subscription } from '@/lib/models/Subscription';
 import { Plan } from '@/lib/models/Plan';
+import { sendTrialReminderEmail } from '@/lib/services/email';
 
 /**
  * GET /api/cron/trial-expiry
@@ -27,8 +28,11 @@ export async function GET(req: NextRequest) {
             subscriptionEndAt: { $gte: day11, $lt: new Date(day11.getTime() + 24 * 60 * 60 * 1000) }
         });
 
-        // TODO: Send "3 days left" emails
-        console.log(`[CRON] Found ${soonExpiring.length} trials with 3 days left`);
+        // Send "3 days left" emails to trials ending soon
+        for (const u of soonExpiring) {
+            await sendTrialReminderEmail(u.email, { daysLeft: 3, name: u.displayName || u.username }).catch(console.error);
+        }
+        console.log(`[CRON] Sent Day-11 trial reminder to ${soonExpiring.length} users`);
 
         // 3. Identify trials ending tomorrow
         const day13 = new Date();
@@ -38,8 +42,11 @@ export async function GET(req: NextRequest) {
             subscriptionEndAt: { $gte: day13, $lt: new Date(day13.getTime() + 24 * 60 * 60 * 1000) }
         });
 
-        // TODO: Send "Tomorrow your plan starts" emails
-        console.log(`[CRON] Found ${tomorrowExpiring.length} trials with 1 day left`);
+        // Send "Tomorrow your plan starts" emails
+        for (const u of tomorrowExpiring) {
+            await sendTrialReminderEmail(u.email, { daysLeft: 1, name: u.displayName || u.username }).catch(console.error);
+        }
+        console.log(`[CRON] Sent Day-13 trial reminder to ${tomorrowExpiring.length} users`);
 
         // 4. Handle expired trials that FAILED to convert (Grace Period)
         // Note: Razorpay auto-charges on Day 14. If charge fails, Razorpay status changes.

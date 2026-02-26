@@ -10,7 +10,8 @@ export interface IEmailSequenceStep {
 export interface IEmailSequence extends Document {
     creatorId: mongoose.Types.ObjectId;
     name: string;
-    triggerType: 'signup' | 'purchase' | 'abandoned_cart';
+    triggerType: 'signup' | 'purchase' | 'abandoned_cart' | 'lead_magnet' | 'new_subscriber' | 'manual';
+    triggerProductId?: mongoose.Types.ObjectId;
     steps: IEmailSequenceStep[];
     isActive: boolean;
     stats: {
@@ -33,9 +34,10 @@ const emailSequenceSchema = new Schema({
     name: { type: String, required: true },
     triggerType: {
         type: String,
-        enum: ['signup', 'purchase', 'abandoned_cart'],
+        enum: ['signup', 'purchase', 'abandoned_cart', 'lead_magnet', 'new_subscriber', 'manual'],
         required: true
     },
+    triggerProductId: { type: Schema.Types.ObjectId, ref: 'Product', sparse: true },
     steps: [emailSequenceStepSchema],
     isActive: { type: Boolean, default: false },
     stats: {

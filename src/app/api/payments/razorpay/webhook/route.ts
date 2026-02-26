@@ -41,7 +41,7 @@ async function processSuccessfulOrder(order: any) {
         });
 
         if (affiliate) {
-            const commission = (order.total * affiliate.commissionRate) / 100;
+            const commission = (order.total * (affiliate.commissionRate || affiliate.commissionPercent || 0)) / 100;
 
             order.commissionAmount = commission;
             await order.save();
@@ -244,7 +244,7 @@ export async function POST(req: NextRequest) {
                     });
 
                     if (affiliate) {
-                        const commission = (order.total * affiliate.commissionRate) / 100;
+                        const commission = (order.total * (affiliate.commissionRate || affiliate.commissionPercent || 0)) / 100;
                         order.commissionAmount = commission;
                         await order.save();
 

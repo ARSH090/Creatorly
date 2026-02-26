@@ -13,8 +13,9 @@ import { hasFeature } from '@/lib/utils/planLimits';
 async function handler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
-    // Check plan feature
-    if (!hasFeature(user.plan || 'free', 'emailMarketing')) {
+    // BUG-29 FIX: Use subscriptionTier (correct) first, fallback to plan (legacy)
+    const effectiveTier = user.subscriptionTier || user.plan || 'free';
+    if (!hasFeature(effectiveTier, 'emailMarketing')) {
         throw new Error('Email marketing requires Creator Pro plan');
     }
 

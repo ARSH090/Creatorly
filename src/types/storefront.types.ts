@@ -15,6 +15,9 @@ export interface StorefrontTheme {
     borderRadius: 'sm' | 'md' | 'lg' | 'full';
     buttonStyle: 'pill' | 'square' | 'rounded';
     backgroundImage?: string;
+    productLayout?: 'grid' | 'list';
+    buttonColor?: string;
+    buttonTextColor?: string;
 }
 
 export const DEFAULT_THEME: StorefrontTheme = {
@@ -75,6 +78,7 @@ export interface PublicCreator {
     logo?: string;
     socialLinks: PublicSocialLinks;
     theme: StorefrontTheme;
+    showProfilePhoto?: boolean;
 }
 
 export interface PublicProfile {

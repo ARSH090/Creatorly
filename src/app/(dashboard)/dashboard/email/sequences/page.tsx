@@ -56,10 +56,12 @@ export default function SequencesPage() {
                     <h1 className="text-3xl font-bold tracking-tight italic uppercase">Automated Sequences</h1>
                     <p className="text-muted-foreground">Automate your follow-ups and nurture your audience.</p>
                 </div>
-                <Button className="bg-white text-black hover:bg-zinc-200">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Sequence
-                </Button>
+                <Link href="/dashboard/email/sequences/new">
+                    <Button className="bg-white text-black hover:bg-zinc-200">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Sequence
+                    </Button>
+                </Link>
             </div>
 
             <div className="grid gap-6">

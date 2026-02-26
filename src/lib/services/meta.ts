@@ -26,21 +26,38 @@ export class MetaGraphService {
 
 
     /**
-     * Sends a DM to an Instagram user. 
-     * Retries are handled by the QueueJob processor, not here.
+     * Sends a DM (Text or Attachment) to an Instagram user. 
      */
     static async sendDirectMessage(params: {
         recipientId: string;
-        message: string;
+        message?: string;
+        attachment?: {
+            type: 'image' | 'video' | 'audio' | 'file';
+            payload: { url: string; is_reusable?: boolean };
+        };
+        template?: any;
         accessToken: string;
     }): Promise<MetaMessageResponse> {
         try {
+            const payload: any = {
+                recipient: { id: params.recipientId },
+                message: {}
+            };
+
+            if (params.message) {
+                payload.message.text = params.message;
+            } else if (params.attachment) {
+                payload.message.attachment = params.attachment;
+            } else if (params.template) {
+                payload.message.attachment = {
+                    type: 'template',
+                    payload: params.template
+                };
+            }
+
             const response = await axios.post(
                 `${GRAPH_BASE_URL}/${VERSION}/me/messages`,
-                {
-                    recipient: { id: params.recipientId },
-                    message: { text: params.message },
-                },
+                payload,
                 {
                     params: { access_token: params.accessToken },
                     headers: { 'Content-Type': 'application/json' }

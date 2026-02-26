@@ -23,7 +23,8 @@ async function handler(req: NextRequest, user: any, context: any) {
     } else if (status === 'completed') {
         query.status = 'completed';
     } else if (status === 'cancelled') {
-        query.status = 'canceled';
+        // BUG-39 FIX: Use 'cancelled' (two l's) consistently throughout
+        query.status = 'cancelled';
     }
 
     const bookings = await (Booking as any).find(query)

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Plan } from '@/lib/models/Plan';
 import { PlanTier, BillingPeriod } from '@/lib/models/plan.types';
+import { withAdminAuth } from '@/lib/auth/withAuth';
 
 const plansData = [
     {
@@ -137,23 +138,37 @@ const plansData = [
     }
 ];
 
-export async function GET() {
+async function seedPlansHandler(req: NextRequest, admin: any) {
+    // SECURITY: Prevent accidental execution in production without explicit confirmation
+    if (process.env.NODE_ENV === 'production') {
+        const confirm = req.headers.get('x-admin-confirm');
+        if (confirm !== 'seed-plans-confirmed') {
+            return NextResponse.json({
+                error: 'In production, set header x-admin-confirm: seed-plans-confirmed to proceed.'
+            }, { status: 403 });
+        }
+    }
+
     try {
         await connectToDatabase();
 
-        console.log('Seeding plans via API...');
+        console.log(`[Seed Plans] Triggered by admin: ${admin.email}`);
 
+        const results = [];
         for (const plan of plansData) {
-            await Plan.findOneAndUpdate(
+            const updated = await Plan.findOneAndUpdate(
                 { tier: plan.tier },
                 plan,
                 { upsert: true, new: true }
             );
+            results.push({ tier: plan.tier, id: updated._id });
         }
 
-        return NextResponse.json({ success: true, message: 'Plans seeded successfully.' });
+        return NextResponse.json({ success: true, message: 'Plans seeded successfully.', results });
     } catch (error: any) {
         console.error('Error seeding plans via API:', error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export const GET = withAdminAuth(seedPlansHandler);

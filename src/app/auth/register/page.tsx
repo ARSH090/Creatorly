@@ -1,485 +1,358 @@
 'use client';
 
-import { useState, Suspense, useEffect } from 'react';
-import { useSignUp, useSignIn } from '@clerk/nextjs';
+import { useState, useEffect, useCallback } from 'react';
+import { useSignUp } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ShieldAlert, CheckCircle, Smartphone, User as UserIcon, Mail, Shield, ChevronRight, Loader2 } from 'lucide-react';
+import { CheckCircle2, Zap, Eye, EyeOff, Loader2, ArrowRight, Mail, Lock, User } from 'lucide-react';
 
-function RegisterFormContent() {
+type Stage = 'form' | 'email-verify' | 'done';
+
+export default function RegisterPage() {
     const { isLoaded, signUp, setActive } = useSignUp();
-    const { isLoaded: isSignInLoaded, signIn } = useSignIn();
-
-    // UI State
-    const [formData, setFormData] = useState({
-        username: '',
-        displayName: '',
-        email: '',
-        phone: '',
-        password: '',
-    });
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-    const [pendingVerification, setPendingVerification] = useState(false);
-    const [verificationCode, setVerificationCode] = useState('');
-
-    // Username Check State
-    const [usernameStatus, setUsernameStatus] = useState<'idle' | 'checking' | 'available' | 'taken' | 'invalid'>('idle');
-    const [usernameMessage, setUsernameMessage] = useState('');
-
     const router = useRouter();
 
-    // Debounced username check
-    useEffect(() => {
-        if (!formData.username) {
-            setUsernameStatus('idle');
-            setUsernameMessage('');
-            return;
-        }
+    const [form, setForm] = useState({
+        username: '',
+        fullName: '',
+        email: '',
+        password: '',
+    });
+    const [showPass, setShowPass] = useState(false);
+    const [otp, setOtp] = useState('');
 
-        if (formData.username.length < 3) {
-            setUsernameStatus('invalid');
-            setUsernameMessage('At least 3 characters');
-            return;
-        }
+    const [stage, setStage] = useState<Stage>('form');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+    const [usernameAvail, setUsernameAvail] = useState<boolean | null>(null);
+    const [usernameChecking, setUsernameChecking] = useState(false);
 
-        const checkUsername = async () => {
-            setUsernameStatus('checking');
-            try {
-                const res = await fetch(`/api/auth/check-username?username=${formData.username}`);
-                const data = await res.json();
-                if (data.available) {
-                    setUsernameStatus('available');
-                    setUsernameMessage('Available');
-                } else {
-                    setUsernameStatus('taken');
-                    setUsernameMessage(data.error || 'Already taken');
-                }
-            } catch (err) {
-                console.error('Check username error:', err);
-                setUsernameStatus('idle');
-            }
-        };
-
-        const timer = setTimeout(checkUsername, 500);
-        return () => clearTimeout(timer);
-    }, [formData.username]);
-
-    const handleGoogleSignUp = async () => {
-        if (!isLoaded) return;
+    // ── Username availability check (debounced 500ms) ──────────────────────────
+    const checkUsername = useCallback(async (val: string) => {
+        if (val.length < 3) { setUsernameAvail(null); return; }
+        setUsernameChecking(true);
         try {
-            setLoading(true);
-            await signUp.authenticateWithRedirect({
-                strategy: 'oauth_google',
-                redirectUrl: '/sso-callback',
-                redirectUrlComplete: '/dashboard',
-            });
-        } catch (err: any) {
-            console.error('Google Sign Up Error:', err);
-            setError(err.errors?.[0]?.message || 'Google sign-up failed');
-            setLoading(false);
+            const res = await fetch(`/api/auth/check-username?username=${encodeURIComponent(val)}`);
+            const d = await res.json();
+            setUsernameAvail(d.available === true);
+        } catch {
+            setUsernameAvail(null);
+        } finally {
+            setUsernameChecking(false);
         }
-    };
+    }, []);
 
+    useEffect(() => {
+        const t = setTimeout(() => { if (form.username) checkUsername(form.username); }, 500);
+        return () => clearTimeout(t);
+    }, [form.username, checkUsername]);
+
+    // ── Step 1: Create Clerk User & Send Email Verification ────────────────────
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!isLoaded) return;
+        if (!isLoaded || loading) return;
+        if (usernameAvail === false) { setError('Username is taken'); return; }
+        if (!/^[a-z]/.test(form.username)) { setError('Username must start with a letter'); return; }
+        if (form.password.length < 8) { setError('Password must be at least 8 characters'); return; }
 
         setLoading(true);
         setError('');
 
-        // Basic validation
-        if (!formData.displayName.trim()) {
-            setError('Your name is required');
-            setLoading(false);
-            return;
-        }
-        if (!formData.email.includes('@')) {
-            setError('Please enter a valid email address');
-            setLoading(false);
-            return;
-        }
-        if (formData.password.length < 8) {
-            setError('Password must be at least 8 characters');
-            setLoading(false);
-            return;
-        }
-
-        if (usernameStatus === 'taken') {
-            setError('This username is already taken');
-            setLoading(false);
-            return;
-        }
-        if (usernameStatus === 'invalid' || formData.username.length < 3) {
-            setError('Please choose a valid username');
-            setLoading(false);
-            return;
-        }
-
         try {
-            // 1. Create Sign Up Attempt
-            await signUp.create({
-                emailAddress: formData.email,
-                password: formData.password,
-                firstName: formData.displayName.split(' ')[0],
-                lastName: formData.displayName.split(' ').slice(1).join(' '),
+            // Create Clerk User
+            const result = await signUp.create({
+                emailAddress: form.email,
+                password: form.password,
+                username: form.username,
+                firstName: form.fullName.split(' ')[0],
+                lastName: form.fullName.split(' ').slice(1).join(' ') || undefined,
                 unsafeMetadata: {
-                    username: formData.username,
-                    source: 'registration_flow'
-                }
-            });
-            // Note: Phone number logic can be added later as requested
-
-            // 2. Prepare Verification
-            await signUp.prepareVerification({
-                strategy: 'email_code'
+                    username: form.username,
+                    fullName: form.fullName,
+                },
             });
 
-            setPendingVerification(true);
-        } catch (err: any) {
-            console.error('Registration error:', err);
-            // Handle specific Clerk errors
-            if (err.errors?.[0]?.code === 'form_identifier_exists') {
-                setError('This account already exists. Please log in.');
-            } else if (err.errors?.[0]?.code === 'password_complexity') {
-                setError('Password is too weak. Use mix of chars/numbers.');
-            } else if (err.errors?.[0]?.meta?.paramName === 'captcha') {
-                setError('CAPTCHA check failed. Please refresh and try again.');
+            if (result.status === 'complete') {
+                // Email verification not required
+                await setActive({ session: result.createdSessionId });
+                setStage('done');
+                window.location.href = '/dashboard';
+            } else if (result.unverifiedFields.includes('email_address')) {
+                // Send email verification code
+                await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+                setStage('email-verify');
             } else {
-                setError(err.errors?.[0]?.message || 'Failed to create account.');
+                setError('Signup incomplete. Please contact support.');
             }
+        } catch (err: any) {
+            setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || 'Registration failed. Please try again.');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleVerification = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!isLoaded) return;
-
+    // ── Step 2: Verify Email OTP ───────────────────────────────────────────────
+    const handleVerifyEmail = async () => {
+        if (!isLoaded || loading || otp.length < 6) return;
         setLoading(true);
         setError('');
 
         try {
-            const completeSignUp = await signUp.attemptVerification({
-                strategy: 'email_code',
-                code: verificationCode,
+            const result = await signUp.attemptEmailAddressVerification({
+                code: otp,
             });
 
-            if (completeSignUp.status === 'complete') {
-                await setActive({ session: completeSignUp.createdSessionId });
+            if (result.status === 'complete') {
+                await setActive({ session: result.createdSessionId });
+                setStage('done');
                 window.location.href = '/dashboard';
-            } else if (completeSignUp.status === 'missing_requirements') {
-                console.error("Missing requirements:", completeSignUp.missingFields);
-                setError('Account created but missing requirements (e.g. verified phone). Please contact support.');
             } else {
-                console.log(JSON.stringify(completeSignUp, null, 2));
                 setError('Verification incomplete. Please try again.');
             }
         } catch (err: any) {
-            console.error('Verification Error:', err);
-            if (err.errors?.[0]?.code === 'verification_already_verified') {
-                // Even if already verified, we need to check if we can proceed
-                // But typically this means we are missing requirements if access is not granted.
-                // We can try to reload or check status. 
-                // For now, let's just warn the user.
-                setError('Email already verified, but account setup is incomplete. See previous error regarding requirements.');
-            } else {
-                setError(err.errors?.[0]?.message || 'Invalid verification code');
-            }
+            setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || 'Invalid verification code.');
         } finally {
             setLoading(false);
         }
     };
 
-    // Verification UI
-    if (pendingVerification) {
-        return (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4">
-                <div className="text-center space-y-2 mb-8">
-                    <div className="mx-auto w-16 h-16 bg-indigo-500/20 rounded-full flex items-center justify-center text-indigo-400 mb-4 ring-4 ring-indigo-500/10">
-                        <CheckCircle className="w-8 h-8" />
-                    </div>
-                    <h2 className="text-3xl font-medium tracking-tight text-white">Verify Email</h2>
-                    <p className="text-zinc-500 text-sm">We sent a verification code to <span className="text-white font-medium">{formData.email}</span></p>
-                </div>
+    // Auto-submit on 6 digits
+    useEffect(() => {
+        if (otp.length === 6 && stage === 'email-verify') handleVerifyEmail();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [otp]);
 
-                {error && (
-                    <div className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-sm font-bold border border-red-500/20 text-center">
-                        {error}
-                    </div>
-                )}
+    const resendCode = async () => {
+        try {
+            await signUp?.prepareEmailAddressVerification({ strategy: 'email_code' });
+            setError('');
+        } catch {
+            setError('Failed to resend code. Please try again.');
+        }
+    };
 
-                <form onSubmit={handleVerification} className="space-y-8">
-                    <div className="space-y-4">
-                        <div className="flex justify-center gap-3">
-                            {/* Visual pseudo-input for verification code */}
-                            <input
-                                type="text"
-                                required
-                                autoFocus
-                                className="w-full max-w-[200px] px-4 py-5 bg-zinc-900/50 border border-white/10 rounded-2xl focus:border-indigo-500/50 focus:bg-zinc-900 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all font-mono text-white placeholder-zinc-700 text-center text-3xl tracking-[0.5em]"
-                                placeholder="000000"
-                                maxLength={6}
-                                value={verificationCode}
-                                onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
-                            />
-                        </div>
-                        <p className="text-center text-xs text-zinc-500 uppercase tracking-widest font-bold">Enter 6-digit Code</p>
-                    </div>
-
-                    <div className="space-y-4">
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all disabled:opacity-50 shadow-lg shadow-indigo-500/20"
-                        >
-                            {loading ? 'Verifying...' : 'Verify Email'}
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setPendingVerification(false)}
-                            className="w-full py-2 text-zinc-500 hover:text-zinc-300 text-xs font-bold uppercase tracking-widest transition-colors"
-                        >
-                            Use different email
-                        </button>
-                    </div>
-                </form>
-            </div>
-        );
-    }
-
+    // ─── RENDER ────────────────────────────────────────────────────────────────
     return (
-        <div className="space-y-6">
-            <div className="mb-10 text-center">
-                <h2 className="text-3xl font-black text-white mb-2 italic">
-                    Hey @{formData.username || 'Username'} 👋
-                </h2>
-                <p className="text-zinc-500 text-sm font-bold uppercase tracking-widest">Let's monetize your following!</p>
+        <div className="min-h-screen bg-[#030303] text-zinc-400 font-sans antialiased">
+            {/* Ambient glow */}
+            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-indigo-600/10 rounded-full blur-[100px]" />
             </div>
 
-            <div id="clerk-captcha" /> {/* Explicit CAPTCHA mount point */}
+            <main className="relative z-10 min-h-screen flex items-start justify-center px-4 py-10 md:py-16">
+                <div className="w-full max-w-md">
+                    {/* Clerk Turnstile CAPTCHA */}
+                    <div id="clerk-captcha" className="absolute w-0 h-0 overflow-hidden" />
 
-            {error && (
-                <div className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-sm font-bold border border-red-500/20 animate-in fade-in slide-in-from-top-2">
-                    ✗ {error}
-                </div>
-            )}
-
-            <div className="space-y-4">
-                <button
-                    onClick={handleGoogleSignUp}
-                    className="w-full flex items-center justify-center gap-3 px-4 py-3.5 rounded-2xl bg-white text-black hover:bg-zinc-200 transition-all active:scale-[0.98] font-bold text-sm"
-                    type="button"
-                    disabled={loading}
-                >
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21.6 12.227C21.6 11.549 21.547 10.953 21.444 10.381H12v3.889h5.787c-.249 1.342-.98 2.486-2.093 3.265v2.717h3.387c1.983-1.828 3.119-4.515 3.119-7.87z" fill="#4285F4" />
-                        <path d="M12 22c2.7 0 4.966-.89 6.622-2.41l-3.387-2.717c-.94.633-2.144 1.01-3.235 1.01-2.487 0-4.598-1.68-5.352-3.94H2.993v2.47C4.64 19.99 8.02 22 12 22z" fill="#34A853" />
-                        <path d="M6.648 13.943a6.6 6.6 0 010-3.886V7.588H2.993a10.998 10.998 0 000 8.823l3.655-2.058z" fill="#FBBC05" />
-                        <path d="M12 5.5c1.468 0 2.792.505 3.835 1.49l2.876-2.876C16.961 2.47 14.695 1.6 12 1.6 8.02 1.6 4.64 3.61 2.993 6.412l3.655 2.47C7.402 7.18 9.513 5.5 12 5.5z" fill="#EA4335" />
-                    </svg>
-                    Continue with Google
-                </button>
-            </div>
-
-            <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-white/5" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase tracking-widest font-bold">
-                    <span className="bg-[#0e0e0e] px-3 text-zinc-600">Or using email</span>
-                </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-zinc-600 font-bold text-sm">
-                            @ <span className="ml-2 text-zinc-400">creatorly.in/</span>
+                    {/* Logo */}
+                    <div className="text-center mb-8">
+                        <div className="inline-flex items-center gap-2 mb-5">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                                <Zap size={20} className="text-white fill-white" />
+                            </div>
+                            <span className="text-white font-black text-2xl tracking-tighter">Creatorly</span>
                         </div>
-                        <input
-                            type="text"
-                            required
-                            className={`w-full pl-36 pr-12 py-4 bg-white/3 border-2 rounded-2xl outline-none transition-all font-bold text-white placeholder-zinc-700 ${usernameStatus === 'available' ? 'border-emerald-500/50 focus:border-emerald-500' :
-                                usernameStatus === 'taken' || usernameStatus === 'invalid' ? 'border-rose-500/50 focus:border-rose-500' :
-                                    'border-indigo-500/30 focus:border-indigo-500'
-                                }`}
-                            placeholder="username"
-                            value={formData.username}
-                            onChange={(e) => setFormData({ ...formData, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') })}
-                            disabled={loading}
-                        />
-                        <div className="absolute inset-y-0 right-0 flex items-center pr-5 pointer-events-none">
-                            {usernameStatus === 'checking' && <Loader2 className="w-5 h-5 animate-spin text-zinc-500" />}
-                            {usernameStatus === 'available' && <CheckCircle className="w-5 h-5 text-emerald-500" />}
-                            {(usernameStatus === 'taken' || usernameStatus === 'invalid') && <ShieldAlert className="w-5 h-5 text-rose-500" />}
-                        </div>
-                    </div>
-                    {usernameMessage && (
-                        <p className={`text-[10px] font-black uppercase tracking-widest ml-1 ${usernameStatus === 'available' ? 'text-emerald-500' : 'text-rose-500'
-                            }`}>
-                            {usernameMessage}
-                        </p>
-                    )}
-                </div>
 
-                <div className="space-y-2">
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-zinc-500">
-                            <UserIcon size={18} />
-                        </div>
-                        <input
-                            type="text"
-                            required
-                            autoComplete="name"
-                            className="w-full pl-12 pr-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
-                            placeholder="Full Name"
-                            value={formData.displayName}
-                            onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-                            disabled={loading}
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-zinc-500">
-                            <Mail size={18} />
-                        </div>
-                        <input
-                            type="email"
-                            required
-                            autoComplete="email"
-                            className="w-full pl-12 pr-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
-                            placeholder="Email"
-                            value={formData.email}
-                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                            disabled={loading}
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <div className="flex gap-2">
-                        <div className="flex items-center gap-2 px-4 bg-white/3 border border-white/8 rounded-2xl text-white">
-                            <span className="text-lg">🇮🇳</span>
-                            <span className="text-sm font-bold text-zinc-500">+91</span>
-                            <ChevronRight size={14} className="rotate-90 text-zinc-600" />
-                        </div>
-                        <input
-                            type="tel"
-                            className="flex-1 px-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
-                            placeholder="Phone Number"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
-                            disabled={loading}
-                        />
-                    </div>
-                </div>
-
-                <div className="space-y-2">
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-5 pointer-events-none text-zinc-500">
-                            <Shield size={18} />
-                        </div>
-                        <input
-                            type="password"
-                            required
-                            autoComplete="new-password"
-                            className="w-full pl-12 pr-5 py-4 bg-white/3 border border-white/8 rounded-2xl focus:border-indigo-500/50 focus:bg-white/5 outline-none transition-all font-medium text-white placeholder-zinc-600"
-                            placeholder="Password"
-                            value={formData.password}
-                            onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                            disabled={loading}
-                        />
-                    </div>
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-4 bg-indigo-600 text-white rounded-3xl font-black text-xs uppercase tracking-[0.2em] hover:bg-indigo-500 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-xl shadow-indigo-500/20"
-                >
-                    {loading ? 'Initializing...' : 'Next'}
-                </button>
-
-                <p className="text-[10px] text-zinc-500 text-center font-bold uppercase tracking-wider">
-                    Registration indicates acceptance of our {' '}
-                    <Link href="/terms-of-service" className="text-white hover:underline">
-                        Legal Terms
-                    </Link>
-                </p>
-            </form>
-
-            <div className="mt-6 text-center">
-                <p className="text-sm text-zinc-500">
-                    Already have an account?
-                    <Link href="/auth/login" className="text-white hover:underline ml-1 font-bold">
-                        Log in
-                    </Link>
-                </p>
-            </div>
-        </div>
-    );
-}
-
-export default function RegisterPage() {
-    return (
-        <div className="min-h-screen bg-[#030303] text-zinc-400 selection:bg-indigo-500/30 font-sans antialiased overflow-x-hidden">
-            <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.03]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3%3Ffilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
-
-            <main className="relative z-10 pt-20 pb-12 px-6">
-                <div className="max-w-6xl mx-auto grid md:grid-cols-2 gap-20 items-center">
-                    <div className="hidden md:block">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/8 bg-white/2 mb-8">
-                            <span className="relative flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
-                            </span>
-                            <span className="text-[10px] font-bold text-indigo-400 uppercase tracking-[0.2em]">Scale Your Influence</span>
-                        </div>
-                        <h1 className="text-5xl lg:text-7xl font-medium tracking-tighter text-white leading-[0.9] mb-8">
-                            Join the <br />
-                            <span className="text-zinc-600 italic">top 1%</span> creators.
+                        <h1 className="text-3xl font-bold tracking-tight text-white mb-2">
+                            {stage === 'email-verify' ? 'Check your email' :
+                                stage === 'done' ? 'Account created! 🎉' :
+                                    'Create your account'}
                         </h1>
-                        <div className="space-y-8 mt-12">
-                            {[
-                                { t: 'Unified Infrastructure', d: 'One dashboard to manage products, payments, and settlements.' },
-                                { t: 'Zero Platform Tax', d: 'Keep 100% of your earnings (minus standard gateway fees).' },
-                                { t: 'Enterprise Security', d: 'Your data and revenue protected by military-grade encryption.' }
-                            ].map((item, i) => (
-                                <div key={i} className="flex gap-4 group">
-                                    <div className="mt-1 w-5 h-5 rounded-full border border-white/20 flex items-center justify-center text-zinc-600 font-bold text-[10px]">
-                                        0{i + 1}
+                        <p className="text-zinc-500 text-sm font-medium">
+                            {stage === 'email-verify'
+                                ? `We sent a 6-digit code to ${form.email}`
+                                : stage === 'done'
+                                    ? 'Taking you to choose a plan…'
+                                    : 'Join thousands of creators building their future.'}
+                        </p>
+                    </div>
+
+                    {/* ── Email Verify Stage ───────────────────────────────────── */}
+                    {stage === 'email-verify' && (
+                        <div className="bg-[#0A0A0A]/80 border border-white/8 backdrop-blur-3xl rounded-[2rem] p-8 space-y-6">
+                            {error && (
+                                <div className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-sm font-medium border border-red-500/20">
+                                    {error}
+                                </div>
+                            )}
+
+                            <div className="text-center space-y-4">
+                                <div className="mx-auto w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                                    <Mail size={26} className="text-indigo-400" />
+                                </div>
+                                <input
+                                    type="text"
+                                    maxLength={6}
+                                    inputMode="numeric"
+                                    autoFocus
+                                    placeholder="000000"
+                                    value={otp}
+                                    onChange={e => setOtp(e.target.value.replace(/\D/g, ''))}
+                                    disabled={loading}
+                                    className="w-full px-5 py-5 bg-white/3 border border-white/8 rounded-2xl outline-none text-white text-4xl font-black text-center tracking-[0.5em] placeholder-zinc-700 focus:border-indigo-500/50 transition-all disabled:opacity-50"
+                                />
+                            </div>
+
+                            <button
+                                onClick={handleVerifyEmail}
+                                disabled={loading || otp.length < 6}
+                                className="w-full py-4 bg-white text-black hover:bg-zinc-100 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.98] disabled:opacity-40 flex items-center justify-center gap-2"
+                            >
+                                {loading ? <><Loader2 size={16} className="animate-spin" /> Verifying…</> : 'Verify & Continue'}
+                            </button>
+
+                            <button
+                                onClick={resendCode}
+                                disabled={loading}
+                                className="w-full text-center text-xs text-zinc-600 hover:text-zinc-400 transition-colors"
+                            >
+                                Didn&apos;t receive it? <span className="underline">Resend Code</span>
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ── Done Stage ────────────────────────────────────────────── */}
+                    {stage === 'done' && (
+                        <div className="bg-[#0A0A0A]/80 border border-white/8 backdrop-blur-3xl rounded-[2rem] p-12 text-center space-y-4">
+                            <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                <CheckCircle2 size={30} className="text-emerald-400" />
+                            </div>
+                            <p className="text-white font-black text-xl">Email verified!</p>
+                            <p className="text-zinc-500 text-sm">Setting up your account…</p>
+                            <Loader2 size={20} className="animate-spin text-zinc-600 mx-auto" />
+                        </div>
+                    )}
+
+                    {/* ── Form Stage ────────────────────────────────────────────── */}
+                    {stage === 'form' && (
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div className="bg-[#0A0A0A]/80 border border-white/8 backdrop-blur-3xl rounded-[2rem] p-8 space-y-5">
+
+                                {error && (
+                                    <div className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-sm font-medium border border-red-500/20">
+                                        {error}
                                     </div>
-                                    <div>
-                                        <h4 className="font-bold text-white mb-1 uppercase tracking-widest text-[11px]">{item.t}</h4>
-                                        <p className="text-sm text-zinc-500 leading-relaxed">{item.d}</p>
+                                )}
+
+                                {/* Username */}
+                                <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Username</label>
+                                    <div className="relative flex items-center bg-white/3 border border-white/8 rounded-2xl overflow-hidden focus-within:border-indigo-500/50 focus-within:bg-white/5 transition-all">
+                                        <span className="flex-shrink-0 pl-4 pr-2 text-zinc-500 text-sm font-semibold select-none whitespace-nowrap border-r border-white/8 py-3.5">
+                                            creatorly.in/
+                                        </span>
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="yourcoolname"
+                                            value={form.username}
+                                            onChange={e => setForm(p => ({ ...p, username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '') }))}
+                                            className="flex-1 min-w-0 px-3 py-3.5 bg-transparent outline-none text-white placeholder-zinc-600 text-sm font-medium"
+                                        />
+                                        <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs flex items-center gap-1">
+                                            {usernameChecking && <Loader2 size={14} className="animate-spin text-zinc-600" />}
+                                            {!usernameChecking && usernameAvail === true && (
+                                                <>
+                                                    <CheckCircle2 size={14} className="text-emerald-400" />
+                                                    <span className="text-emerald-400 text-[10px] font-black uppercase">Available</span>
+                                                </>
+                                            )}
+                                            {!usernameChecking && usernameAvail === false && (
+                                                <span className="text-red-400 text-[10px] font-black uppercase">Username taken</span>
+                                            )}
+                                        </span>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
 
-                    <div className="relative">
-                        <div className="absolute inset-0 bg-indigo-500/10 blur-[100px] rounded-full -z-10" />
-                        <div className="bg-zinc-900/40 border border-white/8 backdrop-blur-3xl rounded-4xl p-8 md:p-12">
-                            <Suspense fallback={<div className="text-zinc-500 animate-pulse">Establishing secure connection...</div>}>
-                                <RegisterFormContent />
-                            </Suspense>
-                        </div>
-                    </div>
+                                {/* Full Name */}
+                                <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Full Name</label>
+                                    <div className="relative">
+                                        <User size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" />
+                                        <input
+                                            type="text"
+                                            required
+                                            placeholder="Jane Creator"
+                                            value={form.fullName}
+                                            onChange={e => setForm(p => ({ ...p, fullName: e.target.value }))}
+                                            className="w-full pl-10 py-3.5 bg-white/3 border border-white/8 rounded-2xl outline-none text-white placeholder-zinc-600 focus:border-indigo-500/50 focus:bg-white/5 transition-all text-sm font-medium"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Email */}
+                                <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Email Address</label>
+                                    <div className="relative">
+                                        <Mail size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" />
+                                        <input
+                                            type="email"
+                                            required
+                                            placeholder="you@example.com"
+                                            value={form.email}
+                                            onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                                            className="w-full pl-10 py-3.5 bg-white/3 border border-white/8 rounded-2xl outline-none text-white placeholder-zinc-600 focus:border-indigo-500/50 focus:bg-white/5 transition-all text-sm font-medium"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Password */}
+                                <div className="space-y-1.5">
+                                    <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Password</label>
+                                    <div className="relative">
+                                        <Lock size={15} className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" />
+                                        <input
+                                            type={showPass ? 'text' : 'password'}
+                                            required
+                                            minLength={8}
+                                            placeholder="Min. 8 characters"
+                                            value={form.password}
+                                            onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                                            className="w-full pl-10 pr-12 py-3.5 bg-white/3 border border-white/8 rounded-2xl outline-none text-white placeholder-zinc-600 focus:border-indigo-500/50 focus:bg-white/5 transition-all text-sm font-medium"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPass(p => !p)}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-zinc-400 transition-colors"
+                                        >
+                                            {showPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Live URL preview */}
+                                {form.username && (
+                                    <div className="flex items-center gap-2 bg-white/3 border border-white/8 rounded-xl px-4 py-2.5">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+                                        <span className="text-zinc-600 text-xs font-mono">creatorly.in/</span>
+                                        <span className="text-white text-xs font-mono font-bold">{form.username}</span>
+                                        <span className="ml-auto text-zinc-700 text-[10px] font-black uppercase tracking-widest">Your Link</span>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Submit */}
+                            <button
+                                type="submit"
+                                disabled={loading || !isLoaded || usernameAvail === false}
+                                className="w-full py-5 bg-white text-black hover:bg-zinc-100 rounded-2xl font-black text-base uppercase tracking-tight transition-all active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(255,255,255,0.08)]"
+                            >
+                                {loading
+                                    ? <><Loader2 size={18} className="animate-spin" /> Creating Account…</>
+                                    : <><ArrowRight size={18} /> Create Account</>
+                                }
+                            </button>
+
+                            <p className="text-center text-xs text-zinc-600">
+                                Already have an account?{' '}
+                                <Link href="/auth/login" className="text-zinc-400 hover:text-white font-bold transition-colors">
+                                    Sign in
+                                </Link>
+                            </p>
+                        </form>
+                    )}
                 </div>
             </main>
-
-            <footer className="py-20 border-t border-white/5 bg-[#020202]">
-                <div className="max-w-7xl mx-auto px-6 flex flex-col md:row justify-between items-center gap-6 opacity-40">
-                    <span className="text-xl font-black text-white tracking-tighter">Creatorly</span>
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">Built for the Next Billion • Bharat 🇮🇳</p>
-                </div>
-            </footer>
         </div>
     );
 }

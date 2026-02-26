@@ -29,9 +29,7 @@ export default function PaymentStep({ data, onBack }: PaymentStepProps) {
                         username: data.username,
                         fullName: data.fullName,
                         email: data.email,
-                        phone: data.phone,
-                        password: data.password,
-                        phoneHash: data.phoneHash
+                        password: data.password
                     }
                 })
             });
@@ -64,9 +62,7 @@ export default function PaymentStep({ data, onBack }: PaymentStepProps) {
                                     username: data.username,
                                     fullName: data.fullName,
                                     email: data.email,
-                                    phone: data.phone,
                                     password: data.password,
-                                    phoneHash: data.phoneHash,
                                     plan: data.selectedPlan.id,
                                     cycle: data.billingCycle
                                 }
@@ -86,8 +82,7 @@ export default function PaymentStep({ data, onBack }: PaymentStepProps) {
                 },
                 prefill: {
                     name: data.fullName,
-                    email: data.email,
-                    contact: `+91${data.phone}`
+                    email: data.email
                 },
                 theme: { color: "#6366f1" }
             };

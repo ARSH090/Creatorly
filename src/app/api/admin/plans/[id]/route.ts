@@ -4,6 +4,8 @@ import Plan from '@/lib/models/Plan';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { logAdminAction } from '@/lib/admin/logger';
 import { syncRazorpayPlan } from '@/lib/payments/razorpay';
+import { invalidateCache } from '@/lib/cache';
+import { revalidatePath } from 'next/cache';
 
 /**
  * GET /api/admin/plans/[id]
@@ -49,37 +51,74 @@ async function putHandler(
             return NextResponse.json({ error: 'Plan not found' }, { status: 404 });
         }
 
-        // 1. Handle Price Changes (Sync to Razorpay)
-        // Note: Razorpay plans are immutable. If price changes, we create a new plan version.
+        // 1. Handle Price Changes (Sync to Razorpay with Rotation)
         if (plan.tier !== 'free') {
             const monthlyPriceChanged = body.monthlyPrice !== undefined && body.monthlyPrice !== plan.monthlyPrice;
             const yearlyPriceChanged = body.yearlyPrice !== undefined && body.yearlyPrice !== plan.yearlyPrice;
 
-            if (monthlyPriceChanged) {
-                const monthlyRp = await syncRazorpayPlan({
-                    name: body.name || plan.name,
-                    description: body.description || plan.description,
-                    amount: body.monthlyPrice,
-                    interval: 'monthly'
+            if (monthlyPriceChanged || yearlyPriceChanged) {
+                // Keep history of previous plans
+                plan.razorpayPlanHistory = plan.razorpayPlanHistory || [];
+                plan.razorpayPlanHistory.push({
+                    razorpayPlanId: plan.razorpayMonthlyPlanId || plan.razorpayPlanId || '',
+                    cycle: 'monthly',
+                    price: plan.monthlyPrice,
+                    createdAt: new Date(),
+                    changedBy: user.email
                 });
-                body.razorpayMonthlyPlanId = monthlyRp.id;
-                body.razorpayPlanId = monthlyRp.id; // Update legacy field too
-            }
 
-            if (yearlyPriceChanged) {
-                const yearlyRp = await syncRazorpayPlan({
-                    name: body.name || plan.name,
-                    description: body.description || plan.description,
-                    amount: body.yearlyPrice,
-                    interval: 'yearly'
-                });
-                body.razorpayYearlyPlanId = yearlyRp.id;
+                if (plan.razorpayYearlyPlanId) {
+                    plan.razorpayPlanHistory.push({
+                        razorpayPlanId: plan.razorpayYearlyPlanId,
+                        cycle: 'yearly',
+                        price: plan.yearlyPrice,
+                        createdAt: new Date(),
+                        changedBy: user.email
+                    });
+                }
+
+                const newMonthlyPrice = body.monthlyPrice ?? plan.monthlyPrice;
+                const newYearlyPrice = body.yearlyPrice ?? plan.yearlyPrice;
+
+                // Sync Monthly Plan
+                if (newMonthlyPrice > 0) {
+                    const monthlyRp = await syncRazorpayPlan({
+                        name: body.name || plan.name,
+                        description: body.description || plan.description,
+                        amount: newMonthlyPrice,
+                        interval: 'monthly'
+                    });
+                    body.razorpayMonthlyPlanId = monthlyRp.id;
+                    body.razorpayPlanId = monthlyRp.id;
+                } else {
+                    body.razorpayMonthlyPlanId = undefined;
+                    body.razorpayPlanId = undefined;
+                }
+
+                // Sync Yearly Plan
+                if (newYearlyPrice > 0) {
+                    const yearlyRp = await syncRazorpayPlan({
+                        name: body.name || plan.name,
+                        description: body.description || plan.description,
+                        amount: newYearlyPrice,
+                        interval: 'yearly'
+                    });
+                    body.razorpayYearlyPlanId = yearlyRp.id;
+                } else {
+                    body.razorpayYearlyPlanId = undefined;
+                }
             }
         }
 
         // Update plan fields
         Object.assign(plan, body);
         await plan.save();
+        await invalidateCache('plans:all');
+
+        // Invalidate Pricing Cache (Multiple paths for safety)
+        revalidatePath('/onboarding');
+        revalidatePath('/pricing');
+        revalidatePath('/dashboard/settings/billing');
 
         // Log action
         await logAdminAction(
@@ -87,15 +126,19 @@ async function putHandler(
             'UPDATE_PLAN',
             'plan',
             id,
-            { updates: Object.keys(body) },
+            {
+                updates: Object.keys(body),
+                priceChanged: (body.monthlyPrice !== undefined || body.yearlyPrice !== undefined)
+            },
             req
         );
 
         return NextResponse.json({
             success: true,
             plan,
-            message: 'Plan updated successfully'
+            message: 'Plan updated successfully. New prices synced to Razorpay.'
         });
+
     } catch (error: any) {
         console.error('Plan update error:', error);
         return NextResponse.json({ error: error.message }, { status: 400 });
@@ -123,6 +166,7 @@ async function deleteHandler(
         // Soft delete
         plan.isActive = false;
         await plan.save();
+        await invalidateCache('plans:all');
 
         // Log action
         await logAdminAction(

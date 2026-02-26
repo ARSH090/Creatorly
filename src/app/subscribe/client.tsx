@@ -2,237 +2,282 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2, CheckCircle2 } from 'lucide-react';
+import {
+    Loader2, Check, Zap, Shield, Star, ArrowRight,
+    Sparkles, Clock, ChevronDown, ChevronUp
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { motion, AnimatePresence } from 'framer-motion';
 
 declare global {
-    interface Window {
-        Razorpay: any;
-    }
+    interface Window { Razorpay: any; }
+}
+
+interface Plan {
+    id: string;
+    name: string;
+    tier: string;
+    monthlyPrice: number;
+    yearlyPrice: number;
+    displayFeatures: string[];
+    razorpayMonthlyPlanId?: string;
+    razorpayYearlyPlanId?: string;
 }
 
 interface SubscribeClientProps {
-    plans: {
-        monthly: { price: number; active: boolean };
-        yearly: { price: number; active: boolean };
-    };
-    user: {
-        name: string;
-        email: string;
-        contact?: string;
-    };
+    plans: Plan[];
+    user: { name: string; email: string; contact?: string };
     userId: string;
 }
 
+const FAQS = [
+    {
+        q: 'Will I be charged today?',
+        a: 'No. Your 14-day free trial starts immediately. We set up an AutoPay mandate now so your subscription can auto-renew after the trial — but zero is charged today.'
+    },
+    {
+        q: 'Can I cancel before the trial ends?',
+        a: 'Yes, anytime. Cancel from your dashboard before Day 14 and you won\'t be charged a single Rupee. No hoops, no calls required.'
+    },
+    {
+        q: 'What payment methods are accepted?',
+        a: 'UPI, Credit/Debit cards, Net Banking, and Wallets — powered by Razorpay, India\'s most trusted payment gateway.'
+    },
+    {
+        q: 'Is there a difference between monthly and yearly?',
+        a: 'Same features, same access. Yearly saves you 2 months worth of billing — pay once, use all year.'
+    },
+];
+
 export default function SubscribeClient({ plans, user, userId }: SubscribeClientProps) {
     const router = useRouter();
-    const [selectedPlan, setSelectedPlan] = useState<'monthly' | 'yearly'>('yearly'); // Default to yearly for higher conversion
-    const [isLoading, setIsLoading] = useState(false);
-    const [couponCode, setCouponCode] = useState('');
+    const [billing, setBilling] = useState<'monthly' | 'yearly'>('yearly');
+    const [isLoading, setIsLoading] = useState<string | null>(null);
+    const [coupon, setCoupon] = useState('');
+    const [couponApplied, setCouponApplied] = useState(false);
+    const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-    // Load Razorpay Script
+    // Load Razorpay
     useEffect(() => {
-        const script = document.createElement('script');
-        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-        script.async = true;
-        document.body.appendChild(script);
-        return () => {
-            document.body.removeChild(script);
-        };
+        const s = document.createElement('script');
+        s.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        s.async = true;
+        document.body.appendChild(s);
+        return () => { document.body.removeChild(s); };
     }, []);
 
-    const handleSubscribe = async () => {
-        setIsLoading(true);
+    const handleSubscribe = async (plan: Plan) => {
+        setIsLoading(plan.id);
         try {
-            // 1. Create Subscription on Backend
             const res = await fetch('/api/subscriptions/create', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    plan: selectedPlan,
-                    couponCode: couponCode.trim()
+                    planId: plan.id,
+                    interval: billing,
+                    couponCode: coupon.trim()
                 })
             });
 
             const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to initialize subscription');
 
-            if (!res.ok) {
-                throw new Error(data.error || 'Failed to initialize subscription');
+            if (data.status === 'active') {
+                toast.success('🎉 Welcome to Creatorly! Redirecting...');
+                router.push('/dashboard');
+                return;
             }
 
-            const { subscriptionId, razorpayKey } = data;
+            const { razorpaySubscriptionId, razorpayKey } = data;
 
-            // 2. Open Razorpay Checkout
             const options = {
                 key: razorpayKey,
-                subscription_id: subscriptionId,
-                name: "Creatorly",
-                description: `Creatorly ${selectedPlan === 'monthly' ? 'Monthly' : 'Yearly'} Plan`,
-                image: "/logo.png", // Ensure this exists or use text
-                handler: function (response: any) {
-                    // Successful payment/mandate
-                    // Verify via webhook or redirect to dashboard which checks status
-                    toast.success('Subscription active! Redirecting...');
+                subscription_id: razorpaySubscriptionId,
+                name: 'Creatorly',
+                description: `${plan.name} (${billing === 'monthly' ? 'Monthly' : 'Yearly'}) — 14-Day Free Trial`,
+                handler: () => {
+                    toast.success('🎉 Welcome to Creatorly! Redirecting...');
                     router.push('/dashboard');
                 },
-                prefill: {
-                    name: user.name,
-                    email: user.email,
-                    contact: user.contact
-                },
-                theme: {
-                    color: "#0F172A"
-                },
+                prefill: { name: user.name, email: user.email, contact: user.contact },
+                theme: { color: '#6366f1' },
                 modal: {
-                    ondismiss: function () {
-                        setIsLoading(false);
-                        toast('Subscription cancelled', { icon: '⚠️' });
+                    ondismiss: () => {
+                        setIsLoading(null);
+                        toast('Checkout closed', { icon: '⚠️' });
                     }
                 }
             };
 
             const rzp = new window.Razorpay(options);
-            rzp.on('payment.failed', function (response: any) {
-                toast.error(response.error.description || 'Payment failed');
-                setIsLoading(false);
+            rzp.on('payment.failed', (r: any) => {
+                toast.error(r.error.description || 'Payment failed. Please try again.');
+                setIsLoading(null);
             });
             rzp.open();
-
-        } catch (error: any) {
-            toast.error(error.message);
-            setIsLoading(false);
+        } catch (err: any) {
+            toast.error(err.message);
+            setIsLoading(null);
         }
     };
 
-    const monthlyPrice = plans.monthly.price;
-    const yearlyPrice = plans.yearly.price;
-    const yearlySavings = Math.round(((monthlyPrice * 12) - yearlyPrice) / (monthlyPrice * 12) * 100);
-
     return (
-        <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white flex flex-col items-center justify-center p-4">
-            <div className="max-w-4xl w-full space-y-8">
-                <div className="text-center space-y-4">
-                    <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl">
-                        Start Your 14-Day Free Trial
-                    </h1>
-                    <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                        Unlock the full power of Creatorly. Cancel anytime.
-                        <span className="block font-semibold text-blue-600 mt-2">
-                            AutoPay required to activate trial.
-                        </span>
-                    </p>
-                </div>
+        <div className="min-h-screen bg-[#030303] text-white selection:bg-indigo-500/30 antialiased">
+            {/* Ambient glow */}
+            <div className="fixed inset-0 pointer-events-none overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[500px] bg-indigo-600/10 rounded-full blur-[120px]" />
+            </div>
 
-                {/* Plan Toggle */}
-                <div className="flex justify-center">
-                    <div className="bg-gray-100 p-1 rounded-xl inline-flex relative">
+            <div className="relative z-10 max-w-7xl mx-auto px-4 py-12 md:py-20">
+
+                {/* Header */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center mb-14"
+                >
+                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+                        <Sparkles size={11} fill="currentColor" />
+                        Zero Risk • 14-Day Free Trial
+                    </div>
+                    <h1 className="text-5xl md:text-7xl font-black tracking-tight text-white mb-4">
+                        Scale Your Influence
+                    </h1>
+                    <p className="text-zinc-500 text-lg max-w-xl mx-auto uppercase font-black tracking-widest text-xs">
+                        Pick a tier. AutoPay setup required. Charged only after 14 days.
+                    </p>
+                </motion.div>
+
+                {/* Billing Toggle */}
+                <div className="flex justify-center mb-16">
+                    <div className="bg-zinc-900/80 p-1.5 rounded-2xl border border-white/5 flex gap-1">
                         <button
-                            onClick={() => setSelectedPlan('monthly')}
-                            className={`px-6 py-2 rounded-lg text-sm font-medium transition-all ${selectedPlan === 'monthly'
-                                    ? 'bg-white shadow-sm text-gray-900'
-                                    : 'text-gray-500 hover:text-gray-900'
-                                }`}
+                            onClick={() => setBilling('monthly')}
+                            className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${billing === 'monthly' ? 'bg-white text-black' : 'text-zinc-600 hover:text-white'}`}
                         >
                             Monthly
                         </button>
                         <button
-                            onClick={() => setSelectedPlan('yearly')}
-                            className={`px-6 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${selectedPlan === 'yearly'
-                                    ? 'bg-white shadow-sm text-gray-900'
-                                    : 'text-gray-500 hover:text-gray-900'
-                                }`}
+                            onClick={() => setBilling('yearly')}
+                            className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 ${billing === 'yearly' ? 'bg-white text-black' : 'text-zinc-600 hover:text-white'}`}
                         >
                             Yearly
-                            <span className="bg-green-100 text-green-700 text-xs px-2 py-0.5 rounded-full">
-                                Save {yearlySavings}%
-                            </span>
+                            <span className="bg-emerald-500/20 text-emerald-400 text-[9px] px-2 py-0.5 rounded-full">Save 20%</span>
                         </button>
                     </div>
                 </div>
 
-                {/* Pricing Cards */}
-                <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
-                    {/* Monthly Card */}
-                    <Card className={`relative border-2 transition-all cursor-pointer ${selectedPlan === 'monthly' ? 'border-blue-600 shadow-xl scale-105' : 'border-gray-200 hover:border-blue-300'}`}
-                        onClick={() => setSelectedPlan('monthly')}
-                    >
-                        <CardHeader>
-                            <CardTitle className="text-2xl">Monthly</CardTitle>
-                            <CardDescription>Flexible, month-to-month</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-baseline mb-4">
-                                <span className="text-4xl font-extrabold">₹{monthlyPrice}</span>
-                                <span className="text-gray-500 ml-2">/month</span>
-                            </div>
-                            <ul className="space-y-3 text-sm text-gray-600">
-                                <li className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-green-500" /> All Pro Features</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-green-500" /> Unlimited Products</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-green-500" /> Priority Support</li>
-                            </ul>
-                        </CardContent>
-                    </Card>
+                {/* Pricing Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-20">
+                    {plans.map((plan, idx) => {
+                        const price = billing === 'monthly' ? plan.monthlyPrice : plan.yearlyPrice;
+                        const label = billing === 'monthly' ? '/mo' : '/yr';
+                        const isFeatured = plan.tier === 'pro';
 
-                    {/* Yearly Card */}
-                    <Card className={`relative border-2 transition-all cursor-pointer ${selectedPlan === 'yearly' ? 'border-blue-600 shadow-xl scale-105' : 'border-gray-200 hover:border-blue-300'}`}
-                        onClick={() => setSelectedPlan('yearly')}
-                    >
-                        <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs font-bold px-3 py-1 rounded-bl-lg rounded-tr-sm">
-                            MOST POPULAR
-                        </div>
-                        <CardHeader>
-                            <CardTitle className="text-2xl">Yearly</CardTitle>
-                            <CardDescription>Best value for creators</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-baseline mb-4">
-                                <span className="text-4xl font-extrabold">₹{yearlyPrice}</span>
-                                <span className="text-gray-500 ml-2">/year</span>
-                            </div>
-                            <ul className="space-y-3 text-sm text-gray-600">
-                                <li className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-green-500" /> All Pro Features</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-green-500" /> Unlimited Products</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-green-500" /> Priority Support</li>
-                                <li className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-green-500" /> 2 Months Free</li>
-                            </ul>
-                        </CardContent>
-                    </Card>
+                        return (
+                            <motion.div
+                                key={plan.id}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: idx * 0.1 }}
+                                className={`relative rounded-[3rem] p-10 flex flex-col ${isFeatured
+                                    ? 'bg-[#0A0A0A] border-2 border-indigo-500/40 shadow-[0_0_80px_rgba(99,102,241,0.15)] scale-105 z-20'
+                                    : 'bg-zinc-900/40 border border-white/5 z-10'
+                                    }`}
+                            >
+                                {isFeatured && (
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-500 text-white text-[10px] font-black uppercase tracking-[0.2em] px-6 py-2 rounded-full shadow-lg">
+                                        Recommended
+                                    </div>
+                                )}
+
+                                <div className="mb-8">
+                                    <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em] mb-3">{plan.name}</p>
+                                    <div className="flex items-baseline gap-1">
+                                        <span className="text-5xl font-black italic tracking-tighter">₹{price.toLocaleString('en-IN')}</span>
+                                        <span className="text-zinc-600 font-bold text-sm tracking-widest uppercase">{label}</span>
+                                    </div>
+                                    {billing === 'yearly' && (
+                                        <p className="text-emerald-400 text-[10px] font-black uppercase tracking-tighter mt-2">
+                                            ₹{Math.round(plan.yearlyPrice / 12).toLocaleString('en-IN')}/mo inclusive
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="space-y-4 mb-10 flex-1">
+                                    {plan.displayFeatures.map((f, i) => (
+                                        <div key={i} className="flex items-center gap-3">
+                                            <div className="w-5 h-5 rounded-full bg-indigo-500/10 flex items-center justify-center flex-shrink-0">
+                                                <Check size={10} className="text-indigo-400" strokeWidth={4} />
+                                            </div>
+                                            <span className="text-xs font-bold text-white/80 uppercase tracking-tight">{f}</span>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <button
+                                    onClick={() => handleSubscribe(plan)}
+                                    disabled={!!isLoading}
+                                    className={`w-full py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-3 ${isFeatured
+                                        ? 'bg-white text-black hover:bg-zinc-200'
+                                        : 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
+                                        }`}
+                                >
+                                    {isLoading === plan.id ? (
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                    ) : (
+                                        <>Deploy Flow <ArrowRight size={14} /></>
+                                    )}
+                                </button>
+                            </motion.div>
+                        );
+                    })}
                 </div>
 
-                {/* Action Section */}
-                <div className="max-w-md mx-auto space-y-6">
-                    <div className="space-y-2">
-                        <Label>Coupon Code</Label>
-                        <div className="flex gap-2">
-                            <Input
-                                placeholder="Enter code"
-                                value={couponCode}
-                                onChange={(e) => setCouponCode(e.target.value)}
-                            />
-                            <Button variant="outline" onClick={() => toast.success('Coupon applied (if valid)')}>Apply</Button>
-                        </div>
+                {/* Trust & FAQ */}
+                <div className="max-w-4xl mx-auto">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-20">
+                        {[
+                            { icon: Shield, l: 'Secure' },
+                            { icon: Clock, l: '14D Trial' },
+                            { icon: Star, l: 'Top Rated' },
+                            { icon: Zap, l: 'Instant' }
+                        ].map((i, idx) => (
+                            <div key={idx} className="bg-zinc-900/20 border border-white/5 p-4 rounded-2xl flex items-center justify-center gap-3">
+                                <i.icon size={14} className="text-indigo-500" />
+                                <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">{i.l}</span>
+                            </div>
+                        ))}
                     </div>
 
-                    <Button
-                        size="lg"
-                        className="w-full text-lg h-12 bg-blue-600 hover:bg-blue-700"
-                        onClick={handleSubscribe}
-                        disabled={isLoading}
-                    >
-                        {isLoading ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : null}
-                        {isLoading ? 'Processing...' : `Start 14-Day Free Trial`}
-                    </Button>
-
-                    <p className="text-xs text-center text-gray-500">
-                        Your card will be verified. No charges today. Subscription starts after 14 days unless cancelled.
-                        By subscribing, you agree to our Terms of Service.
-                    </p>
+                    <div className="space-y-4">
+                        <h3 className="text-center text-xs font-black text-white/20 uppercase tracking-[0.4em] mb-10 text-pretty">Common Queries</h3>
+                        {FAQS.map((faq, i) => (
+                            <div key={i} className="bg-zinc-900/40 border border-white/5 rounded-3xl overflow-hidden">
+                                <button
+                                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                                    className="w-full flex items-center justify-between px-8 py-6 text-left"
+                                >
+                                    <span className="text-[11px] font-black text-white uppercase tracking-widest">{faq.q}</span>
+                                    {openFaq === i ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                                </button>
+                                <AnimatePresence>
+                                    {openFaq === i && (
+                                        <motion.div
+                                            initial={{ height: 0, opacity: 0 }}
+                                            animate={{ height: 'auto', opacity: 1 }}
+                                            exit={{ height: 0, opacity: 0 }}
+                                            className="px-8 pb-8 text-xs text-zinc-500 font-bold leading-loose uppercase tracking-tighter"
+                                        >
+                                            {faq.a}
+                                        </motion.div>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        ))}
+                    </div>
                 </div>
+
             </div>
         </div>
     );

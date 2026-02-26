@@ -35,7 +35,7 @@ export default function StoreHeader({ creator }: StoreHeaderProps) {
                 : 'bg-transparent border-transparent py-4 sm:py-6'
                 }`}
         >
-            <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 flex items-center justify-between">
                 {/* Logo / Name */}
                 <Link href={`/u/${creator.username}`} className="flex items-center gap-3 group">
                     {creator.logo ? (

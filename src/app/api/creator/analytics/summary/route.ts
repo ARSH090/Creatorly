@@ -41,47 +41,43 @@ async function handler(req: NextRequest, user: any) {
 
     const dateFilter = startDate ? { createdAt: { $gte: startDate } } : {};
 
-    // 1. Total Revenue
-    const revenueResult = await Order.aggregate([
-        {
-            $match: {
-                creatorId,
-                paymentStatus: 'paid',
-                ...dateFilter
+    // 1. Parallelize independent metrics queries
+    const [revenueResult, totalLeads, storeViews, uniqueClicks] = await Promise.all([
+        Order.aggregate([
+            {
+                $match: {
+                    creatorId,
+                    paymentStatus: 'paid',
+                    ...dateFilter
+                }
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalRevenue: { $sum: '$total' },
+                    totalSales: { $sum: 1 }
+                }
             }
-        },
-        {
-            $group: {
-                _id: null,
-                totalRevenue: { $sum: '$total' },
-                totalSales: { $sum: 1 }
-            }
-        }
+        ]),
+        Order.countDocuments({
+            creatorId,
+            amount: 0, // Free lead magnets
+            ...dateFilter
+        }),
+        AnalyticsEvent.countDocuments({
+            creatorId,
+            eventType: 'store_view',
+            ...dateFilter
+        }),
+        AnalyticsEvent.distinct('ip', {
+            creatorId,
+            eventType: { $in: ['product_view', 'add_to_cart'] },
+            ...dateFilter
+        })
     ]);
 
     const totalRevenue = revenueResult[0]?.totalRevenue || 0;
     const totalSales = revenueResult[0]?.totalSales || 0;
-
-    // 2. Total Leads (email captures from lead magnets - orders with price = 0)
-    const totalLeads = await Order.countDocuments({
-        creatorId,
-        amount: 0, // Free lead magnets
-        ...dateFilter
-    });
-
-    // 3. Store Views
-    const storeViews = await AnalyticsEvent.countDocuments({
-        creatorId,
-        eventType: 'store_view',
-        ...dateFilter
-    });
-
-    // 4. Conversion Rate = (paid orders / unique product clicks) * 100
-    const uniqueClicks = await AnalyticsEvent.distinct('ip', {
-        creatorId,
-        eventType: { $in: ['product_view', 'add_to_cart'] },
-        ...dateFilter
-    });
 
     const conversionRate = uniqueClicks.length > 0
         ? (totalSales / uniqueClicks.length) * 100

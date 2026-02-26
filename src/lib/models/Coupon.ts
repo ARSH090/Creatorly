@@ -1,123 +1,99 @@
-import mongoose, { Document, Schema, Model } from 'mongoose';
+import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface ICoupon extends Document {
-    code: string;
-    description?: string;
-    discountType: 'percentage' | 'fixed';
-    discountValue: number;
-    minOrderAmount: number;
-    maxDiscountAmount?: number;
+    creatorId: mongoose.Types.ObjectId;
+    code: string; // UPPERCASE
+    discountType: 'percentage' | 'fixed' | 'free' | 'bogo';
+    discountValue: number; // % or amount
 
-    // Applicability
+    bogoConfig?: {
+        buyQuantity: number;
+        getQuantity: number;
+        getDiscountValue: number; // 100 for free
+    };
+
+    appliesTo: 'all' | 'specific' | 'type' | 'minimum';
     applicableProducts: mongoose.Types.ObjectId[];
-    applicableCreators: mongoose.Types.ObjectId[];
+    applicableProductIds?: mongoose.Types.ObjectId[]; // Alias
+    applicableCreators?: mongoose.Types.ObjectId[];
+    applicableProductType?: string;
+    minOrderAmount: number;
+    minimumPurchaseAmount?: number; // Alias for minOrderAmount
 
-    // Limits
     usageLimit?: number;
-    usagePerUser: number;
+    maxUses?: number; // Alias for usageLimit
     usedCount: number;
+    usagePerUser: number;
+    usageLimitPerUser?: number; // Alias
+    perCustomerLimit?: number; // Alias for usagePerUser
+    firstTimeOnly: boolean;
 
-    // Validity
     validFrom: Date;
     validUntil?: Date;
-
+    expiresAt?: Date; // Alias for validUntil
     status: 'active' | 'inactive' | 'expired';
-    razorpayOfferId?: string;
+    isActive: boolean; // For compatibility
 
-    createdBy?: string; // Admin email
+    showHintOnStorefront: boolean;
+    internalNote?: string;
+
+    isBulkGenerated: boolean;
+    bulkBatchId?: string;
+
+    razorpayOfferId?: string;
+    totalRevenueDriven: number;
     createdAt: Date;
     updatedAt: Date;
 }
 
-const couponSchema = new Schema<ICoupon>({
-    code: {
-        type: String,
-        required: true,
-        unique: true,
-        uppercase: true,
-        trim: true
-    },
-    description: String,
-    discountType: {
-        type: String,
-        enum: ['percentage', 'fixed'],
-        required: true
-    },
-    discountValue: {
-        type: Number,
-        required: true,
-        min: 0
-    },
-    minOrderAmount: {
-        type: Number,
-        default: 0,
-        min: 0
-    },
-    maxDiscountAmount: {
-        type: Number,
-        min: 0
+const CouponSchema = new Schema<ICoupon>({
+    creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    code: { type: String, required: true, uppercase: true, trim: true },
+    discountType: { type: String, enum: ['percentage', 'fixed', 'free', 'bogo'], required: true },
+    discountValue: { type: Number, required: true },
+    bogoConfig: {
+        buyQuantity: { type: Number, default: 1 },
+        getQuantity: { type: Number, default: 1 },
+        getDiscountValue: { type: Number, default: 100 }
     },
 
-    // Applicability - empty arrays mean applicable to all
-    applicableProducts: [{
-        type: Schema.Types.ObjectId,
-        ref: 'Product'
-    }],
-    applicableCreators: [{
-        type: Schema.Types.ObjectId,
-        ref: 'User'
-    }],
 
-    // Usage limits
-    usageLimit: {
-        type: Number,
-        min: 1
-    },
-    usagePerUser: {
-        type: Number,
-        default: 1,
-        min: 1
-    },
-    usedCount: {
-        type: Number,
-        default: 0,
-        min: 0
-    },
+    appliesTo: { type: String, enum: ['all', 'specific', 'type', 'minimum'], default: 'all' },
+    applicableProducts: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
+    applicableProductIds: [{ type: Schema.Types.ObjectId, ref: 'Product' }],
+    applicableCreators: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    applicableProductType: String,
+    minOrderAmount: { type: Number, default: 0 },
+    minimumPurchaseAmount: Number,
 
-    // Validity
-    validFrom: {
-        type: Date,
-        default: Date.now
-    },
+    usageLimit: { type: Number, default: null },
+    maxUses: Number,
+    usedCount: { type: Number, default: 0 },
+    usagePerUser: { type: Number, default: 0 }, // 0 means unlimited
+    usageLimitPerUser: Number,
+    perCustomerLimit: Number,
+    firstTimeOnly: { type: Boolean, default: false },
+
+    validFrom: { type: Date, default: Date.now },
     validUntil: Date,
+    expiresAt: Date,
+    status: { type: String, enum: ['active', 'inactive', 'expired'], default: 'active' },
+    isActive: { type: Boolean, default: true },
 
-    status: {
-        type: String,
-        enum: ['active', 'inactive', 'expired'],
-        default: 'active'
-    },
+    showHintOnStorefront: { type: Boolean, default: false },
+    internalNote: String,
 
-    razorpayOfferId: { type: String, sparse: true },
+    isBulkGenerated: { type: Boolean, default: false },
+    bulkBatchId: String,
 
-    createdBy: String,
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
-});
+    razorpayOfferId: String,
+    totalRevenueDriven: { type: Number, default: 0 }
+}, { timestamps: true });
 
-// Indexes
+CouponSchema.index({ creatorId: 1, code: 1 }, { unique: true });
+CouponSchema.index({ creatorId: 1, createdAt: -1 });
+CouponSchema.index({ creatorId: 1, isPublished: 1 });
 
-couponSchema.index({ status: 1 });
-couponSchema.index({ validFrom: 1, validUntil: 1 });
-
-// Update `updatedAt` on every save
-
-
-const Coupon: Model<ICoupon> = mongoose.models.Coupon || mongoose.model<ICoupon>('Coupon', couponSchema);
+const Coupon: Model<ICoupon> = mongoose.models.Coupon || mongoose.model<ICoupon>('Coupon', CouponSchema);
 export { Coupon };
 export default Coupon;

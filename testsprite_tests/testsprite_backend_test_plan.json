@@ -1,0 +1,22 @@
+[
+  {
+    "id": "TC001",
+    "title": "post api auth sync user onboarding",
+    "description": "Test the POST /api/auth/sync endpoint to verify that user onboarding data is correctly synchronized. Note: Successful response contains a nested 'user' object with an 'id' field."
+  },
+  {
+    "id": "TC003",
+    "title": "get api analytics stats dashboard data retrieval",
+    "description": "Test the GET /api/creator/analytics/summary endpoint to ensure creators can retrieve their dashboard metrics. Expect keys: totalRevenue, totalSales, totalLeads, conversionRate, storeViews, period."
+  },
+  {
+    "id": "TC004",
+    "title": "get api products storefront product listing",
+    "description": "Test the GET /api/products endpoint to verify that the public storefront correctly lists available digital products for a given creator username."
+  },
+  {
+    "id": "TC005",
+    "title": "post api checkout product purchase flow",
+    "description": "Test the POST /api/payments/razorpay/create-order endpoint to validate the digital product purchase flow, including payment initiation and Razorpay order creation."
+  }
+]

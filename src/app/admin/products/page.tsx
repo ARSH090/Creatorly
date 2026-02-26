@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, Eye, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
+import { cn } from '@/lib/utils';
 
 export default function ProductsPage() {
     const [products, setProducts] = useState<any[]>([]);

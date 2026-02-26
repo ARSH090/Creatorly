@@ -22,7 +22,9 @@ export interface ISocialAccount extends Document {
     tokenTag: string;
     tokenExpiresAt?: Date;
     tokenStatus: 'valid' | 'expired' | 'revoked';
+    keyVersion: string;
     lastTokenCheck: Date;
+
     isBusiness: boolean;
     webhookSubscribed: boolean;
     isActive: boolean;
@@ -41,7 +43,9 @@ const SocialAccountSchema: Schema = new Schema({
 
     tokenExpiresAt: Date,
     tokenStatus: { type: String, enum: ['valid', 'expired', 'revoked'], default: 'valid', index: true },
+    keyVersion: { type: String, default: 'v1' }, // tracks which encryption key was used
     lastTokenCheck: { type: Date, default: Date.now },
+
     isBusiness: { type: Boolean, default: false },
     webhookSubscribed: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true },

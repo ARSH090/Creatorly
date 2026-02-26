@@ -15,7 +15,8 @@ import {
     ShieldAlert,
     Globe,
     LogOut,
-    FileText
+    FileText,
+    Layers
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useClerk } from '@clerk/nextjs';
@@ -27,6 +28,7 @@ const sidebarItems = [
     { href: '/admin/products', label: 'Products', icon: ShoppingBag },
     { href: '/admin/orders', label: 'Orders', icon: CreditCard },
     { href: '/admin/coupons', label: 'Coupons', icon: Ticket },
+    { href: '/admin/plans', label: 'Plans', icon: Layers },
     { href: '/admin/payouts', label: 'Payouts', icon: Banknote },
     { href: '/admin/domains', label: 'Domains', icon: Globe },
     { href: '/admin/logs', label: 'Audit Logs', icon: FileText },

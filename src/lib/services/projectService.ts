@@ -58,7 +58,7 @@ export class ProjectService {
                     description: t.description,
                     priority: t.priority || 'Medium',
                     status: 'To Do',
-                    order: index
+                    position: index
                 });
             });
             await Promise.all(taskPromises);
@@ -72,13 +72,13 @@ export class ProjectService {
      */
     static async addTask(projectId: string, taskData: Partial<ITask>): Promise<ITask> {
         // Calculate next order
-        const lastTask = await Task.findOne({ projectId }).sort({ order: -1 });
-        const order = lastTask ? lastTask.order + 1 : 0;
+        const lastTask = await Task.findOne({ projectId }).sort({ position: -1 });
+        const position = lastTask ? lastTask.position + 1 : 0;
 
         return await Task.create({
             ...taskData,
             projectId,
-            order
+            position
         });
     }
 

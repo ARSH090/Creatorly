@@ -21,7 +21,7 @@ export enum CreditPackage {
 }
 
 /**
- * AI Credit Interface
+ * AI Credit Document Interface
  */
 export interface IAICredit extends Document {
     creatorId: mongoose.Types.ObjectId;
@@ -29,12 +29,23 @@ export interface IAICredit extends Document {
     usedCredits: number;
     remainingCredits: number;
     packageType: CreditPackage;
-    expiresAt: Date;
+    expiresAt: Date | null;
     autoReload: boolean;
     autoReloadThreshold: number;
     autoReloadAmount: number;
     createdAt: Date;
     updatedAt: Date;
+
+    // Instance methods
+    useCredits(amount: number, description: string, metadata?: Record<string, any>): Promise<IAICredit>;
+    addCredits(amount: number, type: CreditTransactionType, description: string, metadata?: Record<string, any>): Promise<IAICredit>;
+}
+
+/**
+ * AI Credit Model Interface (includes static methods)
+ */
+export interface IAICreditModel extends Model<IAICredit> {
+    getOrCreate(creatorId: mongoose.Types.ObjectId | string): Promise<IAICredit>;
 }
 
 /**
@@ -48,28 +59,13 @@ export interface IAICreditTransaction extends Document {
     metadata?: Record<string, any>;
     balanceAfter: number;
     createdAt: Date;
-}
-
-/**
- * AI Credit Document Interface (includes instance methods)
- */
-export interface IAICreditDocument extends IAICredit, Document {
-    _id: mongoose.Types.ObjectId;
-    useCredits(amount: number, description: string, metadata?: Record<string, any>): Promise<IAICreditDocument>;
-    addCredits(amount: number, type: CreditTransactionType, description: string, metadata?: Record<string, any>): Promise<IAICreditDocument>;
-}
-
-/**
- * AI Credit Model Interface (includes static methods)
- */
-export interface IAICreditModel extends Model<IAICreditDocument> {
-    getOrCreate(creatorId: mongoose.Types.ObjectId | string): Promise<IAICreditDocument>;
+    updatedAt: Date;
 }
 
 /**
  * AI Credit Schema
  */
-const AICreditSchema: Schema<IAICreditDocument, IAICreditModel> = new Schema({
+const AICreditSchema = new Schema<IAICredit, IAICreditModel>({
     creatorId: {
         type: Schema.Types.ObjectId,
         ref: 'User',
@@ -122,7 +118,7 @@ const AICreditSchema: Schema<IAICreditDocument, IAICreditModel> = new Schema({
 /**
  * AI Credit Transaction Schema
  */
-const AICreditTransactionSchema: Schema = new Schema({
+const AICreditTransactionSchema = new Schema<IAICreditTransaction>({
     creatorId: {
         type: Schema.Types.ObjectId,
         ref: 'User',
@@ -220,10 +216,13 @@ AICreditSchema.methods.addCredits = async function (amount: number, type: Credit
     return this.save();
 };
 
-export const AICredit = (mongoose.models.AICredit as IAICreditModel) ||
-    mongoose.model<IAICreditDocument, IAICreditModel>('AICredit', AICreditSchema);
+// Use a separate variable for the model to ensure it's typed correctly
+const AICreditModel = (mongoose.models.AICredit as IAICreditModel) ||
+    mongoose.model<IAICredit, IAICreditModel>('AICredit', AICreditSchema);
+
+export { AICreditModel as AICredit };
 
 export const AICreditTransaction = (mongoose.models.AICreditTransaction as Model<IAICreditTransaction>) ||
     mongoose.model<IAICreditTransaction>('AICreditTransaction', AICreditTransactionSchema);
 
-export default AICredit;
+export default AICreditModel;

@@ -7,7 +7,7 @@ import Order from '@/lib/models/Order';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { getCurrentUser } from '@/lib/auth/server-auth';
 
-export async function checkAdminAccess() {
+async function checkAdminAccess() {
   const user = await getCurrentUser();
 
   if (!user) {

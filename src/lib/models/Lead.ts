@@ -105,5 +105,7 @@ LeadSchema.index({ email: 1, createdAt: -1 });
 LeadSchema.index({ creatorId: 1, createdAt: -1 });
 LeadSchema.index({ dmStatus: 1 });
 LeadSchema.index({ creatorId: 1, dmStatus: 1 });
+LeadSchema.index({ creatorId: 1, email: 1 });
+LeadSchema.index({ creatorId: 1, isPublished: 1 });
 
 export default mongoose.models.Lead || mongoose.model<ILead>('Lead', LeadSchema);

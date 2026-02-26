@@ -1,0 +1,58 @@
+[
+  {
+    "projectId": "7b4efb2f-4a41-4682-b63b-9dabdfa22d6c",
+    "testId": "f65e9eb1-93f8-4ff9-aff1-49e95da15cc3",
+    "userId": "64d854d8-70e1-700f-e414-f0cfdfd657a6",
+    "title": "TC001-post api auth sync user onboarding",
+    "description": "Test the POST /api/auth/sync endpoint to verify that user onboarding data is correctly synchronized. Note: Successful response contains a nested 'user' object with an 'id' field.",
+    "code": "import requests\n\nBASE_URL = \"http://localhost:3000\"\nHEADERS = {\n    \"X-Test-Secret\": \"v3ry-s3cr3t-t3st-v4lu3\",\n    \"Content-Type\": \"application/json\"\n}\n\ndef test_post_api_auth_sync_user_onboarding():\n    url = f\"{BASE_URL}/api/auth/sync\"\n    payload = {\n        # Sample user onboarding sync payload with realistic fields\n        \"username\": \"testuser123\",\n        \"fullName\": \"Test User\",\n        \"email\": \"testuser123@example.com\",\n        \"phone\": \"+919876543210\",\n        \"otpVerified\": True,\n        \"plan\": \"trial\",\n        \"razorpayMandateId\": \"mandate_test_12345\"\n    }\n\n    try:\n        response = requests.post(url, json=payload, headers=HEADERS, timeout=30)\n        response.raise_for_status()\n    except requests.RequestException as e:\n        assert False, f\"Request failed: {e}\"\n\n    try:\n        body = response.json()\n    except ValueError:\n        assert False, \"Response is not valid JSON\"\n\n    assert \"success\" in body, \"'success' key missing in response\"\n    assert body[\"success\"] is True, \"API call not successful\"\n\n    # Adjust to check for user key either under 'data' or directly in response body\n    if \"data\" in body:\n        data = body[\"data\"]\n        assert isinstance(data, dict), \"'data' is not a dict\"\n        assert \"user\" in data, \"'user' object missing in data\"\n        user = data[\"user\"]\n    else:\n        assert \"user\" in body, \"'user' key missing in response body\"\n        user = body[\"user\"]\n\n    assert isinstance(user, dict), \"'user' is not a dict\"\n    assert \"id\" in user, \"'id' missing in user object\"\n    assert isinstance(user[\"id\"], (str, int)), \"'id' in user is not a string/int\"\n\n\ntest_post_api_auth_sync_user_onboarding()",
+    "testStatus": "PASSED",
+    "testError": "",
+    "testType": "BACKEND",
+    "createFrom": "mcp",
+    "created": "2026-02-25T13:35:00.662Z",
+    "modified": "2026-02-25T13:35:32.060Z"
+  },
+  {
+    "projectId": "7b4efb2f-4a41-4682-b63b-9dabdfa22d6c",
+    "testId": "2151c20b-1a09-4af5-a5b2-4fcc306f2a63",
+    "userId": "64d854d8-70e1-700f-e414-f0cfdfd657a6",
+    "title": "TC003-get api analytics stats dashboard data retrieval",
+    "description": "Test the GET /api/creator/analytics/summary endpoint to ensure creators can retrieve their dashboard metrics. Expect keys: totalRevenue, totalSales, totalLeads, conversionRate, storeViews, period.",
+    "code": "import requests\n\nBASE_URL = \"http://localhost:3000\"\nHEADERS = {\n    \"X-Test-Secret\": \"v3ry-s3cr3t-t3st-v4lu3\"\n}\nTIMEOUT = 30\n\ndef test_get_api_analytics_stats_dashboard_data_retrieval():\n    url = f\"{BASE_URL}/api/creator/analytics/summary\"\n    try:\n        response = requests.get(url, headers=HEADERS, timeout=TIMEOUT)\n        response.raise_for_status()\n    except requests.RequestException as e:\n        assert False, f\"Request failed: {e}\"\n\n    json_response = None\n    try:\n        json_response = response.json()\n    except ValueError:\n        assert False, \"Response is not valid JSON\"\n\n    assert isinstance(json_response, dict), \"Response JSON root is not a dictionary\"\n    assert \"success\" in json_response, \"'success' key missing in response\"\n    assert json_response[\"success\"] is True, \"API did not return success=True\"\n    assert \"data\" in json_response, \"'data' key missing in response\"\n\n    data = json_response[\"data\"]\n    expected_keys = {\n        \"totalRevenue\",\n        \"totalSales\",\n        \"totalLeads\",\n        \"conversionRate\",\n        \"storeViews\",\n        \"period\"\n    }\n\n    assert isinstance(data, dict), \"'data' is not a dictionary\"\n    missing_keys = expected_keys - data.keys()\n    assert not missing_keys, f\"Missing expected keys in data: {missing_keys}\"\n\n    # Validate types as reasonable (can be adjusted if API spec given)\n    assert isinstance(data[\"totalRevenue\"], (int, float)), \"totalRevenue should be a number\"\n    assert isinstance(data[\"totalSales\"], int), \"totalSales should be an integer\"\n    assert isinstance(data[\"totalLeads\"], int), \"totalLeads should be an integer\"\n    assert isinstance(data[\"conversionRate\"], (int, float)), \"conversionRate should be a number\"\n    assert isinstance(data[\"storeViews\"], int), \"storeViews should be an integer\"\n    assert isinstance(data[\"period\"], str), \"period should be a string\"\n\ntest_get_api_analytics_stats_dashboard_data_retrieval()",
+    "testStatus": "PASSED",
+    "testError": "",
+    "testType": "BACKEND",
+    "createFrom": "mcp",
+    "created": "2026-02-25T13:35:00.668Z",
+    "modified": "2026-02-25T13:35:16.545Z"
+  },
+  {
+    "projectId": "7b4efb2f-4a41-4682-b63b-9dabdfa22d6c",
+    "testId": "0de949a3-1661-49d7-8279-e9ce8befd405",
+    "userId": "64d854d8-70e1-700f-e414-f0cfdfd657a6",
+    "title": "TC004-get api products storefront product listing",
+    "description": "Test the GET /api/products endpoint to verify that the public storefront correctly lists available digital products for a given creator username.",
+    "code": "import requests\n\ndef test_get_api_products_storefront_product_listing():\n    base_url = \"http://localhost:3000\"\n    endpoint = \"/api/products\"\n    headers = {\n        \"X-Test-Secret\": \"v3ry-s3cr3t-t3st-v4lu3\"\n    }\n    params = {\n        \"creatorId\": \"65db8d9f1234567890abcdef\"\n    }\n    try:\n        response = requests.get(\n            url=f\"{base_url}{endpoint}\",\n            headers=headers,\n            params=params,\n            timeout=30\n        )\n        response.raise_for_status()\n    except requests.RequestException as e:\n        assert False, f\"Request to {endpoint} failed: {e}\"\n\n    json_response = response.json()\n\n    # Check that response wrapper fields exist\n    assert \"success\" in json_response, \"'success' key not found in response\"\n    assert json_response[\"success\"] is True, \"API response 'success' is not True\"\n    assert \"data\" in json_response, \"'data' key not found in response\"\n\n    data = json_response[\"data\"]\n\n    # Validate that data is a list (product listings)\n    assert isinstance(data, list), f\"Expected data to be a list but got {type(data)}\"\n\n    # For each product, validate expected keys exist (at minimum: id, name, published)\n    for product in data:\n        assert isinstance(product, dict), \"Each product item should be a dict\"\n        assert \"id\" in product, \"Product missing 'id' field\"\n        assert isinstance(product[\"id\"], str), \"'id' should be a string\"\n        assert \"name\" in product, \"Product missing 'name' field\"\n        assert isinstance(product[\"name\"], str), \"'name' should be a string\"\n        assert \"published\" in product, \"Product missing 'published' field\"\n        assert isinstance(product[\"published\"], bool), \"'published' should be a boolean\"\n\n    # Optionally assert at least one product is returned\n    assert len(data) >= 0, \"Product list is unexpected empty (allowed if no products)\"\n\ntest_get_api_products_storefront_product_listing()",
+    "testStatus": "PASSED",
+    "testError": "",
+    "testType": "BACKEND",
+    "createFrom": "mcp",
+    "created": "2026-02-25T13:35:00.674Z",
+    "modified": "2026-02-25T13:35:19.922Z"
+  },
+  {
+    "projectId": "7b4efb2f-4a41-4682-b63b-9dabdfa22d6c",
+    "testId": "eb9b883d-86a2-450e-b826-68c03a239c13",
+    "userId": "64d854d8-70e1-700f-e414-f0cfdfd657a6",
+    "title": "TC005-post api checkout product purchase flow",
+    "description": "Test the POST /api/payments/razorpay/create-order endpoint to validate the digital product purchase flow, including payment initiation and Razorpay order creation.",
+    "code": "import requests\n\nBASE_URL = \"http://localhost:3000\"\nHEADERS = {\n    \"X-Test-Secret\": \"v3ry-s3cr3t-t3st-v4lu3\",\n    \"Content-Type\": \"application/json\"\n}\nTIMEOUT = 30\n\n\ndef test_post_api_checkout_product_purchase_flow():\n    # Step 1: Get the list of products\n    products_url = f\"{BASE_URL}/api/products\"\n    try:\n        products_response = requests.get(products_url, headers=HEADERS, timeout=TIMEOUT)\n        assert products_response.status_code == 200, f\"Expected 200 OK, got {products_response.status_code}\"\n        products = products_response.json()\n        assert isinstance(products, list) and len(products) > 0, \"Product list is empty or not a list\"\n    except Exception as e:\n        raise AssertionError(f\"Failed to get products: {e}\")\n\n    # Use the first product's ID for order creation\n    product = products[0]\n    product_id = product.get(\"id\")\n    assert product_id, \"Product ID not found\"\n\n    # Prepare payload for checkout\n    payload = {\n        \"productId\": product_id,\n        \"buyerEmail\": \"buyer@example.com\",  # simulate buyer input email on checkout\n        \"currency\": \"INR\",\n        \"amount\": 100  # Assuming amount in smallest currency unit (e.g. paise)\n    }\n\n    create_order_url = f\"{BASE_URL}/api/checkout\"\n\n    try:\n        # Step 2: POST to create order/checkout\n        order_response = requests.post(create_order_url, json=payload, headers=HEADERS, timeout=TIMEOUT)\n        assert order_response.status_code == 200, f\"Expected 200 OK, got {order_response.status_code}\"\n        order_json = order_response.json()\n        assert order_json.get(\"success\") is True, \"Order response success flag is not True\"\n        order_data = order_json.get(\"data\")\n        assert order_data, \"Order data missing in response\"\n\n        # Validate important Razorpay order fields presence\n        razorpay_order_id = order_data.get(\"id\")\n        razorpay_amount = order_data.get(\"amount\")\n        razorpay_currency = order_data.get(\"currency\")\n        assert razorpay_order_id and isinstance(razorpay_order_id, str), \"Invalid or missing razorpay order id\"\n        assert razorpay_amount == payload[\"amount\"], \"Razorpay order amount mismatch\"\n        assert razorpay_currency == payload[\"currency\"], \"Razorpay order currency mismatch\"\n\n    except Exception as e:\n        raise AssertionError(f\"Failed to create order via checkout API: {e}\")\n\n\n# Call the test function\ntest_post_api_checkout_product_purchase_flow()\n",
+    "testStatus": "FAILED",
+    "testError": "Traceback (most recent call last):\n  File \"<string>\", line 18, in test_post_api_checkout_product_purchase_flow\nAssertionError: Product list is empty or not a list\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"/var/task/handler.py\", line 258, in run_with_retry\n    exec(code, exec_env)\n  File \"<string>\", line 59, in <module>\n  File \"<string>\", line 20, in test_post_api_checkout_product_purchase_flow\nAssertionError: Failed to get products: Product list is empty or not a list\n",
+    "testType": "BACKEND",
+    "createFrom": "mcp",
+    "created": "2026-02-25T13:35:00.681Z",
+    "modified": "2026-02-25T13:35:56.717Z"
+  }
+]

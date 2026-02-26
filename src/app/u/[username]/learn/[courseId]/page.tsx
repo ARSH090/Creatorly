@@ -329,6 +329,43 @@ export default function CourseLearnPage() {
                                 </div>
                             )}
 
+                            {/* Student Notes Panel */}
+                            <div className="bg-white/[0.03] border border-white/5 rounded-3xl p-6 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="text-sm font-black uppercase tracking-widest text-zinc-400">Student Notes</h3>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                                        <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Autosaving...</span>
+                                    </div>
+                                </div>
+                                <textarea
+                                    className="w-full bg-black/20 border border-white/5 rounded-xl p-4 text-sm text-zinc-300 focus:outline-none focus:border-indigo-500/30 transition-all resize-none min-h-[150px]"
+                                    placeholder="Jot down key takeaways from this lesson..."
+                                    value={course.progress?.notes?.find((n: any) => n.lessonId === activeLesson.id)?.text || ''}
+                                    onChange={(e) => {
+                                        const noteText = e.target.value;
+                                        // Update local state and trigger autosave
+                                        setCourse((prev: any) => ({
+                                            ...prev,
+                                            progress: {
+                                                ...prev.progress,
+                                                notes: [
+                                                    ...(prev.progress?.notes?.filter((n: any) => n.lessonId !== activeLesson.id) || []),
+                                                    { lessonId: activeLesson.id, text: noteText, updatedAt: new Date() }
+                                                ]
+                                            }
+                                        }));
+                                        // Debounced API call would be better, but for now direct for simplicity/speed
+                                        fetch(`/api/courses/${courseId}/progress`, {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ lessonId: activeLesson.id, notes: noteText })
+                                        });
+                                    }}
+                                />
+                            </div>
+
+
                             {/* Quiz content */}
                             {activeLesson.type === 'quiz' && activeLesson.content && (() => {
                                 try {

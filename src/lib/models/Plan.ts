@@ -18,11 +18,20 @@ export interface IPlan extends Document {
     maxApiCalls: number;
     rateLimitPerMin: number;
 
+    // Feature Flags
     hasAnalytics: boolean;
     hasPrioritySupport: boolean;
     hasCustomDomain: boolean;
     hasTeamCollaboration: boolean;
     hasWebhooks: boolean;
+
+    trialLimits?: {
+        maxProducts: number;
+        transactionFeePercent: number;
+        hasAutoDM: boolean;
+    };
+    displayFeatures?: string[];
+
     features: Array<{
         name: string;
         included: boolean;
@@ -33,10 +42,18 @@ export interface IPlan extends Document {
     isActive: boolean;
     isVisible: boolean;
     sortOrder: number;
-    razorpayPlanId?: string; // Legacy/Primary
+    razorpayPlanId?: string; // Current Primary
     razorpayMonthlyPlanId?: string;
     razorpayYearlyPlanId?: string;
+    razorpayPlanHistory: Array<{
+        razorpayPlanId: string;
+        cycle: 'monthly' | 'yearly';
+        price: number; // in paise
+        createdAt: Date;
+        changedBy?: string; // admin email
+    }>;
     createdAt: Date;
+
     updatedAt: Date;
 }
 
@@ -59,25 +76,12 @@ const PlanSchema: Schema = new Schema({
     monthlyPrice: {
         type: Number,
         required: true,
-        min: 0,
-        validate: {
-            validator: function (this: any, val: number): boolean {
-                return this.tier === PlanTier.FREE ? val === 0 : val > 0;
-            },
-            message: 'Monthly price must be 0 for Free tier and > 0 for paid tiers.'
-        }
+        min: 0
     },
     yearlyPrice: {
         type: Number,
         required: true,
-        min: 0,
-        validate: {
-            validator: function (this: any, val: number): boolean {
-                if (this.tier === PlanTier.FREE) return val === 0;
-                return val > 0 && val < this.monthlyPrice * 12;
-            },
-            message: 'Yearly price must be 0 for Free tier and less than monthly * 12 for paid tiers.'
-        }
+        min: 0
     },
 
     // Strict Limits (Free tier cannot be modified to prevent abuse)
@@ -174,6 +178,14 @@ const PlanSchema: Schema = new Schema({
             message: 'Free tier cannot have webhooks.'
         }
     },
+
+    trialLimits: {
+        maxProducts: { type: Number, default: 5 },
+        transactionFeePercent: { type: Number, default: 3 },
+        hasAutoDM: { type: Boolean, default: false }
+    },
+    displayFeatures: [{ type: String }],
+
     features: [{
         name: { type: String, required: true },
         included: { type: Boolean, default: true },
@@ -185,8 +197,16 @@ const PlanSchema: Schema = new Schema({
     sortOrder: { type: Number, default: 0 },
     razorpayPlanId: { type: String, sparse: true },
     razorpayMonthlyPlanId: { type: String, sparse: true },
-    razorpayYearlyPlanId: { type: String, sparse: true }
+    razorpayYearlyPlanId: { type: String, sparse: true },
+    razorpayPlanHistory: [{
+        razorpayPlanId: { type: String, required: true },
+        cycle: { type: String, enum: ['monthly', 'yearly'], required: true },
+        price: { type: Number, required: true },
+        createdAt: { type: Date, default: Date.now },
+        changedBy: { type: String }
+    }]
 }, { timestamps: true });
+
 
 
 // Prevent logical errors with manual pre-save hook for complex constraints

@@ -56,45 +56,57 @@ export default function AntiGravityUpload({
                 })
             });
 
-            if (!res.ok) throw new Error('Failed to get upload URL');
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || 'Failed to get upload URL');
+            }
+
             const { uploadUrl, key, publicUrl } = await res.json();
 
-            // 2. Perform Upload to S3
-            const xhr = new XMLHttpRequest();
-            xhr.open('PUT', uploadUrl, true);
-            xhr.setRequestHeader('Content-Type', file.type);
+            // 2. Perform Upload to S3 using a Promise wrapper for XHR
+            await new Promise<void>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', uploadUrl, true);
+                xhr.setRequestHeader('Content-Type', file.type);
 
-            xhr.upload.onprogress = (e) => {
-                if (e.lengthComputable) {
-                    const pct = Math.round((e.loaded / e.total) * 100);
-                    setProgress(pct);
-                }
-            };
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const pct = Math.round((e.loaded / e.total) * 100);
+                        setProgress(pct);
+                    }
+                };
 
-            xhr.onload = () => {
-                if (xhr.status === 200) {
-                    setUploading(false);
-                    onUploadComplete(publicUrl, key, {
-                        name: file.name,
-                        size: file.size,
-                        mimeType: file.type
-                    });
-                } else {
-                    throw new Error('Upload failed');
-                }
-            };
+                xhr.onload = () => {
+                    if (xhr.status === 200 || xhr.status === 204) {
+                        onUploadComplete(publicUrl, key, {
+                            name: file.name,
+                            size: file.size,
+                            mimeType: file.type
+                        });
+                        resolve();
+                    } else {
+                        reject(new Error(`Upload failed with status ${xhr.status}. Check S3 permissions.`));
+                    }
+                };
 
-            xhr.onerror = () => {
-                throw new Error('Network error during upload');
-            };
+                xhr.onerror = () => {
+                    reject(new Error('Network error. This is likely a CORS issue. Please ensure your S3 bucket allows PUT requests from this origin.'));
+                };
 
-            xhr.send(file);
+                xhr.onabort = () => {
+                    reject(new Error('Upload aborted'));
+                };
 
+                xhr.send(file);
+            });
+
+            setUploading(false);
         } catch (err: any) {
             console.error('Upload Error:', err);
-            setError(err.message || 'Upload failed');
+            const errorMessage = err.message || 'Upload failed';
+            setError(errorMessage);
             setUploading(false);
-            onUploadError(err.message);
+            onUploadError(errorMessage);
         }
     };
 

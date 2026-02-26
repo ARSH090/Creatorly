@@ -5,16 +5,19 @@ import {
     CreditCard, Check, Sparkles, AlertCircle,
     ArrowRight, Download, Calendar, Zap, Shield,
     TrendingUp, Wallet, ArrowUpRight, DollarSign,
-    RefreshCcw, FileText, CheckCircle2, Clock
+    RefreshCcw, FileText, CheckCircle2, Clock, X, RotateCcw
 } from 'lucide-react';
 import { useAuth as useClerkAuth } from '@clerk/nextjs';
 import { useAuth } from '@/hooks/useAuth';
+import toast from 'react-hot-toast';
 
 export default function BillingPage() {
     const { user } = useAuth();
     const { getToken } = useClerkAuth();
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<'subscription' | 'earnings'>('subscription');
+    const [cancelling, setCancelling] = useState(false);
+    const [cancelledUntil, setCancelledUntil] = useState<string | null>(null);
 
     // Subscription Data
     const [subscription, setSubscription] = useState<any>(null);
@@ -81,6 +84,26 @@ export default function BillingPage() {
             loadBilling();
         }
     }, [user]);
+
+    async function handleCancelSubscription() {
+        if (!confirm('Are you sure you want to cancel your subscription? You will retain access until the end of your billing period.')) return;
+        setCancelling(true);
+        try {
+            const res = await fetch('/api/subscription/cancel', { method: 'POST' });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Cancellation failed');
+            const endDate = data.subscription?.endDate
+                ? new Date(data.subscription.endDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })
+                : subscription?.nextBillingDate || 'end of billing period';
+            setCancelledUntil(endDate);
+            setSubscription((prev: any) => prev ? { ...prev, status: 'cancelled' } : prev);
+            toast.success('Subscription cancelled. Access continues until ' + endDate);
+        } catch (err: any) {
+            toast.error(err.message || 'Failed to cancel subscription');
+        } finally {
+            setCancelling(false);
+        }
+    }
 
     async function handleRequestPayout() {
         if (overview.currentBalance <= 0) return;
@@ -161,13 +184,35 @@ export default function BillingPage() {
                                         <p className="text-zinc-400 max-w-sm leading-relaxed">
                                             Your next billing date is <span className="text-white font-bold">{subscription?.nextBillingDate}</span>. We'll automatically charge your default card.
                                         </p>
+                                        {cancelledUntil && (
+                                            <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                                                <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                                                <p className="text-xs font-bold text-amber-300 flex-1">
+                                                    Cancelled — you keep full access until <span className="text-white">{cancelledUntil}</span>
+                                                </p>
+                                                <button onClick={() => setCancelledUntil(null)} className="text-amber-600 hover:text-amber-400"><X className="w-4 h-4" /></button>
+                                            </div>
+                                        )}
                                         <div className="flex flex-wrap gap-4 pt-4">
-                                            <button className="px-8 py-4 bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-zinc-200 transition-all shadow-xl shadow-white/10">
-                                                Manage Subscription
-                                            </button>
-                                            <button className="px-8 py-4 bg-transparent border border-white/10 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-white/5 transition-all">
-                                                View Documentation
-                                            </button>
+                                            {subscription?.status === 'cancelled' || cancelledUntil ? (
+                                                <button className="px-8 py-4 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-500/20 flex items-center gap-2">
+                                                    <RotateCcw className="w-4 h-4" /> Reactivate Plan
+                                                </button>
+                                            ) : (
+                                                <>
+                                                    <button className="px-8 py-4 bg-white text-black text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-zinc-200 transition-all shadow-xl shadow-white/10">
+                                                        Manage Subscription
+                                                    </button>
+                                                    <button
+                                                        onClick={handleCancelSubscription}
+                                                        disabled={cancelling}
+                                                        className="px-8 py-4 bg-transparent border border-rose-500/30 text-rose-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-2xl hover:bg-rose-500/10 transition-all flex items-center gap-2 disabled:opacity-50"
+                                                    >
+                                                        {cancelling ? <RefreshCcw className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                                                        {cancelling ? 'Cancelling...' : 'Cancel Plan'}
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="bg-black/40 backdrop-blur-3xl rounded-3xl p-8 border border-white/10 flex-1 max-w-sm">

@@ -17,8 +17,8 @@ const Footer: React.FC = () => {
         <div>
           <p className="text-white font-bold mb-6 tracking-tighter uppercase text-xs">Legal</p>
           <ul className="space-y-4 text-[10px] font-bold text-zinc-500">
-            <li><Link href="/privacy-policy" className="hover:text-white transition-colors uppercase tracking-widest">Privacy</Link></li>
-            <li><Link href="/terms-of-service" className="hover:text-white transition-colors uppercase tracking-widest">Terms</Link></li>
+            <li><Link href="/privacy" className="hover:text-white transition-colors uppercase tracking-widest">Privacy</Link></li>
+            <li><Link href="/terms" className="hover:text-white transition-colors uppercase tracking-widest">Terms</Link></li>
             <li><Link href="/refund-policy" className="hover:text-white transition-colors uppercase tracking-widest">Refunds</Link></li>
           </ul>
         </div>

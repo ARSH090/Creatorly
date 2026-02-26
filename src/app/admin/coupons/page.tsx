@@ -250,11 +250,11 @@ export default function CouponsPage() {
                       <div className="w-full h-2 bg-black/40 rounded-full overflow-hidden border border-white/5 flex-1 max-w-[100px]">
                         <div
                           className="h-full bg-indigo-500"
-                          style={{ width: `${Math.min(100, (coupon.usedCount / (coupon.usageLimit || 1)) * 100)}%` }}
+                          style={{ width: `${Math.min(100, (coupon.usedCount / (coupon.maxUses || 1)) * 100)}%` }}
                         />
                       </div>
                       <span className="text-[10px] font-black text-zinc-500 uppercase tracking-widest">
-                        {coupon.usedCount} / {coupon.usageLimit || '∞'}
+                        {coupon.usedCount} / {coupon.maxUses || '∞'}
                       </span>
                     </div>
                   </TableCell>

@@ -3,9 +3,31 @@
 import React, { useEffect } from 'react';
 import { useCheckoutStore } from '@/lib/store/useCheckoutStore';
 import { Mail, User, Phone, ArrowRight, ChevronLeft } from 'lucide-react';
+import OrderBumpCard from './OrderBumpCard';
 
 export default function CustomerInfoForm() {
-    const { customer, setCustomer, setStep } = useCheckoutStore();
+    const { customer, setCustomer, setStep, cart, activeBumps, setActiveBumps } = useCheckoutStore();
+
+    useEffect(() => {
+        const fetchBumps = async () => {
+            if (cart.length === 0) return;
+            // Assuming the first item in cart is the trigger for now (Creatorly logic usually involves one main product)
+            const mainProduct = cart[0];
+            try {
+                const res = await fetch(`/api/checkout/bumps/${mainProduct.id}`);
+                const data = await res.json();
+                if (data.bumps) {
+                    setActiveBumps(data.bumps);
+                }
+            } catch (err) {
+                console.error('Failed to fetch order bumps:', err);
+            }
+        };
+
+        if (activeBumps.length === 0) {
+            fetchBumps();
+        }
+    }, [cart, activeBumps.length, setActiveBumps]);
 
     // Auto-save logic is handled by Zustand middleware, but we can add secondary persistence here if needed.
 
@@ -59,6 +81,16 @@ export default function CustomerInfoForm() {
                             />
                         </div>
                     </div>
+
+                    {/* Order Bumps Section */}
+                    {activeBumps.length > 0 && (
+                        <div className="pt-4 space-y-4">
+                            <label className="text-[10px] uppercase font-black tracking-widest text-amber-400/80 ml-4 mb-1 block">Special Add-on Offers</label>
+                            {activeBumps.map((bump) => (
+                                <OrderBumpCard key={bump.id} bump={bump} />
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 pt-4">

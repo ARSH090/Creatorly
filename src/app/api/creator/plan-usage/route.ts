@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
 import Product from '@/lib/models/Product';
 import { Order } from '@/lib/models/Order';
+import { DMLog } from '@/lib/models/DMLog';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 
@@ -22,11 +23,11 @@ async function handler(req: NextRequest, user: any) {
         );
     }
 
-    const plan = creator.plan || 'free';
+    const plan = creator.subscriptionTier || creator.plan || 'free';
 
     // Get plan limits
     const { getPlanLimits } = await import('@/lib/utils/planLimits');
-    const limits = getPlanLimits(plan);
+    const limits = getPlanLimits(plan as any);
 
     // Calculate current usage
     const productCount = await Product.countDocuments({
@@ -56,6 +57,17 @@ async function handler(req: NextRequest, user: any) {
 
     const revenue = monthlyRevenue[0]?.total || 0;
 
+    // Calculate DM usage for current month
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const dmCount = await DMLog.countDocuments({
+        creatorId: user._id,
+        createdAt: { $gte: startOfMonth },
+        status: 'success'
+    });
+
     return {
         plan,
         limits: {
@@ -70,7 +82,7 @@ async function handler(req: NextRequest, user: any) {
         },
         usage: {
             products: productCount,
-            dmsThisMonth: 0, // TODO: Implement DM counting
+            dmsThisMonth: dmCount,
             storageMb: creator.storageUsageMb || 0,
             monthlyRevenue: Math.round(revenue * 100) / 100
         },

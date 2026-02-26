@@ -92,6 +92,11 @@ export async function GET(req: NextRequest) {
                         isActive: true,
                         isBusiness: true,
                         connectedAt: new Date(),
+                        metadata: {
+                            username: igAccount.username,
+                            accountType: igAccount.account_type,
+                            pageName: page.name
+                        }
                     },
                     { upsert: true, new: true }
                 );

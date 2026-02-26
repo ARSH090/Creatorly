@@ -42,7 +42,7 @@ export async function getPresignedUploadUrl(
 
 export async function getPresignedDownloadUrl(
     key: string,
-    expiresIn = 3600
+    expiresIn = 3 * 24 * 3600 // 72 hours per user requirement
 ) {
     const command = new GetObjectCommand({
         Bucket: process.env.AWS_S3_BUCKET,
@@ -59,11 +59,16 @@ export async function getPresignedDownloadUrl(
 }
 
 
+
 export function getPublicUrl(key: string) {
     if (process.env.NEXT_PUBLIC_S3_DOMAIN) {
         return `${process.env.NEXT_PUBLIC_S3_DOMAIN}/${key}`;
     }
-    // Fallback to standard S3 domain if environment variable is missing (but this might fail if bucket is private)
-    return `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    // Fallback to standard AWS S3 URL if domain is not set
+    if (process.env.AWS_S3_BUCKET) {
+        const region = process.env.AWS_REGION || 'ap-south-1';
+        return `https://${process.env.AWS_S3_BUCKET}.s3.${region}.amazonaws.com/${key}`;
+    }
+    return '';
 }
 

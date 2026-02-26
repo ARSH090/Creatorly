@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import SequenceEnrollment from '@/lib/models/SequenceEnrollment';
 import EmailSequence from '@/lib/models/EmailSequence';
-import User from '@/lib/models/User';
-import { sendMarketingEmail } from '@/lib/services/email';
+import { QueueJob } from '@/lib/models/QueueJob';
 
-export async function GET(req: NextRequest) {
-    // Basic security check for Vercel Cron
+export async function POST(req: NextRequest) {
+    // Upstash QStash logic or simply CRON_SECRET for now as per project convention
     const authHeader = req.headers.get('authorization');
     if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -20,15 +19,13 @@ export async function GET(req: NextRequest) {
         const dueEnrollments = await SequenceEnrollment.find({
             status: 'active',
             nextStepDueAt: { $lte: now }
-        }).limit(50); // Process in batches to avoid timeouts
+        }).limit(100);
 
-        console.log(`[Cron] Processing ${dueEnrollments.length} due sequence steps`);
+        console.log(`[Sequence Cron] Found ${dueEnrollments.length} due enrollments. Enqueuing jobs...`);
 
-        let processedCount = 0;
-
+        let jobCount = 0;
         for (const enrollment of dueEnrollments) {
             try {
-                // Fetch sequence definition
                 const sequence = await EmailSequence.findById(enrollment.sequenceId);
                 if (!sequence || !sequence.isActive) {
                     enrollment.status = 'cancelled';
@@ -36,57 +33,52 @@ export async function GET(req: NextRequest) {
                     continue;
                 }
 
-                const steps = [...sequence.steps].sort((a, b) => a.sequenceOrder - b.sequenceOrder);
-                const currentStepIndex = enrollment.currentStep;
-                const currentStep = steps[currentStepIndex];
-
+                const currentStep = sequence.steps.find(s => s.sequenceOrder === enrollment.currentStep);
                 if (!currentStep) {
                     enrollment.status = 'completed';
                     await enrollment.save();
                     continue;
                 }
 
-                // Fetch Creator Info
-                const creator = await User.findById(enrollment.creatorId).select('displayName').lean();
-                const creatorName = creator?.displayName || 'a Creator';
+                // Create a QueueJob for this specific email step
+                await QueueJob.create({
+                    type: 'email_sequence_step',
+                    payload: {
+                        sequenceId: sequence._id,
+                        enrollmentId: enrollment._id,
+                        email: enrollment.email,
+                        subject: currentStep.subject,
+                        content: currentStep.content,
+                        stepIndex: enrollment.currentStep
+                    },
+                    status: 'pending',
+                    nextRunAt: now
+                });
 
-                // Send Email
-                await sendMarketingEmail(
-                    enrollment.email,
-                    currentStep.subject,
-                    currentStep.content,
-                    creatorName
-                );
-
-                // Determine next step
-                const nextStepIndex = currentStepIndex + 1;
-                const nextStep = steps[nextStepIndex];
-
-                if (nextStep) {
-                    // Schedule next step
-                    enrollment.currentStep = nextStepIndex;
-                    enrollment.nextStepDueAt = new Date(Date.now() + (nextStep.delayHours || 0) * 60 * 60 * 1000);
-                } else {
-                    // No more steps
-                    enrollment.status = 'completed';
-                    await EmailSequence.findByIdAndUpdate(sequence._id, { $inc: { 'stats.completed': 1 } });
-                }
-
+                // Mark enrollment as processing/locked so it doesn't get picked up again next minute
+                // until the QueueJob finishes and updates it to the next step
+                enrollment.nextStepDueAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24h safety lock
                 await enrollment.save();
-                processedCount++;
+
+                jobCount++;
             } catch (err) {
-                console.error(`[Cron] Failed to process enrollment ${enrollment._id}:`, err);
+                console.error(`[Sequence Cron] Failed to enqueue job for ${enrollment._id}:`, err);
             }
         }
 
         return NextResponse.json({
             success: true,
-            processed: processedCount,
-            message: `Processed ${processedCount} sequence steps`
+            jobsCreated: jobCount,
+            message: `Enqueued ${jobCount} work items.`
         });
 
     } catch (error: any) {
-        console.error('[Cron] Sequence processing error:', error);
+        console.error('[Sequence Cron] Fatal error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
+}
+
+// Keep GET for manual triggering/ease of testing during dev
+export async function GET(req: NextRequest) {
+    return POST(req);
 }

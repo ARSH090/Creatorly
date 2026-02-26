@@ -30,6 +30,10 @@ export interface ISubscription extends Document {
     deletedAt?: Date;
     lastPaymentId?: string;
     renewalCount: number;
+    failureCount: number;
+    lastFailureReason?: string;
+    trialReminder3Sent?: boolean;
+    trialReminder1Sent?: boolean;
 }
 
 
@@ -97,6 +101,10 @@ const SubscriptionSchema: Schema = new Schema({
     razorpayCustomerId: { type: String },
     lastPaymentId: { type: String },
     renewalCount: { type: Number, default: 0 },
+    failureCount: { type: Number, default: 0 },
+    lastFailureReason: { type: String },
+    trialReminder3Sent: { type: Boolean, default: false },
+    trialReminder1Sent: { type: Boolean, default: false },
     deletedAt: { type: Date, index: true }
 }, { timestamps: true });
 
@@ -110,6 +118,14 @@ SubscriptionSchema.pre('validate', function (this: any, next: any) {
     if (this.finalPrice < 0) this.finalPrice = 0;
     next();
 });
+
+// ─── Performance indexes ──────────────────────────────────────────────────────
+// Fast lookup by userId+status for billing dashboard
+SubscriptionSchema.index({ userId: 1, status: 1 });
+// Cron: find trialing subs that expire soon (trialEndsAt + status)
+SubscriptionSchema.index({ trialEndsAt: 1, status: 1 });
+// Active Razorpay subscription lookup
+SubscriptionSchema.index({ razorpaySubscriptionId: 1 }, { sparse: true });
 
 export const Subscription = mongoose.models.Subscription || mongoose.model<ISubscription>('Subscription', SubscriptionSchema);
 export default Subscription;

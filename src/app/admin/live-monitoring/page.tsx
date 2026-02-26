@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Activity, AlertTriangle } from 'lucide-react';
 
 export default function LiveMonitoringPage() {
     const [metrics, setMetrics] = useState({
@@ -190,4 +191,3 @@ function MonitorCard({ label, value, target, status }: { label: string, value: s
     );
 }
 
-import { Activity, AlertTriangle } from 'lucide-react';

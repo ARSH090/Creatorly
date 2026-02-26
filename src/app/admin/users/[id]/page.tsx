@@ -10,9 +10,11 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, AlertTriangle, Save, Ban, CheckCircle, DollarSign } from 'lucide-react';
+import { Loader2, AlertTriangle, Save, Ban, CheckCircle, DollarSign, ArrowLeft } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 export default function UserDetailPage() {
     const params = useParams();

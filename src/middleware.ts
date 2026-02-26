@@ -1,6 +1,8 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { authRateLimit, usernameCheckRateLimit, paymentRateLimit, publicApiRateLimit, webhookRateLimit } from "@/lib/security/global-ratelimit";
 
+// Protected routes - require authentication
 const isProtectedRoute = createRouteMatcher([
     '/dashboard(.*)',
     '/admin(.*)',
@@ -8,60 +10,124 @@ const isProtectedRoute = createRouteMatcher([
     '/api/user(.*)',
     '/api/creator(.*)',
     '/api/payments(.*)',
-    '/api/admin(.*)'
+    '/api/admin(.*)',
+    '/api/portal/(.*)',
 ]);
 
-// Define auth routes (to redirect if logged in)
-const isAuthRoute = createRouteMatcher(['/auth(.*)']);
+// Auth routes - redirect to dashboard if already logged in
+const isAuthRoute = createRouteMatcher([
+    '/auth/login(.*)',
+    '/auth/register(.*)',
+    '/auth/forgot-password(.*)',
+    '/sign-in(.*)',
+    '/sign-up(.*)',
+    '/login(.*)',
+    '/signup(.*)'
+]);
 
-// Define public routes (explicitly)
+// Public routes - accessible without authentication
 const isPublicRoute = createRouteMatcher([
     '/',
+    '/sign-in(.*)',
+    '/sign-up(.*)',
     '/sso-callback',
     '/api/webhooks(.*)',
-    '/u/(.*)' // Public storefronts
+    '/u/(.*)',
+    '/pricing',
+    '/features',
+    '/blog(.*)',
+    '/terms',
+    '/privacy',
+    '/refund-policy',
+    '/thank-you',
+    '/learn(.*)',
+    '/book(.*)',
+    '/[username](.*)',
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
-    const { userId } = await auth();
     const { pathname } = req.nextUrl;
+
+    // ── Bypass for Testing ──
+    const testSecret = process.env.TEST_SECRET;
+    const incomingSecret = req.headers.get('x-test-secret');
+    if (testSecret && incomingSecret === testSecret) {
+        return NextResponse.next();
+    }
+
+    const { userId } = await auth();
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0] || (req as any).ip || '127.0.0.1';
+
+    // ── Rate Limiting ──
+    const hasRedis = !!process.env.UPSTASH_REDIS_REST_URL;
+    if (hasRedis) {
+        try {
+            let limit;
+            if (pathname === '/api/auth/check-username') {
+                limit = await usernameCheckRateLimit.limit(ip);
+            } else if (pathname.startsWith('/api/auth')) {
+                limit = await authRateLimit.limit(ip);
+            } else if (pathname.startsWith('/api/payments')) {
+                limit = await paymentRateLimit.limit(ip);
+            } else if (pathname.startsWith('/api/webhooks')) {
+                limit = await webhookRateLimit.limit(ip);
+            } else if (!pathname.startsWith('/_next') && isPublicRoute(req)) {
+                limit = await publicApiRateLimit.limit(ip);
+            }
+
+            if (limit && !limit.success) {
+                return new NextResponse(JSON.stringify({ error: 'Too many requests' }), {
+                    status: 429,
+                    headers: { 'Content-Type': 'application/json' }
+                });
+            }
+        } catch (err) {
+            console.error('Rate limit error:', err);
+        }
+    }
 
     // 1. Protect Routes
     if (isProtectedRoute(req)) {
-        await auth.protect();
+        const authObj = await auth();
+        await authObj.protect();
     }
-    // Note: Public routes are implicitly allowed by not calling auth.protect()
-    // but we define them for clarity and potential future logic.
 
-    // 2. Redirect to dashboard if accessing auth pages while logged in
+    // 2. Handle Auth Routes
     if (isAuthRoute(req) && userId) {
         return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 
-    // 3. Admin & Subscription Protection
+    // 3. Admin & Role Protection
+    const authObj = await auth();
+    const { sessionClaims } = authObj;
     if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
-        const { sessionClaims } = await auth();
         const role = (sessionClaims?.metadata as any)?.role;
-        if (role !== 'admin' && role !== 'super-admin') {
+        if (role && role !== 'admin' && role !== 'super-admin') {
             return NextResponse.redirect(new URL('/dashboard', req.url));
         }
     }
 
-    // Initialize response
     const response = NextResponse.next();
 
-    // 3. Affiliate & Referral Tracking
-    const refCode = req.nextUrl.searchParams.get('ref');
-    if (refCode) {
-        response.cookies.set('affiliate_ref', refCode, {
-            maxAge: 60 * 60 * 24 * 30, // 30 days
-            path: '/',
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax'
+    // ── UTM & Traffic Tracking ──
+    const utmParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'ref'];
+    const hasUtm = utmParams.some(p => req.nextUrl.searchParams.has(p));
+
+    if (hasUtm) {
+        // We set a ephemeral header that the page component can use to trigger the recordTrafficHit
+        utmParams.forEach(p => {
+            const val = req.nextUrl.searchParams.get(p);
+            if (val) response.headers.set(`X-Track-${p}`, val);
         });
-        response.cookies.set('referral_code', refCode, {
-            maxAge: 60 * 60 * 24 * 30, // 30 days
+    }
+
+    // ── Affiliate Tracking ──
+    const ref = req.nextUrl.searchParams.get('ref');
+    if (ref) {
+        response.cookies.set('affiliate_code', ref, {
+            maxAge: 30 * 24 * 60 * 60, // 30 days
             path: '/',
+            httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'lax'
         });
@@ -71,104 +137,26 @@ export default clerkMiddleware(async (auth, req) => {
     response.headers.set('X-Frame-Options', 'DENY');
     response.headers.set('X-Content-Type-Options', 'nosniff');
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-    response.headers.set(
-        'Permissions-Policy',
-        'camera=(), microphone=(), geolocation=(), interest-cohort=()'
-    );
 
-    // CSP (Content Security Policy)
-    const csp = `
-    default-src 'self';
-    script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.com https://*.clerk.accounts.dev https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.googletagmanager.com https://*.vercel-analytics.com https://va.vercel-scripts.com https://*.razorpay.com https://checkout.razorpay.com https://challenges.cloudflare.com https://*.hcaptcha.com;
-    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-    img-src 'self' blob: data: https://*.clerk.com https://*.clerk.accounts.dev https://*.googleusercontent.com https://*.cloudinary.com https://*.gravatar.com https://*.razorpay.com https://*.s3.amazonaws.com https://*.s3-ap-south-1.amazonaws.com;
-    font-src 'self' https://fonts.gstatic.com;
-    connect-src 'self' https://*.clerk.com https://*.clerk.accounts.dev https://*.google.com https://*.googleapis.com https://*.gstatic.com https://*.vercel-analytics.com https://va.vercel-scripts.com https://*.firebaseio.com https://*.razorpay.com https://lumberjack.razorpay.com https://*.sentry.io;
-    frame-src 'self' https://*.clerk.com https://*.clerk.accounts.dev https://*.google.com https://*.razorpay.com https://api.razorpay.com https://*.firebaseapp.com https://challenges.cloudflare.com https://*.hcaptcha.com;
-    worker-src 'self' blob:;
-    object-src 'none';
-    base-uri 'self';
-  `.replace(/\s{2,}/g, ' ').trim();
-
-    response.headers.set('Content-Security-Policy', csp);
-    // Keep the fix: unsafe-none for COOP
-    response.headers.set('Cross-Origin-Opener-Policy', 'unsafe-none');
-    response.headers.set('Cross-Origin-Embedder-Policy', 'credentialless');
-
-    // 5. Root-level Storefront Routing (/[username] → /u/[username])
+    // 5. Custom Domain & Path Routing
+    const firstSegment = pathname.split('/')[1];
     const reservedPaths = [
-        'admin', 'dashboard', 'api', 'auth', 'onboarding', 'u', 'cart',
-        'checkout', 'pricing', 'setup', 'explore', 'login', 'account',
-        'subscribe', 'pricing', 'sso-callback', 'robots.txt', 'sitemap.xml',
-        'favicon.ico', 'icon.png', 'apple-icon.png', 'privacy', 'terms', 'onboarding'
+        'admin', 'dashboard', 'superadmin', 'auth', 'login', 'signup', 'register', 'sign-in', 'sign-up',
+        'api', 'trpc', 'u', 'pricing', 'features', 'blog', 'terms', 'privacy', 'refund-policy', '_next',
+        'subscribe', 'onboarding', 'checkout', 'cart', 'learn', 'book', 'explore', 'p', 'portal',
+        'thank-you', 'order-success', 'sso-callback', 'account', 'autodm', 'user-profile', 'ref', 'setup',
+        'subscription'
     ];
 
-    const firstSegment = pathname.split('/')[1];
-
-    if (
-        firstSegment &&
-        !reservedPaths.includes(firstSegment) &&
-        !pathname.startsWith('/_next') &&
-        !pathname.includes('.') // Skip static files
-    ) {
+    if (firstSegment && !reservedPaths.includes(firstSegment) && !pathname.includes('.')) {
         const url = req.nextUrl.clone();
         url.pathname = `/u/${pathname.substring(1)}`;
         return NextResponse.rewrite(url);
-    }
-
-    // 6. Custom Domain Routing (Existing)
-    const host = req.headers.get('host') || '';
-    const platformDomains = ['creatorly.in', 'www.creatorly.in', 'localhost:3000', 'creatorly-12319.vercel.app'];
-    const isCustomDomain = !platformDomains.some(d => host === d || host.endsWith('.' + d)) && !host.endsWith('.vercel.app');
-
-    if (isCustomDomain && !pathname.startsWith('/api') && !pathname.startsWith('/_next')) {
-        try {
-            const { Redis } = await import('@upstash/redis');
-            const redis = Redis.fromEnv();
-            const username = await redis.get(`domain:${host}`);
-
-            if (username) {
-                // Rewrite to /u/[username]/[path]
-                const url = req.nextUrl.clone();
-                url.pathname = `/u/${username}${pathname === '/' ? '' : pathname}`;
-                return NextResponse.rewrite(url);
-            }
-        } catch (error) {
-            console.error('Custom domain resolution error:', error);
-        }
-    }
-
-    // 6. Rate Limiting (Standardized)
-    if (pathname.startsWith('/api/auth') || pathname.startsWith('/api/user') || pathname.startsWith('/api/ai')) {
-        // ... existing rate limit code ...
-        try {
-            const { checkRateLimit } = await import('@/middleware/rateLimit');
-            const ip = req.headers.get('x-forwarded-for') ?? '127.0.0.1';
-
-            const rateLimitResult = await checkRateLimit(req, ip, {
-                limit: 20,
-                window: 60
-            });
-
-            if (!rateLimitResult.success) {
-                return new NextResponse(
-                    JSON.stringify({ error: 'Too many requests, please try again later.' }),
-                    { status: 429, headers: { 'Content-Type': 'application/json' } }
-                );
-            }
-        } catch (e) {
-            console.error("Rate limit check failed", e);
-        }
     }
 
     return response;
 });
 
 export const config = {
-    matcher: [
-        // Skip Next.js internals and all static files, unless found in search params
-        '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-        // Always run for API routes
-        '/(api|trpc)(.*)',
-    ],
+    matcher: ['/((?!.*\\..*|_next).*)', '/', '/(api|trpc)(.*)'],
 };

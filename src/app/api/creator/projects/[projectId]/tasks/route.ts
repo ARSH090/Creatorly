@@ -21,7 +21,7 @@ async function getHandler(req: NextRequest, user: any, { params }: any) {
         }
 
         const tasks = await Task.find({ projectId })
-            .sort({ order: 1, createdAt: 1 });
+            .sort({ columnId: 1, position: 1, createdAt: 1 });
 
         return NextResponse.json(tasks);
     } catch (error: any) {
@@ -31,7 +31,7 @@ async function getHandler(req: NextRequest, user: any, { params }: any) {
 }
 
 /**
- * POST - Add a task to project
+ * POST - Add a task with CRM metadata
  */
 async function postHandler(req: NextRequest, user: any, { params }: any) {
     try {
@@ -45,11 +45,34 @@ async function postHandler(req: NextRequest, user: any, { params }: any) {
             return NextResponse.json(errorResponse('Project not found or unauthorized'), { status: 404 });
         }
 
-        const task = await ProjectService.addTask(projectId, {
+        // Get highest position in the column
+        const lastTask = await Task.findOne({ projectId, columnId: body.columnId || 'todo' })
+            .sort({ position: -1 });
+        const position = (lastTask?.position || 0) + 1;
+
+        const task = await Task.create({
+            projectId,
             title: body.title,
             description: body.description,
-            priority: body.priority,
-            dueDate: body.dueDate
+            priority: body.priority || 'Medium',
+            dueDate: body.dueDate,
+            columnId: body.columnId || 'todo',
+            status: 'To Do',
+            position,
+            subtasks: body.subtasks || [],
+            attachments: []
+        });
+
+        // Log activity
+        await Project.findByIdAndUpdate(projectId, {
+            $push: {
+                activityLog: {
+                    action: 'task_created',
+                    performedBy: 'Creator',
+                    timestamp: new Date(),
+                    meta: { title: body.title }
+                }
+            }
         });
 
         return NextResponse.json(task);
@@ -58,6 +81,7 @@ async function postHandler(req: NextRequest, user: any, { params }: any) {
         return NextResponse.json(errorResponse('Failed to create task', error.message), { status: 500 });
     }
 }
+
 
 export const GET = withCreatorAuth(getHandler);
 export const POST = withCreatorAuth(postHandler);

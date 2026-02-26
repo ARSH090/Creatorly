@@ -5,6 +5,7 @@ import { CreatorProfile } from '@/lib/models/CreatorProfile';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 import { revalidatePath } from 'next/cache';
+import { invalidateCache } from '@/lib/cache';
 
 /**
  * GET /api/creator/profile
@@ -30,7 +31,9 @@ async function getHandler(req: NextRequest, user: any, context: any) {
     return {
         profile: userData,
         theme: creatorProfile.theme,
+        themeV2: creatorProfile.themeV2,
         layout: creatorProfile.layout,
+        blocksLayout: creatorProfile.blocksLayout,
         links: creatorProfile.links,
         socialLinks: creatorProfile.socialLinks,
         customDomain: creatorProfile.customDomain,
@@ -55,6 +58,10 @@ const profileUpdateSchema = z.object({
         fontFamily: z.string().optional(),
         borderRadius: z.string().optional(),
         buttonStyle: z.enum(['pill', 'square', 'rounded']).optional(),
+        backgroundImage: z.string().optional().or(z.literal('')),
+        productLayout: z.enum(['grid', 'list']).optional(),
+        buttonColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).optional(),
+        buttonTextColor: z.string().regex(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/).optional(),
     }).optional(),
     layout: z.array(z.object({
         id: z.string(),
@@ -80,7 +87,10 @@ const profileUpdateSchema = z.object({
     }).optional(),
     customDomain: z.string().regex(/^[a-z0-9.-]+\.[a-z]{2,}$/).optional().or(z.literal('')),
     testimonials: z.array(z.any()).optional(),
-    faqs: z.array(z.any()).optional()
+    faqs: z.array(z.any()).optional(),
+    blocksLayout: z.array(z.any()).optional(),
+    themeV2: z.record(z.any()).optional(),
+    showProfilePhoto: z.boolean().optional(),
 });
 
 /**
@@ -101,7 +111,8 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
     const {
         displayName, bio, avatar, storeSlug,
         theme, layout, links, socialLinks, customDomain,
-        testimonials, faqs
+        testimonials, faqs, blocksLayout, themeV2,
+        showProfilePhoto
     } = validation.data;
 
     const userUpdates: any = {};
@@ -128,6 +139,10 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
     if (socialLinks) profileUpdates.socialLinks = socialLinks;
     if (testimonials) profileUpdates.testimonials = testimonials;
     if (faqs) profileUpdates.faqs = faqs;
+    if (showProfilePhoto !== undefined) profileUpdates.showProfilePhoto = showProfilePhoto;
+    if (blocksLayout) profileUpdates.blocksLayout = blocksLayout;
+    if (themeV2) profileUpdates.themeV2 = themeV2;
+    if (showProfilePhoto !== undefined) profileUpdates.showProfilePhoto = showProfilePhoto;
 
     // Handle Domain Changes
     if (customDomain !== undefined) {
@@ -169,9 +184,11 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
     const userData = await User.findById(user._id).select('username storeSlug');
     if (userData?.username) {
         revalidatePath(`/u/${userData.username}`);
+        await invalidateCache(`storefront:${userData.username.toLowerCase()}`).catch(() => null);
     }
     if (userData?.storeSlug) {
         revalidatePath(`/u/${userData.storeSlug}`);
+        await invalidateCache(`storefront:${userData.storeSlug.toLowerCase()}`).catch(() => null);
     }
 
     return {

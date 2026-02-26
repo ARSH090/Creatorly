@@ -112,6 +112,21 @@ export interface IUser extends Document {
     trialUsed: boolean;
     onboardingComplete: boolean;
     onboardingStep: number;
+
+    // WhatsApp Configuration
+    whatsappConfig?: {
+        phoneNumberId?: string; // Encrypted
+        phoneNumberIdIV?: string;
+        phoneNumberIdTag?: string;
+        accessToken?: string;   // Encrypted
+        accessTokenIV?: string;
+        accessTokenTag?: string;
+        businessAccountId?: string;
+        displayName?: string;
+        status: 'connected' | 'disconnected' | 'error';
+        connectedAt?: Date;
+    };
+
     planLimits?: {
         maxProducts: number;
         maxStorageMb: number;
@@ -137,7 +152,6 @@ const UserSchema: Schema = new Schema({
     },
     firebaseUid: {
         type: String,
-        unique: true,
         sparse: true,
         index: true,
     },
@@ -324,7 +338,7 @@ const UserSchema: Schema = new Schema({
     },
     phoneVerified: {
         type: Boolean,
-        default: false,
+        default: true, // Auto-verified as we removed the step
         index: true
     },
     phoneVerifiedAt: Date,
@@ -378,16 +392,43 @@ const UserSchema: Schema = new Schema({
     onboardingStep: {
         type: Number,
         default: 1
+    },
+    whatsappConfig: {
+        phoneNumberId: String,
+        phoneNumberIdIV: String,
+        phoneNumberIdTag: String,
+        accessToken: String,
+        accessTokenIV: String,
+        accessTokenTag: String,
+        businessAccountId: String,
+        displayName: String,
+        status: { type: String, enum: ['connected', 'disconnected', 'error'], default: 'disconnected' },
+        connectedAt: Date
     }
 }, { timestamps: true });
 
 
 
 
+// Generic performance indexes
+UserSchema.index({ creatorId: 1, createdAt: -1 });
+UserSchema.index({ creatorId: 1, isPublished: 1 }); // Mapping for potential isPublished usage
+
 // Admin query indexes
 UserSchema.index({ role: 1, isSuspended: 1 });
 UserSchema.index({ adminApprovedAt: 1 });
 UserSchema.index({ lastLogin: -1 });
+
+// ─── Performance indexes ──────────────────────────────────────────────────────
+// Fast Clerk session → MongoDB user lookup (every authenticated API call)
+// (Index defined inline in schema)
+// Fast storefront lookup (used in every /u/[username] request)
+// (Index defined inline in schema)
+// (Index defined inline in schema)
+// Admin/ops filtering
+UserSchema.index({ status: 1, subscriptionTier: 1 });
+// Cron: find users whose trial expires soon
+UserSchema.index({ subscriptionStatus: 1, subscriptionEndAt: 1 });
 
 const User = (mongoose.models.User as Model<IUser>) || mongoose.model<IUser>('User', UserSchema);
 export { User };

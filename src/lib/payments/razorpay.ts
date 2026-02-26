@@ -59,7 +59,7 @@ export const syncRazorpayPlan = async (options: {
             interval: 1,
             item: {
                 name: options.name + (options.interval === 'monthly' ? ' (Monthly)' : ' (Yearly)'),
-                amount: Math.round(options.amount * 100), // to paise
+                amount: options.amount, // already in paise
                 currency: 'INR',
                 description: options.description || `Creatorly ${options.name} ${options.interval} plan`
             }

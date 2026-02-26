@@ -166,8 +166,8 @@ const BioLinkStore: React.FC<BioLinkStoreProps> = ({
             <footer className="mt-24 pb-12 text-center">
                 <p className="text-xs font-bold uppercase tracking-widest opacity-30">© 2026 Creatorly</p>
                 <div className="flex justify-center space-x-4 text-[10px] mt-2 text-foreground/40 font-bold">
-                    <Link href="/privacy-policy" className="hover:text-primary transition-colors">Privacy Policy</Link>
-                    <Link href="/terms-of-service" className="hover:text-primary transition-colors">Terms of Service</Link>
+                    <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+                    <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
                 </div>
                 <p className="text-[10px] mt-4 italic opacity-30">Vocal for Local • Empowering Bharat 🇮🇳</p>
             </footer>

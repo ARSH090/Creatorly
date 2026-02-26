@@ -1,7 +1,8 @@
 import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IQueueJob extends Document {
-    type: 'dm_delivery' | 'email_sequence_step' | 'email_broadcast' | 'booking_cleanup';
+    type: 'dm_delivery' | 'email_sequence_step' | 'email_broadcast' | 'booking_cleanup' | 'one_off_email';
+
     payload: {
         // DM Payload
         recipientId?: string;
@@ -9,10 +10,14 @@ export interface IQueueJob extends Document {
         accessToken?: string;
         creatorId: string;
         ruleId?: string; // DM rule
-        source?: 'dm' | 'comment' | 'story_reply' | 'new_follow';
+        source?: 'dm' | 'comment' | 'story_reply' | 'new_follow' | 'broadcast';
         platform?: 'instagram' | 'whatsapp';
 
-        // Email Payload
+        // Email Broadcast Payload (BUG-27)
+        campaignId?: string;
+        unsubscribeBaseUrl?: string;
+
+        // Email Sequence Payload
         sequenceId?: string;
         enrollmentId?: string;
         stepId?: string; // Index or ID
@@ -21,6 +26,14 @@ export interface IQueueJob extends Document {
         email?: string;
         subject?: string;
         content?: string;
+
+        // Automation Delivery Fields
+        messageType?: string;
+        carouselMessages?: any[];
+        attachmentType?: string;
+        attachmentId?: string;
+        phoneNumberId?: string;
+        variables?: any;
     };
     status: 'pending' | 'processing' | 'completed' | 'failed';
     attempt: number;
@@ -32,7 +45,8 @@ export interface IQueueJob extends Document {
 }
 
 const QueueJobSchema: Schema = new Schema({
-    type: { type: String, required: true, enum: ['dm_delivery', 'email_sequence_step'] },
+    type: { type: String, required: true, enum: ['dm_delivery', 'email_sequence_step', 'email_broadcast', 'booking_cleanup', 'one_off_email'] },
+
     payload: { type: Schema.Types.Mixed, required: true },
     status: {
         type: String,
@@ -47,7 +61,7 @@ const QueueJobSchema: Schema = new Schema({
     error: { type: String },
 }, { timestamps: true });
 
-// Index for efficient polling
-QueueJobSchema.index({ status: 1, nextRunAt: 1 });
+// Compound index for efficient queue polling (worker queries status+nextRunAt together)
+QueueJobSchema.index({ status: 1, nextRunAt: 1, type: 1 });
 
 export const QueueJob: Model<IQueueJob> = mongoose.models.QueueJob || mongoose.model<IQueueJob>('QueueJob', QueueJobSchema);

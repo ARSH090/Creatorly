@@ -66,6 +66,9 @@ export interface ICreatorProfile extends Document {
         borderRadius: string; // 'sm', 'md', 'lg', 'full'
         buttonStyle: 'pill' | 'square' | 'rounded';
         backgroundImage?: string;
+        productLayout: 'grid' | 'list';
+        buttonColor?: string;
+        buttonTextColor?: string;
     };
 
     // Social Links
@@ -137,6 +140,26 @@ export interface ICreatorProfile extends Document {
         answer: string;
     }>;
 
+    // New block builder fields
+    blocksLayout?: any[];
+    themeV2?: Record<string, any>;
+    storefrontSeo?: {
+        metaTitle?: string;
+        metaDescription?: string;
+        ogImage?: string;
+        favicon?: string;
+        keywords?: string;
+    };
+    passwordProtection?: {
+        enabled: boolean;
+        password?: string;
+        hint?: string;
+    };
+
+    // New customization fields
+    showProfilePhoto: boolean;
+    isPublished: boolean;
+
     createdAt: Date;
     updatedAt: Date;
 }
@@ -157,8 +180,14 @@ const CreatorProfileSchema: Schema = new Schema({
         fontFamily: { type: String, default: 'Inter' },
         borderRadius: { type: String, default: 'md' },
         buttonStyle: { type: String, enum: ['pill', 'square', 'rounded'], default: 'rounded' },
-        backgroundImage: String
+        backgroundImage: String,
+        productLayout: { type: String, enum: ['grid', 'list'], default: 'grid' },
+        buttonColor: { type: String, default: '#6366f1' },
+        buttonTextColor: { type: String, default: '#ffffff' }
     },
+
+    showProfilePhoto: { type: Boolean, default: true },
+    isPublished: { type: Boolean, default: true },
 
     socialLinks: {
         instagram: String,
@@ -222,6 +251,26 @@ const CreatorProfileSchema: Schema = new Schema({
         answer: String
     }],
 
+    // New drag-and-drop block layout (stores full block array as flexible Mixed)
+    blocksLayout: { type: [Schema.Types.Mixed], default: [] },
+
+    // New enhanced theme (stored as a flexible Map)
+    themeV2: { type: Schema.Types.Mixed, default: {} },
+
+    storefrontSeo: {
+        metaTitle: String,
+        metaDescription: String,
+        ogImage: String,
+        favicon: String,
+        keywords: String
+    },
+
+    passwordProtection: {
+        enabled: { type: Boolean, default: false },
+        password: String,
+        hint: String
+    },
+
     customDomain: {
         type: String,
         unique: true,
@@ -265,6 +314,8 @@ const CreatorProfileSchema: Schema = new Schema({
 }, { timestamps: true });
 
 // Custom Domain index handled in field definition via sparse: true
+// Fast storefront listing by published status
+CreatorProfileSchema.index({ isPublished: 1, creatorId: 1 });
 
 const CreatorProfile: Model<ICreatorProfile> = mongoose.models.CreatorProfile || mongoose.model<ICreatorProfile>('CreatorProfile', CreatorProfileSchema);
 export { CreatorProfile };

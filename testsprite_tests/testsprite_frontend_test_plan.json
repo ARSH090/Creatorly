@@ -1,0 +1,1814 @@
+[
+  {
+    "id": "TC001",
+    "title": "Username taken prevents progress until changed to available",
+    "description": "Verifies the onboarding flow blocks progression when a username is taken and allows progression after choosing an available username.",
+    "category": "Onboarding & Authentication",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/onboarding\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"taken\" into the \"Username\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Check availability\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"username taken\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "Change taken username to available and proceed to personal details section",
+    "description": "Verifies that after a taken username error, changing to an available username enables the next onboarding step.",
+    "category": "Onboarding & Authentication",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/onboarding\""
+      },
+      {
+        "type": "action",
+        "description": "Type \"taken\" into the \"Username\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Check availability\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"username taken\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type a different unique value into the \"Username\" field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Check availability\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"username available\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "Plan selection is required before continuing to payment",
+    "description": "Verifies the user must select a plan (Starter/Pro/Business) before proceeding to the payment continuation step.",
+    "category": "Onboarding & Authentication",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/onboarding\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Start Trial / Continue to Payment\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Select Plan\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "Public storefront loads and shows creator bio + social links",
+    "description": "Verifies a public creator storefront page renders and key profile elements are visible without login.",
+    "category": "Public Storefront",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a known creator storefront URL (for example, the QA test creator’s public page)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Creator bio\" is visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Social links section\" is visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Products section\" is visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/u/\"."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Switch product layout from Grid to List and confirm change",
+    "description": "Verifies shoppers can switch between Grid and List layouts in the products section.",
+    "category": "Public Storefront",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a known creator storefront URL (for example, the QA test creator’s public page)."
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Products\" section."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Grid layout option\" is visible."
+      },
+      {
+        "type": "action",
+        "description": "Click on \"List\" layout option."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"List layout\" is visible."
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Grid\" layout option."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Grid layout\" is visible."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Open a published product from product card and view product detail modal/drawer",
+    "description": "Verifies clicking a product card opens a visible product detail view (modal or drawer).",
+    "category": "Public Storefront",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a known creator storefront URL (for example, the QA test creator’s public page)."
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Products\" section."
+      },
+      {
+        "type": "action",
+        "description": "Click on a product card that is labeled as available/published."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Product detail modal or drawer\" is visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Buy Now\" is visible."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Start checkout from product detail using Buy Now",
+    "description": "Verifies the Buy Now call-to-action initiates the checkout flow from the public storefront.",
+    "category": "Public Storefront",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a known creator storefront URL (for example, the QA test creator’s public page)."
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Products\" section."
+      },
+      {
+        "type": "action",
+        "description": "Click on a product card that is labeled as available/published."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Buy Now\" is visible."
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Buy Now\"."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Checkout\" is visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"checkout\"."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "Unpublished product card shows Coming Soon or not available message",
+    "description": "Verifies selecting an unavailable/unpublished product results in a clear 'Coming soon' or not available state.",
+    "category": "Public Storefront",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a known creator storefront URL that includes at least one unpublished/unavailable product card."
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Products\" section."
+      },
+      {
+        "type": "action",
+        "description": "Click on a product card that is labeled as unavailable/unpublished (or otherwise indicated as not for sale)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Coming soon\" is visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Buy Now\" is not visible."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Unpublished product returns 404/not available when opened directly via in-page interaction",
+    "description": "Verifies the UI provides a 404 or product-not-available message when an unavailable product cannot be opened.",
+    "category": "Public Storefront",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a known creator storefront URL that includes at least one product card known to be unpublished/unavailable."
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Products\" section."
+      },
+      {
+        "type": "action",
+        "description": "Click on a product card that is known to be unpublished/unavailable."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Not available\" is visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"404\" is visible."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Products section is reachable and contains at least one product card",
+    "description": "Verifies the products area renders product cards and is discoverable via scrolling.",
+    "category": "Public Storefront",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a known creator storefront URL (for example, the QA test creator’s public page)."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Creator bio\" is visible."
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Products\" section."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Product card\" is visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Grid layout option\" is visible."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Product detail view can be dismissed without breaking storefront browsing",
+    "description": "Verifies users can close the product detail modal/drawer and continue viewing the product list.",
+    "category": "Public Storefront",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to a known creator storefront URL (for example, the QA test creator’s public page)."
+      },
+      {
+        "type": "action",
+        "description": "Scroll to the \"Products\" section."
+      },
+      {
+        "type": "action",
+        "description": "Click on a product card that is labeled as available/published."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Product detail modal or drawer\" is visible."
+      },
+      {
+        "type": "action",
+        "description": "Click on \"Close\" (or \"X\") in the product detail view."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Product detail modal or drawer\" is not visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Product card\" is visible."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Save theme colors from Theme tab and see success confirmation",
+    "description": "Verifies a creator can change primary and background colors in the storefront editor and successfully save changes.",
+    "category": "Storefront Customization (Creator Dashboard)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Storefront\" in the dashboard navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard/storefront\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Theme\" tab"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Theme\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Save after changing both primary and background colors shows changes saved",
+    "description": "Verifies saving after making multiple color changes shows a visible confirmation that changes were saved.",
+    "category": "Storefront Customization (Creator Dashboard)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Storefront\" in the dashboard navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard/storefront\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Theme\" tab"
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Verify Upload background image control is visible without performing upload",
+    "description": "Verifies the storefront editor exposes the background image upload entry point (without using file upload).",
+    "category": "Storefront Customization (Creator Dashboard)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Storefront\" in the dashboard navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard/storefront\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Upload background image\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "Verify Save button is present on storefront customization page",
+    "description": "Verifies the storefront customization page provides a visible Save control to persist changes.",
+    "category": "Storefront Customization (Creator Dashboard)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"Storefront\" in the dashboard navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard/storefront\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Save\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Create and publish a new digital product (without file upload)",
+    "description": "Verifies a creator can create and publish a product and see it appear in the product grid/list.",
+    "category": "Product Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Product\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Create Product\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"E2E Test Product\" into the product name field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"A product created by an end-to-end UI test.\" into the product description field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"9.99\" into the price field"
+      },
+      {
+        "type": "action",
+        "description": "Select \"Digital product\" from the product type dropdown"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Publish\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"E2E Test Product\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "Validate required fields prevent publishing a product",
+    "description": "Verifies the publish action is blocked and validation messaging is shown when required fields are missing.",
+    "category": "Product Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Product\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Create Product\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Publish\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"required\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "Cancel out of product creation without publishing",
+    "description": "Verifies a creator can exit the create-product flow and the product is not added to the list.",
+    "category": "Product Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Product\" button"
+      },
+      {
+        "type": "action",
+        "description": "Type \"E2E Draft Product\" into the product name field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Cancel\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"E2E Draft Product\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "Edit an existing product and verify updates appear in the product list",
+    "description": "Verifies a creator can open an existing product, update fields, save/publish changes, and see updates reflected in the UI.",
+    "category": "Product Management",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click on the first product in the product list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Edit Product\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \" (Updated)\" into the product name field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Saved\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Back\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Updated\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Attempt to save order without any reorder changes",
+    "description": "Verifies saving order with no changes either remains disabled or shows no-op feedback without error.",
+    "category": "Product Management",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email or username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Product list\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save order\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Order saved\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Checkout email validation blocks proceeding to payment when email is empty",
+    "description": "Verifies the checkout form requires an email before allowing the buyer to proceed to payment.",
+    "category": "Buyer Purchase & Secure Delivery",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the public storefront page for a test creator (a valid /u/[username] page prepared with at least one purchasable product)."
+      },
+      {
+        "type": "action",
+        "description": "Click the product card."
+      },
+      {
+        "type": "action",
+        "description": "Click \"Buy Now\"."
+      },
+      {
+        "type": "action",
+        "description": "Click the email field."
+      },
+      {
+        "type": "action",
+        "description": "Press \"Enter\"."
+      },
+      {
+        "type": "action",
+        "description": "Click \"Proceed to payment\"."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Email\" is visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a visible validation message is shown indicating email is required."
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Checkout email validation blocks proceeding to payment when email is invalid format",
+    "description": "Verifies invalid email formats are rejected and the buyer cannot proceed to payment.",
+    "category": "Buyer Purchase & Secure Delivery",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the public storefront page for a test creator (a valid /u/[username] page prepared with at least one purchasable product)."
+      },
+      {
+        "type": "action",
+        "description": "Click the product card."
+      },
+      {
+        "type": "action",
+        "description": "Click \"Buy Now\"."
+      },
+      {
+        "type": "action",
+        "description": "Type \"not-an-email\" into the email field."
+      },
+      {
+        "type": "action",
+        "description": "Click \"Proceed to payment\"."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify a visible validation message is shown indicating the email is invalid."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Razorpay\" is not visible."
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Buyer can return to checkout after a failed/cancelled payment and try again",
+    "description": "Verifies the UI provides a visible path to retry payment from the failure state.",
+    "category": "Buyer Purchase & Secure Delivery",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the public storefront page for a test creator (a valid /u/[username] page prepared with at least one purchasable product)."
+      },
+      {
+        "type": "action",
+        "description": "Click the product card."
+      },
+      {
+        "type": "action",
+        "description": "Click \"Buy Now\"."
+      },
+      {
+        "type": "action",
+        "description": "Type \"buyer.e2e+retry@example.com\" into the email field."
+      },
+      {
+        "type": "action",
+        "description": "Click \"Proceed to payment\"."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Payment failed\" is visible."
+      },
+      {
+        "type": "action",
+        "description": "Click \"Try again\"."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Proceed to payment\" is visible."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify the email field is visible."
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Start trial from onboarding and reach Razorpay mandate step",
+    "description": "Verifies a creator can select a plan in onboarding and initiate the Start Trial flow up to the Razorpay mandate UI.",
+    "category": "Billing & Subscription (Razorpay)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /onboarding"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Start Trial\" button for a visible plan"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Razorpay\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "Billing page shows current subscription state details",
+    "description": "Verifies the billing UI displays a clear subscription state (trialing/active/cancelled/past due) for the logged-in creator.",
+    "category": "Billing & Subscription (Razorpay)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Billing\" button or link on the dashboard (if present)"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Subscription\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Status\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC026",
+    "title": "Admin can view webhook logs in admin panel",
+    "description": "Verifies an authenticated admin can access the admin panel and see webhook log-related UI content.",
+    "category": "Billing & Subscription (Razorpay)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Webhook\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Logs\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC027",
+    "title": "Create an AutoDM follow-first rule and verify it appears in the rules list",
+    "description": "Verifies a creator can create a follow-first AutoDM rule from the dashboard and see it listed.",
+    "category": "AutoDM Hub (Instagram follow-first logic)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"AutoDM\" in the dashboard navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Rule\" button"
+      },
+      {
+        "type": "action",
+        "description": "Type \"link\" into the keyword/trigger field"
+      }
+    ]
+  },
+  {
+    "id": "TC028",
+    "title": "Save a newly created follow-first rule and verify success feedback",
+    "description": "Verifies saving a follow-first AutoDM rule shows visible confirmation and returns to a state where rules can be reviewed.",
+    "category": "AutoDM Hub (Instagram follow-first logic)",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"AutoDM\" in the dashboard navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Rule\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Follow-first\" enable toggle/checkbox"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      }
+    ]
+  },
+  {
+    "id": "TC029",
+    "title": "Validation: prevent saving a rule when keyword/trigger is empty",
+    "description": "Verifies the UI blocks saving and shows a visible validation error when required trigger input is missing.",
+    "category": "AutoDM Hub (Instagram follow-first logic)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"AutoDM\" in the dashboard navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Rule\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      }
+    ]
+  },
+  {
+    "id": "TC030",
+    "title": "Cancel rule creation returns to rules list without adding a rule",
+    "description": "Verifies cancelling out of the create rule flow returns to the list view and no new rule is visibly added.",
+    "category": "AutoDM Hub (Instagram follow-first logic)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"AutoDM\" in the dashboard navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Rule\" button"
+      },
+      {
+        "type": "action",
+        "description": "Type \"link\" into the keyword/trigger field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Cancel\" button"
+      }
+    ]
+  },
+  {
+    "id": "TC031",
+    "title": "Toggle follow-first on/off in the create rule form updates visible state",
+    "description": "Verifies the follow-first control can be toggled and the UI reflects the selected state.",
+    "category": "AutoDM Hub (Instagram follow-first logic)",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Click \"AutoDM\" in the dashboard navigation"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Create Rule\" button"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Follow-first\" enable toggle/checkbox"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Follow-first enabled\" or \"On\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC032",
+    "title": "Editing surface is reachable from dashboard without using direct URL navigation after login",
+    "description": "Verifies the user can reach the AutoDM hub via in-app navigation from the main dashboard.",
+    "category": "AutoDM Hub (Instagram follow-first logic)",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Dashboard\" overview content is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click \"AutoDM\" in the dashboard navigation"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify page title contains \"AutoDM\" or \"AutoDM Hub\""
+      }
+    ]
+  },
+  {
+    "id": "TC033",
+    "title": "Admin can suspend a creator user from Users list",
+    "description": "Verifies an admin can find a creator in the Users list and suspend the account with visible suspended status afterward.",
+    "category": "Admin Panel",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Admin\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Users\" tab or menu item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Users\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"test\" into the user search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Users list results\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Suspend\" button for the first visible user in the results"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Confirm\" button in the suspend confirmation dialog"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Suspended\" is visible for that user in the list"
+      }
+    ]
+  },
+  {
+    "id": "TC034",
+    "title": "Admin cancels suspend action and user remains active",
+    "description": "Verifies cancelling the suspend confirmation does not change the user status to suspended.",
+    "category": "Admin Panel",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Admin\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Users\" tab or menu item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Users\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"test\" into the user search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Users list results\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Suspend\" button for the first visible user in the results"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Cancel\" button in the suspend confirmation dialog"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Suspended\" is not visible for that user in the list"
+      }
+    ]
+  },
+  {
+    "id": "TC035",
+    "title": "Admin searches for a creator and sees filtered results",
+    "description": "Verifies the Users search filters the visible list to match a query.",
+    "category": "Admin Panel",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Admin\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Users\" tab or menu item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Users\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"creator\" into the user search field"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Users list results\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"creator\" is visible within the users list area"
+      }
+    ]
+  },
+  {
+    "id": "TC036",
+    "title": "Admin edits a plan price and sees successful sync confirmation",
+    "description": "Verifies an admin can change a plan price, save it, and see a visible success confirmation for the sync.",
+    "category": "Admin Panel",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Admin\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Plans\" tab or menu item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Plans\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Edit\" button for the first visible plan"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Price\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"199\" into the price field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Price sync successful\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC037",
+    "title": "Admin attempts to save an invalid plan price and sees validation error",
+    "description": "Verifies the UI prevents saving an invalid price and displays a visible error message.",
+    "category": "Admin Panel",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Admin\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Plans\" tab or menu item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Plans\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Edit\" button for the first visible plan"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Price\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Type \"-1\" into the price field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Save\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Invalid\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC038",
+    "title": "Admin opens Webhooks list and views a webhook entry details",
+    "description": "Verifies an admin can navigate to Webhooks and open a webhook entry to view details.",
+    "category": "Admin Panel",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Admin\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Webhooks\" tab or menu item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Webhooks\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the first webhook entry in the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Webhook\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Webhook details\" is visible"
+      }
+    ]
+  },
+  {
+    "id": "TC039",
+    "title": "Admin reprocesses a webhook and sees invalid signature error when applicable",
+    "description": "Verifies reprocessing a webhook shows an 'Invalid signature' error and does not show a success confirmation when the signature is invalid.",
+    "category": "Admin Panel",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Admin\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Webhooks\" tab or menu item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Webhooks\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the first webhook entry in the list"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify element \"Webhook details\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Reprocess\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Invalid signature\" is visible"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Reprocess successful\" is not visible"
+      }
+    ]
+  },
+  {
+    "id": "TC040",
+    "title": "Admin panel navigation shows Users, Plans, and Webhooks sections",
+    "description": "Verifies the admin can access core sections from the Admin panel and each section renders a visible header.",
+    "category": "Admin Panel",
+    "priority": "Low",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to /login"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_USER}}\" into the email/username field"
+      },
+      {
+        "type": "action",
+        "description": "Type \"{{LOGIN_PASSWORD}}\" into the password field"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Sign in\" button"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify URL contains \"/dashboard\""
+      },
+      {
+        "type": "action",
+        "description": "Navigate to /admin"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Admin\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Users\" tab or menu item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Users\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Plans\" tab or menu item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Plans\" is visible"
+      },
+      {
+        "type": "action",
+        "description": "Click the \"Webhooks\" tab or menu item"
+      },
+      {
+        "type": "assertion",
+        "description": "Verify text \"Webhooks\" is visible"
+      }
+    ]
+  }
+]

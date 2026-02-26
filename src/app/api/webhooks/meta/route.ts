@@ -114,8 +114,9 @@ export async function POST(req: NextRequest) {
 
         return NextResponse.json({ status: 'success' });
     } catch (error) {
-        console.error('Webhook Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        console.error('CRITICAL Meta Webhook Process Failure:', error);
+        // Generic error to prevent info disclosure
+        return NextResponse.json({ error: 'Process failure' }, { status: 200 });
     }
 }
 
@@ -225,7 +226,7 @@ async function handleFollowEvent(value: any, creatorId: string, igId: string, ac
     for (const request of pendingRequests) {
         // Delivery logic for pending request
         await executeAutomationRaw({
-            text: request.messageText,
+            text: request.requestedContent,
             recipientId: followerId,
             accessToken,
             creatorId,
@@ -287,7 +288,7 @@ async function processRuleExecution(rule: any, recipientId: string, accessToken:
                     ruleId: rule._id,
                     requestedType: rule.attachmentType || 'custom',
                     requestedId: rule.attachmentId,
-                    messageText: rule.replyText,
+                    requestedContent: rule.replyText,
                     expiresAt: new Date(Date.now() + (rule.cooldownHours || 24) * 60 * 60 * 1000)
                 });
             }

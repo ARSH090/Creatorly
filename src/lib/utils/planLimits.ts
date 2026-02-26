@@ -52,20 +52,32 @@ export const PLAN_LIMITS = {
     }
 } as const;
 
-export type PlanType = keyof typeof PLAN_LIMITS;
+// New IUser.subscriptionTier naming → mapped to PLAN_LIMITS keys
+const TIER_ALIAS: Record<string, keyof typeof PLAN_LIMITS> = {
+    'free': 'free',
+    'starter': 'creator',
+    'pro': 'creator_pro',
+    'business': 'creator_pro', // Business has same feature set, higher limits can be added later
+    // Legacy keys pass through as-is
+    'creator': 'creator',
+    'creator_pro': 'creator_pro',
+};
+
+export type PlanType = keyof typeof PLAN_LIMITS | 'starter' | 'pro' | 'business';
 export type LimitType = keyof typeof PLAN_LIMITS['free'];
 
 /**
  * Get plan limits for a specific plan
  */
-export function getPlanLimits(plan: PlanType) {
-    return PLAN_LIMITS[plan] || PLAN_LIMITS.free;
+export function getPlanLimits(plan: PlanType | string) {
+    const resolvedKey = TIER_ALIAS[plan as string] ?? 'free';
+    return PLAN_LIMITS[resolvedKey];
 }
 
 /**
  * Check if a feature is available for a given plan
  */
-export function hasFeature(plan: PlanType, feature: LimitType): boolean {
+export function hasFeature(plan: PlanType | string, feature: LimitType): boolean {
     const limits = getPlanLimits(plan);
     return !!limits[feature];
 }

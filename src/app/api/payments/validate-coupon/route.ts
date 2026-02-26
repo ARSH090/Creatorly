@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
             }, { status: 400 });
         }
 
-        if (coupon.validUntil && now > new Date(coupon.validUntil)) {
+        if (coupon.expiresAt && now > new Date(coupon.expiresAt)) {
             return NextResponse.json({
                 success: false,
                 error: 'Coupon has expired'
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Check usage limit
-        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+        if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
             return NextResponse.json({
                 success: false,
                 error: 'Coupon usage limit reached'
@@ -56,22 +56,22 @@ export async function POST(req: NextRequest) {
         }
 
         // Check per-user limit
-        if (coupon.usagePerUser && userId) {
-            // Note: usedByUsers/usage tracking per user is not currently in the Coupon model
-            // skipping this check to fix build
+        if (coupon.perCustomerLimit && userId) {
+            // Note: usage tracking per user is not fully implemented in validation yet
+            // but we'll use the correct field name
         }
 
         // Check minimum purchase
-        if (coupon.minOrderAmount && amount && amount < coupon.minOrderAmount) {
+        if (coupon.minimumPurchaseAmount && amount && amount < coupon.minimumPurchaseAmount) {
             return NextResponse.json({
                 success: false,
-                error: `Minimum purchase amount is ₹${coupon.minOrderAmount}`
+                error: `Minimum purchase amount is ₹${coupon.minimumPurchaseAmount}`
             }, { status: 400 });
         }
 
         // Check applicable products
-        if (coupon.applicableProducts && coupon.applicableProducts.length > 0) {
-            if (!productId || !coupon.applicableProducts.some((p: any) => p.toString() === productId)) {
+        if (coupon.applicableProductIds && coupon.applicableProductIds.length > 0) {
+            if (!productId || !coupon.applicableProductIds.some((id: any) => id.toString() === productId)) {
                 return NextResponse.json({
                     success: false,
                     error: 'Coupon is not applicable to this product'
@@ -84,8 +84,8 @@ export async function POST(req: NextRequest) {
         if (amount) {
             if (coupon.discountType === 'percentage') {
                 discountAmount = (amount * coupon.discountValue) / 100;
-                if (coupon.maxDiscountAmount) {
-                    discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
+                if (coupon.maxDiscountCap) {
+                    discountAmount = Math.min(discountAmount, coupon.maxDiscountCap);
                 }
             } else if (coupon.discountType === 'fixed') {
                 discountAmount = coupon.discountValue;
@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
                 discountValue: coupon.discountValue,
                 discountAmount: Math.round(discountAmount * 100) / 100,
                 finalAmount: Math.round(finalAmount * 100) / 100,
-                description: coupon.description
+                description: coupon.internalNote || 'Coupon applied'
             }
         });
 

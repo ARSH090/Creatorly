@@ -1,0 +1,73 @@
+version: "2"
+type: frontend
+tech_stack:
+  - TypeScript
+  - Next.js
+  - Lucide React
+  - Framer Motion
+  - Tailwind CSS
+  - Clerk (Auth)
+  - MongoDB/Mongoose
+  - AWS SDK (S3)
+  - "@dnd-kit (Storefront Editor)"
+routes:
+  - path: /u/[username]
+    file: src/app/u/[username]/page.tsx
+    auth_required: false
+    description: Public storefront displaying creator bio, links, and products
+  - path: /dashboard/storefront
+    file: src/app/(dashboard)/dashboard/storefront/page.tsx
+    auth_required: true
+    description: Creator dashboard for editing storefront theme, layout, and links
+  - path: /onboarding
+    file: src/app/onboarding/page.tsx
+    auth_required: true
+    description: User onboarding flow for new creators
+  - path: /dashboard
+    file: src/app/(dashboard)/dashboard/page.tsx
+    auth_required: true
+    description: Main creator dashboard overview
+  - path: /admin
+    file: src/app/admin/page.tsx
+    auth_required: true
+    description: Platform administrator panel
+features:
+  - name: Public Storefront
+    description: Public profile for creators to showcase their work and sell products
+    files:
+      - src/app/u/[username]/page.tsx
+      - src/components/storefront/CreatorBio.tsx
+      - src/components/storefront/ProductGrid.tsx
+    entry_route: /u/[username]
+    user_interactions:
+      - View creator bio and social links
+      - Switch between Grid and List product layouts
+      - Click product cards to view details
+    api_calls:
+      - method: GET
+        endpoint: /api/public/[username]
+    auth_required: false
+  - name: Storefront Customization
+    description: Editor for creators to customize their storefront theme and layout
+    files:
+      - src/app/(dashboard)/dashboard/storefront/page.tsx
+      - src/lib/models/CreatorProfile.ts
+    entry_route: /dashboard/storefront
+    user_interactions:
+      - Change primary and background colors
+      - Upload background image
+      - Toggle profile photo visibility
+      - Reorder storefront sections with drag-and-drop
+      - Click Save to persist changes
+    api_calls:
+      - method: GET
+        endpoint: /api/creator/profile
+      - method: PATCH
+        endpoint: /api/creator/profile
+      - method: POST
+        endpoint: /api/creator/upload
+    auth_required: true
+known_limitations:
+  - issue: Background image upload requires S3 configuration
+    location: src/app/api/creator/upload/route.ts
+    impact: Uploads will fail if S3 credentials are not set in environment

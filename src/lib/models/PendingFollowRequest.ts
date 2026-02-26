@@ -5,11 +5,12 @@ export interface IPendingFollowRequest extends Document {
     platform: 'instagram' | 'whatsapp';
     recipientId: string; // Instagram/WhatsApp ID
     recipientUsername?: string;
+    igUserId?: string; // Creator's IG User ID
     ruleId: mongoose.Types.ObjectId;
-    requestedType: 'product' | 'pdf' | 'booking' | 'custom';
-    requestedId?: string;
-    messageText: string; // The message to send once they follow
-    status: 'waiting' | 'completed' | 'expired';
+    triggerType: string;
+    requestedContent: string; // The message to send once they follow
+    followFirstMessageSent: boolean;
+    status: 'waiting_follow' | 'completed' | 'expired' | 'waiting';
     expiresAt: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -20,14 +21,15 @@ const PendingFollowRequestSchema: Schema = new Schema({
     platform: { type: String, enum: ['instagram', 'whatsapp'], required: true },
     recipientId: { type: String, required: true, index: true },
     recipientUsername: { type: String },
+    igUserId: { type: String },
     ruleId: { type: Schema.Types.ObjectId, ref: 'AutoReplyRule', required: true },
-    requestedType: { type: String, enum: ['product', 'pdf', 'booking', 'custom'], required: true },
-    requestedId: { type: String },
-    messageText: { type: String, required: true },
+    triggerType: { type: String },
+    requestedContent: { type: String, required: true },
+    followFirstMessageSent: { type: Boolean, default: true },
     status: {
         type: String,
-        enum: ['waiting', 'completed', 'expired'],
-        default: 'waiting',
+        enum: ['waiting_follow', 'completed', 'expired', 'waiting'],
+        default: 'waiting_follow',
         index: true
     },
     expiresAt: { type: Date, required: true, index: true }

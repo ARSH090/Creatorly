@@ -10,6 +10,7 @@ import { ChevronRight, Share2, Twitter, Linkedin, Link as LinkIcon, MessageCircl
 import ReactMarkdown from 'react-markdown';
 import TestimonialsSection from '@/components/storefront/TestimonialsSection';
 import FAQSection from '@/components/storefront/FAQSection';
+import ProductInfo from '@/components/product/ProductInfo';
 
 // ISR every 60 seconds (CTO Hardening)
 export const revalidate = 60;
@@ -22,12 +23,16 @@ interface Props {
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import User from '@/lib/models/User';
+import { getPublicUrl } from '@/lib/storage/s3';
 
 
 
 async function getProductData(slug: string) {
     await connectToDatabase();
-    const product = await Product.findOne({ slug, status: 'active', isActive: true });
+    const product = await Product.findOne({
+        slug,
+        status: { $in: ['active', 'published'] } // Support both legacy and new status
+    });
 
     if (!product) return null;
 
@@ -59,8 +64,16 @@ async function getProductData(slug: string) {
         backgroundImage: t?.backgroundImage ? String(t.backgroundImage) : undefined,
     };
 
+    const mappedProduct = {
+        ...product.toObject(),
+        _id: product._id.toString(),
+        image: product.thumbnailKey ? getPublicUrl(product.thumbnailKey) : product.image,
+        thumbnail: product.thumbnailKey ? getPublicUrl(product.thumbnailKey) : product.thumbnail,
+        gallery: (product.galleryKeys || []).map((k: string) => getPublicUrl(k))
+    };
+
     return {
-        product: JSON.parse(JSON.stringify(product)),
+        product: JSON.parse(JSON.stringify(mappedProduct)),
         creator: {
             ...creator.toObject(),
             _id: creator._id.toString(),
@@ -126,9 +139,9 @@ export default async function ProductPage({ params, searchParams }: Props) {
         },
         offers: {
             '@type': 'Offer',
-            price: product.price || 0,
-            priceCurrency: (product as any).currency || 'INR',
-            availability: product.isActive ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
+            price: product.pricing?.basePrice || product.price || 0,
+            priceCurrency: product.pricing?.currency || product.currency || 'INR',
+            availability: product.status === 'active' ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock'
         }
     };
 
@@ -161,44 +174,19 @@ export default async function ProductPage({ params, searchParams }: Props) {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
 
                     {/* Left: Media Gallery */}
-                    <ProductGallery mainImage={product.image || ''} files={product.files} />
+                    <ProductGallery mainImage={product.image || ''} files={product.files} gallery={product.gallery} />
 
-                    {/* Right: Product Info */}
+                    {/* Right: Product Info Container */}
                     <div className="space-y-10 lg:sticky lg:top-8">
-
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-[10px] font-black uppercase tracking-widest text-indigo-400">
-                                    {product.type}
-                                </span>
-                                <div className="flex gap-4 text-zinc-500">
-                                    <button className="hover:text-white transition-colors"><Twitter size={16} /></button>
-                                    <button className="hover:text-white transition-colors"><Linkedin size={16} /></button>
-                                    <button className="hover:text-white transition-colors"><LinkIcon size={16} /></button>
-                                </div>
-                            </div>
-                            <h1 className="text-4xl md:text-5xl font-black uppercase tracking-tighter italic leading-none">
-                                {product.name}
-                            </h1>
-                        </div>
-
-                        <PriceDisplay
-                            price={product.price || 0}
-                            compareAtPrice={product.compareAtPrice}
-                            currency={product.currency || 'INR'}
-                            productName={product.name || ''}
-                            theme={theme}
-                        />
-
-                        <AddToCartButton productId={product._id.toString()} productName={product.name || ''} theme={theme} />
+                        <ProductInfo product={product} theme={theme} />
 
                         <div className="space-y-6 pt-8 border-t border-white/5">
                             <div className="flex items-center gap-4 p-4 bg-white/[0.03] border border-white/10 rounded-3xl">
                                 <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-indigo-500">
                                     <Image src={creator.avatar || '/placeholder-avatar.png'} alt={creator.displayName} fill className="object-cover" />
                                 </div>
-                                <div>
-                                    <h3 className="font-bold text-sm text-white">{creator.displayName}</h3>
+                                <div className="flex-1 min-w-0">
+                                    <h3 className="font-bold text-sm text-white truncate">{creator.displayName}</h3>
                                     <p className="text-[10px] uppercase font-black tracking-widest text-zinc-500 italic">Creator of {creator.storeName}</p>
                                 </div>
                                 <Link

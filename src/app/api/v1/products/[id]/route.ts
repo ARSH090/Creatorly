@@ -7,6 +7,7 @@ import ProductFile from '@/lib/models/ProductFile';
 import { CourseModule, CourseLesson } from '@/lib/models/CourseContent';
 import { getMongoUser } from '@/lib/auth/get-user';
 import mongoose from 'mongoose';
+import { getCached, invalidateCache } from '@/lib/cache';
 
 // FORCE DYNAMIC
 export const dynamic = 'force-dynamic';
@@ -31,35 +32,44 @@ export async function GET(
         const user = await getMongoUser();
         const isCreator = !!user; // Simplified check
 
-        const product = await Product.findById(id).lean();
+        // Fetch product and related data with caching
+        const cacheKey = `product:${id}`;
+        const data = await getCached(cacheKey, 60, async () => {
+            const product = await Product.findById(id).lean();
 
-        if (!product) {
+            if (!product) return null;
+
+            // Fetch related data in parallel
+            const [variants, files, modules] = await Promise.all([
+                ProductVariant.find({ productId: id }).lean(),
+                ProductFile.find({ productId: id }).lean(),
+                CourseModule.find({ productId: id }).sort('orderIndex').lean()
+            ]);
+
+            // If it's a course, fetch lessons for the modules
+            let expandedModules: any[] = modules;
+            if (product.productType === 'course' && modules.length > 0) {
+                const moduleIds = modules.map(m => m._id);
+                const lessons = await CourseLesson.find({ moduleId: { $in: moduleIds } }).sort('orderIndex').lean();
+
+                expandedModules = modules.map(m => ({
+                    ...m,
+                    lessons: lessons.filter(l => l.moduleId.toString() === m._id.toString())
+                }));
+            }
+
+            return { product, variants, files, modules: expandedModules };
+        });
+
+        if (!data) {
             return NextResponse.json({ error: 'Product not found' }, { status: 404 });
         }
 
+        const { product, variants, files, modules: expandedModules } = data;
+
         // Access control: Only creator can see non-active products
-        // Note: Logic needs refinement based on actual requirements (e.g. admins)
         if (product.status !== 'active' && (!user || product.creatorId.toString() !== user._id.toString())) {
             return NextResponse.json({ error: 'Product not found or access denied' }, { status: 404 });
-        }
-
-        // Fetch related data in parallel
-        const [variants, files, modules] = await Promise.all([
-            ProductVariant.find({ productId: id }).lean(),
-            ProductFile.find({ productId: id }).lean(),
-            CourseModule.find({ productId: id }).sort('orderIndex').lean()
-        ]);
-
-        // If it's a course, fetch lessons for the modules
-        let expandedModules: any[] = modules;
-        if (product.productType === 'course' && modules.length > 0) {
-            const moduleIds = modules.map(m => m._id);
-            const lessons = await CourseLesson.find({ moduleId: { $in: moduleIds } }).sort('orderIndex').lean();
-
-            expandedModules = modules.map(m => ({
-                ...m,
-                lessons: lessons.filter(l => l.moduleId.toString() === m._id.toString())
-            }));
         }
 
         return NextResponse.json({
@@ -108,6 +118,13 @@ export async function PUT(
             return NextResponse.json({ error: 'Product not found or unauthorized' }, { status: 404 });
         }
 
+        // Invalidate caches
+        await Promise.all([
+            invalidateCache(`product:${id}`),
+            invalidateCache(`storefront:${user.username.toLowerCase()}`),
+            invalidateCache(`products:list:${user._id}`)
+        ]).catch(err => console.error('Cache invalidation error:', err));
+
         return NextResponse.json({ product });
 
     } catch (error: any) {
@@ -149,6 +166,13 @@ export async function DELETE(
         product.status = 'archived';
         product.deletedAt = new Date();
         await product.save();
+
+        // Invalidate caches
+        await Promise.all([
+            invalidateCache(`product:${id}`),
+            invalidateCache(`storefront:${user.username.toLowerCase()}`),
+            invalidateCache(`products:list:${user._id}`)
+        ]).catch(err => console.error('Cache invalidation error:', err));
 
         return NextResponse.json({ success: true, message: 'Product archived successfully' });
 

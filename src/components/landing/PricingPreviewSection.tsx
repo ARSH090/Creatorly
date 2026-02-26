@@ -33,7 +33,7 @@ const PricingPreviewSection: React.FC = () => {
                             ))}
                         </ul>
 
-                        <Link href="/auth/register" className="w-full py-4 rounded-xl bg-white/10 text-white font-bold text-center hover:bg-white/20 transition-colors">
+                        <Link href="/auth/register" target="_blank" rel="noopener noreferrer" className="w-full py-4 rounded-xl bg-white/10 text-white font-bold text-center hover:bg-white/20 transition-colors">
                             Start for Free
                         </Link>
                     </div>
@@ -57,7 +57,7 @@ const PricingPreviewSection: React.FC = () => {
                             ))}
                         </ul>
 
-                        <Link href="/auth/register" className="w-full py-4 rounded-xl bg-indigo-600 text-white font-bold text-center hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/20">
+                        <Link href="/auth/register" target="_blank" rel="noopener noreferrer" className="w-full py-4 rounded-xl bg-indigo-600 text-white font-bold text-center hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/20">
                             Get Pro
                         </Link>
                     </div>

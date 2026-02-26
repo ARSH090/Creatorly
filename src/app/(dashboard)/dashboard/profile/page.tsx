@@ -73,6 +73,7 @@ export default function ProfilePage() {
                     filename: file.name,
                     contentType: file.type,
                     fileSize: file.size,
+                    type: 'avatar'
                 }),
             });
             if (!presignRes.ok) throw new Error('Failed to get upload URL');
@@ -188,7 +189,7 @@ export default function ProfilePage() {
                             </button>
                         </div>
                         <h2 className="text-xl font-bold text-white mb-1">{formData.displayName || user?.fullName}</h2>
-                        <p className="text-zinc-500 text-sm mb-4">@{formData.username || user?.username || 'creator'}</p>
+                        <p className="text-zinc-500 text-sm mb-4">creatorly.in/<span className="text-zinc-400 font-medium">{formData.username || user?.username || 'creator'}</span></p>
                         <div className="flex gap-2">
                             <span className="px-3 py-1 bg-indigo-500/10 text-indigo-400 text-[10px] font-bold uppercase tracking-widest rounded-full border border-indigo-500/20">
                                 Pro Creator
@@ -238,12 +239,15 @@ export default function ProfilePage() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">Username</label>
-                                <input
-                                    type="text"
-                                    value={formData.username}
-                                    disabled
-                                    className="w-full bg-black/50 border border-white/5 rounded-xl px-4 py-3 text-zinc-500 cursor-not-allowed"
-                                />
+                                <div className="flex items-center bg-black/50 border border-white/5 rounded-xl overflow-hidden">
+                                    <span className="flex-shrink-0 pl-4 pr-2 text-zinc-600 text-sm font-semibold select-none whitespace-nowrap border-r border-white/5 py-3">creatorly.in/</span>
+                                    <input
+                                        type="text"
+                                        value={formData.username}
+                                        disabled
+                                        className="flex-1 min-w-0 px-3 py-3 bg-transparent text-zinc-500 cursor-not-allowed text-sm"
+                                    />
+                                </div>
                             </div>
                         </div>
 

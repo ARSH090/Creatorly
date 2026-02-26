@@ -60,6 +60,73 @@ export class InstagramService {
     }
 
     /**
+     * Exchange OAuth code for a short-lived user access token
+     */
+    static async exchangeCodeForToken(code: string, appId: string, appSecret: string, redirectUri: string): Promise<string | null> {
+        try {
+            const response = await axios.get(
+                `${GRAPH_BASE_URL}/${VERSION}/oauth/access_token`,
+                {
+                    params: {
+                        client_id: appId,
+                        client_secret: appSecret,
+                        redirect_uri: redirectUri,
+                        code: code,
+                    },
+                }
+            );
+            return response.data?.access_token || null;
+        } catch (error) {
+            console.error('[InstagramService] Code exchange failed:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Exchange short-lived token for a long-lived user access token (60 days)
+     */
+    static async getLongLivedToken(shortLivedToken: string, appId: string, appSecret: string): Promise<string | null> {
+        try {
+            const response = await axios.get(
+                `${GRAPH_BASE_URL}/${VERSION}/oauth/access_token`,
+                {
+                    params: {
+                        grant_type: 'fb_exchange_token',
+                        client_id: appId,
+                        client_secret: appSecret,
+                        fb_exchange_token: shortLivedToken,
+                    },
+                }
+            );
+            return response.data?.access_token || null;
+        } catch (error) {
+            console.error('[InstagramService] Long-lived token exchange failed:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Get pages managed by the user
+     */
+    static async getUserPages(userAccessToken: string): Promise<any[]> {
+        try {
+            const response = await axios.get(
+                `${GRAPH_BASE_URL}/${VERSION}/me/accounts`,
+                {
+                    params: {
+                        access_token: userAccessToken,
+                        fields: 'id,name,access_token,instagram_business_account'
+                    },
+                }
+            );
+            return response.data?.data || [];
+        } catch (error) {
+            console.error('[InstagramService] Failed to get user pages:', error);
+            return [];
+        }
+    }
+
+    /**
      * Record circuit breaker success
      */
     private static recordCircuitBreakerSuccess(): void {

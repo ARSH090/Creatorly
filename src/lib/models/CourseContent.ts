@@ -18,6 +18,7 @@ export interface ICourseLesson extends Document {
     orderIndex: number;
     isFreePreview: boolean;
     isActive: boolean;
+    dripDelayDays: number; // Days after purchase to unlock
     createdAt: Date;
     updatedAt: Date;
 }
@@ -41,7 +42,8 @@ const CourseLessonSchema: Schema = new Schema({
     durationMinutes: { type: Number, default: 0 },
     orderIndex: { type: Number, required: true },
     isFreePreview: { type: Boolean, default: false },
-    isActive: { type: Boolean, default: true }
+    isActive: { type: Boolean, default: true },
+    dripDelayDays: { type: Number, default: 0 }
 }, {
     timestamps: true
 });

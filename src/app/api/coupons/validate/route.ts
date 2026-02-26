@@ -6,7 +6,7 @@ import { z } from 'zod';
 const applyCouponSchema = z.object({
     code: z.string().min(1, 'Coupon code is required').toUpperCase(),
     cartTotal: z.number().positive('Cart total must be positive'),
-    creatorId: z.string().optional(),
+    creatorId: z.string().min(1, 'Creator ID is required'),
 });
 
 /**
@@ -28,15 +28,16 @@ export async function POST(request: NextRequest) {
 
         const { code, cartTotal, creatorId } = validation.data;
 
-        // Find coupon
+        // Find coupon for specific creator
         const coupon = await Coupon.findOne({
+            creatorId,
             code: code.toUpperCase(),
-            status: 'active',
+            isActive: true,
         });
 
         if (!coupon) {
             return NextResponse.json(
-                { error: 'Invalid coupon code' },
+                { error: 'Invalid or inactive coupon code' },
                 { status: 404 }
             );
         }
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
         const now = new Date();
 
         // Check validity period
-        if (now < coupon.validFrom || (coupon.validUntil && now > coupon.validUntil)) {
+        if (now < coupon.validFrom || (coupon.expiresAt && now > coupon.expiresAt)) {
             return NextResponse.json(
                 { error: 'Coupon has expired or is not yet valid' },
                 { status: 400 }
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check usage limits
-        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+        if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
             return NextResponse.json(
                 { error: 'Coupon usage limit reached' },
                 { status: 400 }
@@ -61,19 +62,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Check minimum purchase amount
-        if (coupon.minOrderAmount && cartTotal < coupon.minOrderAmount) {
+        if (coupon.minimumPurchaseAmount && cartTotal < coupon.minimumPurchaseAmount) {
             return NextResponse.json(
                 {
-                    error: `Minimum purchase amount is ₹${(coupon.minOrderAmount).toFixed(2)}`,
+                    error: `Minimum purchase amount is ₹${(coupon.minimumPurchaseAmount).toFixed(2)}`,
                 },
-                { status: 400 }
-            );
-        }
-
-        // Check creator-specific coupon
-        if (coupon.applicableCreators?.length > 0 && creatorId && !coupon.applicableCreators.some(id => id.toString() === creatorId)) {
-            return NextResponse.json(
-                { error: 'This coupon is not applicable' },
                 { status: 400 }
             );
         }
@@ -83,11 +76,14 @@ export async function POST(request: NextRequest) {
 
         if (coupon.discountType === 'percentage') {
             discountAmount = Math.floor((cartTotal * coupon.discountValue) / 100);
-        } else {
+            if (coupon.maxDiscountCap) {
+                discountAmount = Math.min(discountAmount, coupon.maxDiscountCap * 100); // converting cap to paise
+            }
+        } else if (coupon.discountType === 'fixed') {
             discountAmount = coupon.discountValue * 100; // Convert to paise
+        } else if (coupon.discountType === 'free') {
+            discountAmount = cartTotal;
         }
-
-        // Apply max discount cap if set
 
         // Ensure discount doesn't exceed cart total
         discountAmount = Math.min(discountAmount, cartTotal);
@@ -97,6 +93,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
             valid: true,
             coupon: {
+                id: coupon._id,
                 code: coupon.code,
                 discountType: coupon.discountType,
                 discountValue: coupon.discountValue,
@@ -114,47 +111,43 @@ export async function POST(request: NextRequest) {
 }
 
 /**
- * Get available coupons
+ * Get available coupons for storefront hint
  */
 export async function GET(request: NextRequest) {
     try {
         const searchParams = request.nextUrl.searchParams;
         const creatorId = searchParams.get('creatorId');
 
+        if (!creatorId) {
+            return NextResponse.json({ error: 'creatorId is required' }, { status: 400 });
+        }
+
         await connectToDatabase();
 
         const now = new Date();
 
-        // Query coupons (site-wide or creator-specific)
-        const query: Record<string, any> = {
-            status: 'active',
+        // Query active coupons that should be shown on storefront
+        const coupons = await Coupon.find({
+            creatorId,
+            isActive: true,
+            showHintOnStorefront: true,
             validFrom: { $lte: now },
             $or: [
-                { validUntil: { $exists: false } },
-                { validUntil: { $gte: now } }
+                { expiresAt: { $exists: false } },
+                { expiresAt: { $gte: now } },
+                { expiresAt: null }
             ]
-        };
-
-        if (creatorId) {
-            query.$or.push(
-                { applicableCreators: { $size: 0 } },
-                { applicableCreators: creatorId }
-            );
-        } else {
-            query.applicableCreators = { $size: 0 }; // Only site-wide coupons
-        }
-
-        const coupons = await Coupon.find(query)
-            .select('code description discountType discountValue minOrderAmount')
-            .limit(50);
+        })
+            .select('code discountType discountValue minimumPurchaseAmount internalNote')
+            .limit(10);
 
         return NextResponse.json({
             coupons: coupons.map((c: any) => ({
                 code: c.code,
-                description: c.description,
                 discountType: c.discountType,
                 discountValue: c.discountValue,
-                minOrderAmount: c.minOrderAmount,
+                minimumPurchaseAmount: c.minimumPurchaseAmount,
+                note: c.internalNote
             })),
         });
     } catch (error) {
@@ -165,3 +158,4 @@ export async function GET(request: NextRequest) {
         );
     }
 }
+

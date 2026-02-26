@@ -9,6 +9,7 @@ export interface IProductFile extends Document {
     storagePath: string; // key/path in object storage
     versionNumber: number;
     isCurrentVersion: boolean;
+    dripDelayDays: number; // Days after purchase to unlock
     createdAt: Date;
     updatedAt: Date;
 }
@@ -21,7 +22,8 @@ const ProductFileSchema: Schema = new Schema({
     fileType: { type: String, required: true },
     storagePath: { type: String, required: true },
     versionNumber: { type: Number, default: 1 },
-    isCurrentVersion: { type: Boolean, default: true }
+    isCurrentVersion: { type: Boolean, default: true },
+    dripDelayDays: { type: Number, default: 0 }
 }, {
     timestamps: true
 });

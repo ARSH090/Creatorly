@@ -10,8 +10,15 @@ interface ShareButtonsProps {
 
 export default function ShareButtons({ username, displayName }: ShareButtonsProps) {
     const [copied, setCopied] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
-    const profileUrl = `${typeof window !== 'undefined' ? window.location.origin : 'https://creatorly.in'}/u/${username}`;
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    const profileUrl = typeof window !== 'undefined'
+        ? `${window.location.origin}/u/${username}`
+        : `https://creatorly.in/u/${username}`;
 
     const handleCopy = async () => {
         try {
@@ -40,8 +47,8 @@ export default function ShareButtons({ username, displayName }: ShareButtonsProp
             <button
                 onClick={handleCopy}
                 className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold transition-all duration-200 ${copied
-                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-                        : 'bg-white/5 border-white/10 text-zinc-400 hover:bg-white/10 hover:text-white'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
+                    : 'bg-white/5 border-white/10 text-zinc-400 hover:bg-white/10 hover:text-white'
                     }`}
             >
                 {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
@@ -74,7 +81,7 @@ export default function ShareButtons({ username, displayName }: ShareButtonsProp
             </a>
 
             {/* Share API (native) if available */}
-            {typeof navigator !== 'undefined' && 'share' in navigator && (
+            {mounted && typeof navigator !== 'undefined' && 'share' in navigator && (
                 <button
                     onClick={() => navigator.share({ title: `${displayName} on Creatorly`, url: profileUrl })}
                     className="flex items-center gap-2 px-4 py-2 rounded-full border border-white/10 bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white text-xs font-bold transition-all duration-200"

@@ -29,9 +29,10 @@ interface ProductCardProps {
     };
     theme: any;
     hasAccess?: boolean;
+    layout?: 'grid' | 'list';
 }
 
-export default function ProductCard({ product, creator, theme, hasAccess }: ProductCardProps) {
+export default function ProductCard({ product, creator, theme, hasAccess, layout = 'grid' }: ProductCardProps) {
     const [isHovered, setIsHovered] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
@@ -39,6 +40,8 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
     const { addToCart, setStep } = useCheckoutStore();
     const { openLeadModal } = useLeadStore();
     const router = useRouter();
+
+    const isList = layout === 'list';
 
     const handleAction = async () => {
         if (hasAccess) {
@@ -130,40 +133,31 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
 
     return (
         <motion.div
-            className="group relative bg-[#0A0A0A] rounded-[2rem] overflow-hidden border border-white/5 transition-all duration-500"
+            className={`group relative bg-[#0A0A0A] rounded-[1.5rem] overflow-hidden border border-white/5 transition-all duration-500 flex ${isList ? 'flex-col sm:flex-row' : 'flex-col'}`}
             onHoverStart={() => setIsHovered(true)}
             onHoverEnd={() => setIsHovered(false)}
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            whileHover={{ y: -8, borderColor: theme.primaryColor + '40' }}
+            whileHover={{ y: -4, borderColor: theme.primaryColor + '40' }}
         >
 
             {/* Product Image & Overlay */}
-            <div className="relative aspect-[4/3] overflow-hidden">
+            <div className={`relative overflow-hidden ${isList ? 'w-full sm:w-48 aspect-square' : 'aspect-[4/3]'}`}>
                 <NextImage
                     src={product.image}
                     alt={product.name}
                     fill
-                    sizes="(max-width: 768px) 100vw, 50vw"
+                    sizes={isList ? "192px" : "(max-width: 768px) 100vw, 50vw"}
                     className="object-cover transition-transform duration-1000 group-hover:scale-110"
                 />
 
                 {/* Type Badge */}
-                <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10">
-                    <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl sm:rounded-2xl px-3 py-1.5 sm:px-4 sm:py-2 flex items-center gap-2">
+                <div className="absolute top-3 left-3 z-10">
+                    <div className="backdrop-blur-xl bg-black/40 border border-white/10 rounded-xl px-3 py-1.5 flex items-center gap-2">
                         <div style={{ color: theme.primaryColor }}>{getTypeIcon()}</div>
-                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-white">{product.type}</span>
+                        <span className="text-[9px] font-black uppercase tracking-widest text-white">{product.type}</span>
                     </div>
-                </div>
-
-                {/* Best Seller / New Badges */}
-                <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
-                    {product.isBestSeller && (
-                        <div className="bg-amber-500 p-2 rounded-xl shadow-xl shadow-amber-500/20">
-                            <TrendingUp className="w-4 h-4 text-black" />
-                        </div>
-                    )}
                 </div>
 
                 {/* Hover Action Overlay */}
@@ -173,28 +167,28 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-8 z-20"
+                            className="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center p-4 z-20"
                         >
                             <button
                                 onClick={handleAction}
                                 disabled={isCheckingOut}
-                                className="w-full py-4 rounded-2xl font-black uppercase tracking-widest text-sm flex items-center justify-center gap-3 transition-all active:scale-95 shadow-2xl disabled:opacity-50"
+                                className="w-full py-3 rounded-xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 transition-all active:scale-95 shadow-2xl disabled:opacity-50"
                                 style={{
-                                    backgroundColor: theme.primaryColor,
-                                    color: '#fff',
-                                    boxShadow: `0 20px 40px ${theme.primaryColor}30`
+                                    backgroundColor: 'var(--button)',
+                                    color: 'var(--button-text)',
+                                    boxShadow: `0 10px 20px ${theme.primaryColor}20`
                                 }}
                             >
                                 {isCheckingOut ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
+                                    <Loader2 className="w-4 h-4 animate-spin" />
                                 ) : hasAccess ? (
-                                    product.type === 'course' ? <Play className="w-5 h-5 fill-white" /> :
-                                        product.type === 'membership' ? <Users className="w-5 h-5" /> :
-                                            <ShoppingBag className="w-5 h-5" />
+                                    product.type === 'course' ? <Play className="w-4 h-4 fill-white" /> :
+                                        product.type === 'membership' ? <Users className="w-4 h-4" /> :
+                                            <ShoppingBag className="w-4 h-4" />
                                 ) : (
-                                    <ShoppingBag className="w-5 h-5" />
+                                    <ShoppingBag className="w-4 h-4" />
                                 )}
-                                {isCheckingOut ? 'Processing...' : (hasAccess ? (product.type === 'course' ? 'Start Learning' : product.type === 'membership' ? 'Join Community' : 'Download Now') : 'Get Access Now')}
+                                {isCheckingOut ? '...' : (hasAccess ? 'Open' : 'Get It')}
                             </button>
                         </motion.div>
                     )}
@@ -202,31 +196,33 @@ export default function ProductCard({ product, creator, theme, hasAccess }: Prod
             </div>
 
             {/* Product Meta */}
-            <div className="p-5 sm:p-8 space-y-3 sm:space-y-4">
-                <div className="flex justify-between items-start gap-3 sm:gap-4">
-                    <h3 className="text-lg sm:text-xl font-bold leading-tight group-hover:text-white transition-colors">
+            <div className={`p-5 sm:p-6 flex-1 flex flex-col justify-center ${isList ? 'sm:py-4' : ''}`}>
+                <div className="flex justify-between items-start gap-3">
+                    <h3 className="text-sm sm:text-lg font-bold leading-tight group-hover:text-white transition-colors line-clamp-2 overflow-hidden">
                         {product.name}
                     </h3>
-                    <div className="text-right">
-                        <p className="text-xl sm:text-2xl font-black tracking-tight" style={{ color: theme.primaryColor }}>
+                    <div className="text-right shrink-0">
+                        <p className="text-lg font-black tracking-tight" style={{ color: theme.primaryColor }}>
                             ₹{product.price}
                         </p>
                     </div>
                 </div>
 
-                <p className="text-zinc-500 text-xs sm:text-sm line-clamp-2 font-medium">
-                    {product.description || 'Elevate your creative workflow with this premium digital asset.'}
-                </p>
+                {!isList && (
+                    <p className="text-zinc-500 text-xs mt-3 line-clamp-2 font-medium">
+                        {product.description || 'Elevate your creative workflow with this premium digital asset.'}
+                    </p>
+                )}
 
-                <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-white/5">
+                <div className={`flex items-center justify-between ${isList ? 'mt-3' : 'pt-4 mt-4 border-t border-white/5'}`}>
                     <div className="flex items-center gap-1.5 bg-white/5 px-2.5 py-1 rounded-full">
-                        <Star className="w-3 h-3 sm:w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                        <span className="text-[10px] sm:text-xs font-bold text-zinc-400">4.9 (124)</span>
+                        <Star className="w-3 h-3 text-amber-500 fill-amber-500" />
+                        <span className="text-[10px] font-bold text-zinc-400">4.9 {isList ? '' : '(124)'}</span>
                     </div>
 
-                    <div className="flex items-center gap-2 group-hover:gap-3 transition-all">
-                        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest text-zinc-500">View Details</span>
-                        <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
+                    <div className="flex items-center gap-2 transition-all group-hover:translate-x-1">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500">View</span>
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: theme.primaryColor }} />
                     </div>
                 </div>
             </div>

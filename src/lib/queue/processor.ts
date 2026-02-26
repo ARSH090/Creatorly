@@ -2,7 +2,6 @@ import { QueueJob, IQueueJob } from '@/lib/models/QueueJob';
 import { MetaGraphService } from '@/lib/services/meta';
 import { DMLog } from '@/lib/models/DMLog';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { sendWhatsAppMessage } from '@/lib/services/whatsapp';
 import { PlatformSettings } from '@/lib/models/PlatformSettings';
 import { Subscription } from '@/lib/models/Subscription';
 import { Plan } from '@/lib/models/Plan';
@@ -40,6 +39,8 @@ export async function processQueueJob(jobId: string) {
             await handleEmailBroadcast(job);
         } else if (job.type === 'booking_cleanup') {
             await handleBookingCleanup(job);
+        } else if (job.type === 'one_off_email') {
+            await handleOneOffEmail(job);
         }
 
         job.status = 'completed';
@@ -67,8 +68,22 @@ export async function processQueueJob(jobId: string) {
 }
 
 async function handleDMDelivery(job: IQueueJob) {
-    const { recipientId, text, accessToken, creatorId, ruleId, source, platform } = job.payload;
-    if (!recipientId || !text) throw new Error('Invalid DM payload');
+    const {
+        recipientId, text, accessToken, creatorId, ruleId,
+        source, platform, messageType, carouselMessages,
+        attachmentType, attachmentId, phoneNumberId,
+        variables = {}
+    } = job.payload;
+
+    if (!recipientId) throw new Error('Invalid DM recipient');
+
+    await connectToDatabase();
+    const { User } = await import('@/lib/models/User');
+    const { AutoReplyRule } = await import('@/lib/models/AutoReplyRule');
+    const { Product } = await import('@/lib/models/Product');
+
+    const creator = await User.findById(creatorId).lean();
+    if (!creator) throw new Error('Creator not found');
 
     // 1. Subscription & Plan Limit Check
     const activeSub = await Subscription.findOne({
@@ -77,64 +92,137 @@ async function handleDMDelivery(job: IQueueJob) {
     }).populate('planId');
 
     let plan = activeSub?.planId as any;
+    if (!plan) plan = await Plan.findOne({ tier: PlanTier.FREE });
+    if (!plan) throw new Error('No plan configuration found.');
 
-    // Fallback to Free Plan if no active sub
-    if (!plan) {
-        plan = await Plan.findOne({ tier: PlanTier.FREE });
-    }
-
-    if (!plan) {
-        throw new Error('Critical: No plan configuration found for usage check.');
-    }
-
-    // Count usage for the current month
     const startOfMonth = new Date();
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
 
     const usageCount = await DMLog.countDocuments({
         creatorId,
-        createdAt: { $gte: startOfMonth }
+        createdAt: { $gte: startOfMonth },
+        status: 'success'
     });
 
     if (usageCount >= plan.maxAutoDms) {
-        throw new Error(`Plan limit reached: ${usageCount}/${plan.maxAutoDms} Auto DMs sent this month.`);
+        throw new Error(`Plan limit reached: ${usageCount}/${plan.maxAutoDms} Auto DMs.`);
     }
 
     // 2. Variable Injection
-    let processedText = text;
-    // Basic replacement for now. In production, fetch Lead name if available.
-    processedText = processedText.replace(/{{name}}/g, 'there');
+    const injectVariables = (str: string | undefined) => {
+        if (!str) return '';
+        return str
+            .replace(/{{first_name}}/g, variables.firstName || 'there')
+            .replace(/{{creator_username}}/g, creator.username || '')
+            .replace(/{{content_description}}/g, variables.contentDescription || '')
+            .replace(/{{product_name}}/g, variables.productName || '')
+            .replace(/{{custom_link}}/g, variables.customLink || '')
+            .replace(/{{name}}/g, variables.firstName || 'there');
+    };
 
+    const finalMessage = injectVariables(text);
+
+    // 3. Platform Specific Logic
     if (platform === 'whatsapp') {
-        const waResult = await sendWhatsAppMessage({
-            phone: recipientId,
-            message: processedText
-        });
-        if (!waResult.success) {
-            throw new Error(waResult.error || 'WhatsApp delivery failed');
+        const { WhatsAppService } = await import('@/lib/services/whatsapp');
+        const { decryptTokenGCM } = await import('@/lib/security/encryption');
+
+        const waConfig = creator.whatsappConfig;
+        let waToken = accessToken;
+        let waPhoneId = phoneNumberId;
+
+        if (!waToken && waConfig?.accessToken) {
+            waToken = decryptTokenGCM(waConfig.accessToken, waConfig.accessTokenIV!, waConfig.accessTokenTag!);
         }
+        if (!waPhoneId && waConfig?.phoneNumberId) {
+            waPhoneId = decryptTokenGCM(waConfig.phoneNumberId, waConfig.phoneNumberIdIV!, waConfig.phoneNumberIdTag!);
+        }
+
+        if (!waToken || !waPhoneId) throw new Error('WhatsApp not configured');
+
+        let waResult;
+        if (messageType === 'template') {
+            waResult = await WhatsAppService.sendTemplateMessage({
+                to: recipientId,
+                templateName: variables.templateName,
+                languageCode: variables.languageCode || 'en',
+                phoneNumberId: waPhoneId,
+                accessToken: waToken
+            });
+        } else if (attachmentType && attachmentType !== 'none') {
+            waResult = await WhatsAppService.sendMediaMessage({
+                to: recipientId,
+                type: (attachmentType === 'pdf' ? 'document' : 'image') as any,
+                url: variables.attachmentUrl,
+                caption: finalMessage,
+                phoneNumberId: waPhoneId,
+                accessToken: waToken
+            });
+        } else {
+            waResult = await WhatsAppService.sendTextMessage({
+                to: recipientId,
+                text: finalMessage,
+                phoneNumberId: waPhoneId,
+                accessToken: waToken
+            });
+        }
+
+        if (!waResult.success) throw new Error(waResult.error || 'WhatsApp delivery failed');
     } else {
-        // Default to Instagram
+        // Instagram Logic
         if (!accessToken) throw new Error('Missing Instagram Access Token');
-        await MetaGraphService.sendDirectMessage({
-            recipientId,
-            message: processedText,
-            accessToken
-        });
+
+        if (messageType === 'carousel' && carouselMessages && carouselMessages.length > 0) {
+            for (const msg of carouselMessages) {
+                // Handle delay
+                if (msg.delaySeconds > 0) {
+                    await new Promise(r => setTimeout(r, msg.delaySeconds * 1000));
+                }
+                await MetaGraphService.sendDirectMessage({
+                    recipientId,
+                    message: injectVariables(msg.text),
+                    accessToken
+                });
+            }
+        } else if (messageType === 'product' && attachmentId) {
+            const product = await Product.findById(attachmentId).lean();
+            if (product) {
+                const productMsg = `${finalMessage}\n\nCheck out ${product.name}: ${process.env.NEXT_PUBLIC_APP_URL}/u/${creator.username}/p/${product.slug}`;
+                await MetaGraphService.sendDirectMessage({
+                    recipientId,
+                    message: productMsg,
+                    accessToken
+                });
+            }
+        } else {
+            await MetaGraphService.sendDirectMessage({
+                recipientId,
+                message: finalMessage,
+                accessToken
+            });
+        }
     }
 
+    // 4. Log Success & Update Stats
     await DMLog.create({
         creatorId,
         recipientId,
         ruleId,
         triggerSource: source || 'automation',
         status: 'success',
-        messageSent: processedText,
+        messageSent: finalMessage,
         provider: platform || 'instagram',
         lastInteractionAt: new Date(),
-        metadata: { jobId: job._id, attempt: job.attempt + 1 }
+        metadata: { jobId: job._id }
     });
+
+    if (ruleId) {
+        await AutoReplyRule.findByIdAndUpdate(ruleId, {
+            $inc: { 'stats.totalSent': 1 },
+            $set: { 'stats.lastFiredAt': new Date() }
+        });
+    }
 }
 
 async function handleEmailSequenceStep(job: IQueueJob) {
@@ -277,5 +365,31 @@ async function handleEmailBroadcast(job: IQueueJob) {
     campaign.sentAt = new Date();
     campaign.stats.sent = successCount;
     await campaign.save();
+}
+
+async function handleOneOffEmail(job: IQueueJob) {
+    const { email, subject, content, creatorId } = job.payload;
+    const { sendEmail } = await import('@/lib/services/email');
+    const { User } = await import('@/lib/models/User');
+
+    if (!email || !subject || !content) {
+        throw new Error('Invalid email payload for one-off email');
+    }
+
+    const creator = await User.findById(creatorId);
+    const creatorName = creator?.displayName || creator?.username || 'Creatorly Creator';
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.link';
+    const unsubscribeUrl = `${appUrl}/api/marketing/unsubscribe?email=${encodeURIComponent(email)}&cid=${creatorId}`;
+
+    const result = await sendEmail({
+        to: email,
+        subject: subject,
+        html: content + `<br/><br/><hr/><small style="color: #666;">Sent by ${creatorName} via Creatorly. <a href="${unsubscribeUrl}">Unsubscribe</a></small>`
+    });
+
+    if (!result.success) {
+        throw new Error(`Email delivery failed: ${result.error}`);
+    }
 }
 

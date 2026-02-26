@@ -237,16 +237,16 @@ export default function DMSection() {
             <div className="mt-8 pt-8 border-t border-white/5">
                 <div className="flex gap-4">
                     <a
-                        href="/dashboard/automations"
+                        href="/dashboard/automation"
                         className="flex-1 py-4 bg-indigo-600 hover:bg-indigo-500 rounded-2xl text-center text-xs font-black text-white uppercase tracking-widest transition-all shadow-lg shadow-indigo-500/10 active:scale-95"
                     >
                         Configure Engine
                     </a>
                     <a
-                        href="/dashboard/leads"
+                        href="/dashboard/settings"
                         className="flex-1 py-4 bg-white/5 hover:bg-white/10 rounded-2xl text-center text-xs font-black text-white uppercase tracking-widest transition-all border border-white/5 active:scale-95"
                     >
-                        Neural Terminal
+                        Terminal Settings
                     </a>
                 </div>
             </div>

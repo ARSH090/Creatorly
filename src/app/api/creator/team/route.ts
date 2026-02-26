@@ -102,7 +102,7 @@ async function postHandler(req: NextRequest, user: any) {
 
     const membership = await Membership.create({
         teamId: team._id,
-        userId: targetUser ? targetUser._id : null,
+        ...(targetUser ? { userId: targetUser._id } : {}),
         invitedEmail: email.toLowerCase(),
         role,
         status: MembershipStatus.PENDING,

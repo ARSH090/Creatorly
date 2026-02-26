@@ -192,7 +192,7 @@ export async function getCreatorWidgets(creatorId: string): Promise<IDashboardWi
             .lean();
     }
 
-    return widgets;
+    return widgets as any[];
 }
 
 /**

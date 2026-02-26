@@ -16,6 +16,7 @@ interface CreatorBioProps {
         verified?: boolean;
         badges?: string[];
         theme?: any;
+        showProfilePhoto?: boolean;
     };
 }
 
@@ -35,29 +36,31 @@ export default function CreatorBio({ creator }: CreatorBioProps) {
                 borderColor: `${theme.primaryColor}20`
             }}
         >
-            <div className="relative mb-6">
-                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 overflow-hidden mx-auto shadow-xl shadow-purple-100 relative">
-                    {creator.avatar ? (
-                        <NextImage
-                            src={creator.avatar}
-                            alt={creator.displayName}
-                            fill
-                            sizes="96px"
-                            className="object-cover"
-                            priority
-                        />
-                    ) : (
-                        <div className="flex items-center justify-center w-full h-full text-3xl font-bold text-purple-300">
-                            {creator.displayName.charAt(0)}
+            {creator.showProfilePhoto !== false && (
+                <div className="relative mb-6">
+                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-100 to-pink-100 overflow-hidden mx-auto shadow-xl shadow-purple-100 relative">
+                        {creator.avatar ? (
+                            <NextImage
+                                src={creator.avatar}
+                                alt={creator.displayName}
+                                fill
+                                sizes="96px"
+                                className="object-cover"
+                                priority
+                            />
+                        ) : (
+                            <div className="flex items-center justify-center w-full h-full text-3xl font-bold text-purple-300">
+                                {creator.displayName.charAt(0)}
+                            </div>
+                        )}
+                    </div>
+                    {creator.verified && (
+                        <div className="absolute bottom-0 right-1/2 translate-x-12 translate-y-2 bg-white p-1 rounded-full shadow-sm">
+                            <CheckCircle className="w-5 h-5 text-blue-500 fill-white" />
                         </div>
                     )}
                 </div>
-                {creator.verified && (
-                    <div className="absolute bottom-0 right-1/2 translate-x-12 translate-y-2 bg-white p-1 rounded-full shadow-sm">
-                        <CheckCircle className="w-5 h-5 text-blue-500 fill-white" />
-                    </div>
-                )}
-            </div>
+            )}
 
             <div className="text-center mb-4 sm:mb-6">
                 <h1 className="text-xl sm:text-2xl font-bold mb-1" style={{ color: theme.textColor }}>{creator.displayName}</h1>

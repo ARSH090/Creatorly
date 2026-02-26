@@ -24,6 +24,8 @@ import { applyThemeToCSSVars, getGoogleFontsUrl } from '@/utils/theme.utils';
 import type { StorefrontTheme, ServiceButton, PublicLink } from '@/types/storefront.types';
 import { shouldDowngrade } from '@/lib/utils/tier-utils';
 import { TIER_LIMITS } from '@/lib/constants/tier-limits';
+import type { StorefrontBlock, StorefrontThemeV2 } from '@/types/storefront-blocks.types';
+import StorefrontRenderer from '@/components/storefront/StorefrontRenderer';
 
 // ─── ISR: revalidate every 60 seconds ─────────────────────────────────────────
 export const revalidate = 60;
@@ -51,40 +53,58 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     await connectToDatabase();
     const { username } = await params;
-    const creator = await User.findOne({
-        $or: [{ username }, { storeSlug: username }]
-    }).lean() as any;
+
+    const [creator, profile] = await Promise.all([
+        User.findOne({ $or: [{ username }, { storeSlug: username }] }).lean() as Promise<any>,
+        User.findOne({ $or: [{ username }, { storeSlug: username }] })
+            .select('_id').lean()
+            .then((c: any) => c ? CreatorProfile.findOne({ creatorId: c._id }).lean() : null) as Promise<any>,
+    ]);
 
     if (!creator) {
         return { title: 'Creator Not Found | Creatorly' };
     }
-
-    const profile = await CreatorProfile.findOne({ creatorId: creator._id }).lean() as any;
     const displayName = creator.displayName || creator.username;
     const bio = profile?.description || creator.bio || `Check out ${displayName}'s store on Creatorly.`;
     const avatar = creator.avatar || '/default-avatar.png';
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in';
     const image = avatar.startsWith('http') ? avatar : `${appUrl}${avatar}`;
 
+    // Use SEO from new builder if present
+    const seo = profile?.storefrontSeo;
+    const pageTitle = seo?.metaTitle || `${displayName} — Digital Products & Courses | Creatorly`;
+    const pageDesc = seo?.metaDescription || bio;
+    const ogImage = seo?.ogImage || image;
+
     return {
-        title: `${displayName} | Creatorly`,
-        description: bio,
+        title: pageTitle,
+        description: pageDesc,
         alternates: {
-            canonical: `${appUrl}/u/${username}`,
+            canonical: `${appUrl}/${username}`,
         },
         openGraph: {
-            title: `${displayName} | Creatorly`,
-            description: bio,
-            images: [{ url: image, width: 400, height: 400, alt: displayName }],
+            title: pageTitle,
+            description: pageDesc,
+            images: [{ url: ogImage, width: 1200, height: 630, alt: `${displayName}'s Storefront` }],
             type: 'profile',
-            url: `${appUrl}/u/${username}`,
+            url: `${appUrl}/${username}`,
         },
         twitter: {
-            card: 'summary',
-            title: `${displayName} | Creatorly`,
-            description: bio,
-            images: [image],
+            card: 'summary_large_image',
+            title: pageTitle,
+            description: pageDesc,
+            images: [ogImage],
+            site: '@creatorly',
         },
+        robots: {
+            index: true,
+            follow: true,
+            googleBot: { index: true, follow: true, 'max-video-preview': -1, 'max-image-preview': 'large', 'max-snippet': -1 },
+        },
+        icons: {
+            icon: seo?.favicon || '/favicon.ico',
+        },
+        keywords: seo?.keywords || 'creator, digital products, courses, storefront, creatorly',
     };
 }
 
@@ -101,9 +121,13 @@ export default async function CreatorStorefront({
 
     await connectToDatabase();
 
-    const creator = await User.findOne({
-        $or: [{ username }, { storeSlug: username }]
-    }).lean() as any;
+    const [creator, profile] = await Promise.all([
+        User.findOne({ $or: [{ username }, { storeSlug: username }] }).select('displayName username avatar bio status isSuspended createdAt').lean(),
+        User.findOne({ $or: [{ username }, { storeSlug: username }] })
+            .select('_id').lean()
+            .then((c: any) => c ? CreatorProfile.findOne({ creatorId: c._id }).select('theme themeV2 layout blocksLayout links serviceButtons description testimonials faqs storefrontSeo passwordProtection showProfilePhoto').lean() : null)
+    ]);
+
     if (!creator) notFound();
 
     // ── Suspended ──
@@ -130,23 +154,83 @@ export default async function CreatorStorefront({
         );
     }
 
-    const profile = await CreatorProfile.findOne({ creatorId: creator._id }).lean() as any;
+    // ── Coming Soon ──
+    if (profile && profile.isPublished === false) {
+        return (
+            <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 text-center">
+                <div className="max-w-md space-y-6">
+                    <div className="w-20 h-20 bg-indigo-50 rounded-3xl flex items-center justify-center mx-auto text-4xl">🚀</div>
+                    <div className="space-y-2">
+                        <h1 className="text-3xl font-black text-zinc-900 tracking-tight">
+                            {creator.displayName || creator.username}
+                        </h1>
+                        <p className="text-zinc-500 font-medium">Something exciting is coming soon!</p>
+                    </div>
+                    <p className="text-xs text-zinc-300 uppercase tracking-widest font-bold">Powered by Creatorly</p>
+                </div>
+            </div>
+        );
+    }
 
-    // ── Enforce Product Limits ──
+    // ── Password Protection ──
+    const { pwd } = (await searchParams) as { pwd?: string };
+    if (profile?.passwordProtection?.enabled) {
+        const correctPassword = profile.passwordProtection.password;
+        if (pwd !== correctPassword) {
+            return (
+                <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-6 text-center">
+                    <div className="max-w-sm w-full space-y-8">
+                        <div className="w-20 h-20 bg-white/5 border border-white/10 rounded-3xl flex items-center justify-center mx-auto text-3xl">
+                            🔒
+                        </div>
+                        <div className="space-y-2">
+                            <h1 className="text-2xl font-black text-white">{creator.displayName || creator.username}</h1>
+                            <p className="text-zinc-500 text-sm">This storefront is password protected.</p>
+                            {profile.passwordProtection.hint && (
+                                <p className="text-xs text-zinc-600 italic">Hint: {profile.passwordProtection.hint}</p>
+                            )}
+                        </div>
+                        <form className="space-y-4">
+                            <input
+                                name="pwd"
+                                type="password"
+                                placeholder="Enter password"
+                                className="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500 transition-all placeholder:text-zinc-600"
+                                required
+                            />
+                            <button
+                                type="submit"
+                                className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-2xl transition-all"
+                            >
+                                Unlock Storefront
+                            </button>
+                        </form>
+                        <p className="text-[10px] text-zinc-700 uppercase tracking-widest font-bold">Powered by Creatorly</p>
+                    </div>
+                </div>
+            );
+        }
+    }
+
+    // ── Product limits ──
     let effectiveTier = creator.subscriptionTier || 'free';
     if (shouldDowngrade(creator.subscriptionStatus, creator.subscriptionEndAt)) {
         effectiveTier = 'free';
     }
-
     const tierLimits = TIER_LIMITS[effectiveTier as keyof typeof TIER_LIMITS];
     const productLimit = creator.planLimits?.maxProducts || tierLimits?.products || 1;
 
-    const products = await ProductModel.find({ creatorId: creator._id, isActive: true, status: 'active' })
+    const products = await ProductModel.find({
+        creatorId: creator._id,
+        isActive: true,
+        status: 'active'
+    })
+        .select('name price type image description isFeatured createdAt')
         .sort({ isFeatured: -1, createdAt: -1 })
         .limit(productLimit === Infinity ? 0 : productLimit)
-        .lean() as IProduct[];
+        .lean();
 
-    // ── Purchased products (for logged-in visitor) ──
+    // ── Purchased products ──
     const currentUser = await getCurrentUser();
     let purchasedProductIds: string[] = [];
     if (currentUser) {
@@ -154,13 +238,116 @@ export default async function CreatorStorefront({
             userId: (currentUser as any)._id,
             creatorId: creator._id,
             status: 'completed',
-        }).lean();
+        }).select('items.productId').lean();
         purchasedProductIds = orders.flatMap((o: any) =>
             o.items.map((item: any) => item.productId.toString())
         );
     }
 
-    // ── Theme with defaults — each property extracted as a primitive to satisfy RSC serialisation ──
+    // Serialise products
+    const plainProducts = products.map((p: any) => ({
+        id: p._id.toString(),
+        name: p.name,
+        price: p.price,
+        type: p.type,
+        image: p.image,
+        description: p.description,
+        isBestSeller: p.isFeatured,
+        isNew: Date.now() - new Date(p.createdAt).getTime() < 7 * 86400 * 1000,
+    }));
+
+    // ── Check if new block-based builder is being used ──
+    const blocksLayout: StorefrontBlock[] | null = profile?.blocksLayout?.length
+        ? profile.blocksLayout
+        : null;
+
+    const themeV2: StorefrontThemeV2 | null = (profile?.themeV2 as unknown as StorefrontThemeV2) ?? null;
+
+    // ── Analytics ──
+    const { AnalyticsEvent } = await import('@/lib/models/AnalyticsEvent');
+    AnalyticsEvent.create({
+        eventType: 'page_view',
+        creatorId: creator._id,
+        path: `/u/${username}`,
+        metadata: { source: 'server-component', ref },
+    }).catch(console.error);
+
+    if (ref && typeof ref === 'string') {
+        const { default: ReferralModel } = await import('@/lib/models/Referral');
+        ReferralModel.findOneAndUpdate({ code: ref }, { $inc: { clicks: 1 } }).catch(console.error);
+    }
+
+    // ── NEW: UTM & Traffic Analytics ──
+    const { headers } = await import('next/headers');
+    const headerList = await headers();
+    const utmSource = headerList.get('x-track-utm_source');
+    const utmMedium = headerList.get('x-track-utm_medium');
+    const utmCampaign = headerList.get('x-track-utm_campaign');
+
+    if (utmSource || utmMedium || utmCampaign) {
+        const { recordTrafficHit } = await import('@/lib/utils/analytics');
+        const utmParams = {
+            utm_source: utmSource || '',
+            utm_medium: utmMedium || '',
+            utm_campaign: utmCampaign || '',
+            utm_term: headerList.get('x-track-utm_term') || '',
+            utm_content: headerList.get('x-track-utm_content') || '',
+            referrer: headerList.get('referer') || ''
+        };
+        recordTrafficHit(creator._id.toString(), `/u/${username}`, utmParams).catch(console.error);
+    }
+
+
+    // ── NEW: Block-based renderer ─────────────────────────────────────────────
+    if (blocksLayout && themeV2) {
+        const plainCreator = {
+            displayName: String(creator.displayName ?? ''),
+            username: String(creator.username ?? ''),
+            bio: String(profile?.description ?? creator.bio ?? ''),
+            avatar: String(creator.avatar ?? ''),
+        };
+
+        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in';
+        const jsonLd = {
+            '@context': 'https://schema.org',
+            '@type': 'Person',
+            name: creator.displayName,
+            url: `${appUrl}/u/${username}`,
+            image: creator.avatar || undefined,
+            description: profile?.description || creator.bio || undefined,
+            sameAs: Object.values(profile?.socialLinks || {}).filter(Boolean),
+        };
+
+        // Google Fonts URL for the new theme
+        const fontsUrl = getGoogleFontsUrl(themeV2.fontFamily);
+
+        return (
+            <>
+                {fontsUrl && (
+                    <>
+                        <link rel="preconnect" href="https://fonts.googleapis.com" />
+                        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+                        <link rel="stylesheet" href={fontsUrl} />
+                    </>
+                )}
+                <Script
+                    id="creator-jsonld"
+                    type="application/ld+json"
+                    dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+                />
+                <StorefrontRenderer
+                    blocks={blocksLayout}
+                    theme={themeV2}
+                    creator={plainCreator}
+                    products={plainProducts}
+                    creatorId={creator._id.toString()}
+                    creatorUsername={creator.username}
+                />
+            </>
+        );
+    }
+
+    // ── LEGACY: Original section-based renderer ───────────────────────────────
     const t = profile?.theme;
     const theme: StorefrontTheme = {
         primaryColor: String(t?.primaryColor ?? '#6366f1'),
@@ -172,23 +359,19 @@ export default async function CreatorStorefront({
         borderRadius: (t?.borderRadius ?? 'md') as 'sm' | 'md' | 'lg' | 'full',
         buttonStyle: (t?.buttonStyle ?? 'rounded') as 'pill' | 'square' | 'rounded',
         backgroundImage: t?.backgroundImage ? String(t.backgroundImage) : undefined,
+        productLayout: (t?.productLayout ?? 'grid') as 'grid' | 'list',
+        buttonColor: t?.buttonColor ? String(t.buttonColor) : undefined,
+        buttonTextColor: t?.buttonTextColor ? String(t.buttonTextColor) : undefined,
     };
 
-    // ── Service Buttons ──
     const serviceButtons: ServiceButton[] = (profile?.serviceButtons || [])
         .filter((b: any) => b.isVisible)
         .sort((a: any, b: any) => a.order - b.order)
         .map((b: any) => ({
-            id: b.id,
-            label: b.label,
-            serviceType: b.serviceType,
-            link: b.link,
-            modalEnabled: b.modalEnabled ?? true,
-            isVisible: b.isVisible ?? true,
-            order: b.order ?? 0,
+            id: b.id, label: b.label, serviceType: b.serviceType, link: b.link,
+            modalEnabled: b.modalEnabled ?? true, isVisible: b.isVisible ?? true, order: b.order ?? 0,
         }));
 
-    // ── Active links — extract plain primitives from Mongoose subdocuments ──
     const activeLinks: PublicLink[] = (profile?.links ?? [])
         .filter((link: any) => {
             if (!link.isActive || !link.url) return false;
@@ -213,19 +396,6 @@ export default async function CreatorStorefront({
             highlightBorder: Boolean(link.highlightBorder),
         }));
 
-    // ── Serialise plain objects for client components ──
-    const plainProducts = products.map((p: any) => ({
-        id: p._id.toString(),
-        name: p.name,
-        price: p.price,
-        type: p.type,
-        image: p.image,
-        description: p.description,
-        isBestSeller: p.isFeatured,
-        isNew: Date.now() - new Date(p.createdAt).getTime() < 7 * 86400 * 1000,
-    }));
-
-    // ── Plain creator — every value is a raw primitive or a new plain object literal ──
     const sl = profile?.socialLinks;
     const plainCreator = {
         displayName: String(creator.displayName ?? ''),
@@ -236,7 +406,6 @@ export default async function CreatorStorefront({
             ? new Date(creator.createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
             : '2024',
         logo: profile?.logo ? String(profile.logo) : undefined,
-        // socialLinks — build a fresh plain object from individual string values
         socialLinks: {
             instagram: sl?.instagram ? String(sl.instagram) : undefined,
             twitter: sl?.twitter ? String(sl.twitter) : undefined,
@@ -245,11 +414,10 @@ export default async function CreatorStorefront({
             linkedin: sl?.linkedin ? String(sl.linkedin) : undefined,
             website: sl?.website ? String(sl.website) : undefined,
         },
-        // theme — already constructed as a plain object above
         theme,
+        showProfilePhoto: profile?.showProfilePhoto !== false,
     };
 
-    // ── Layout sections ──
     const layout = (profile?.layout?.length ? profile.layout : [
         { id: 'hero', enabled: true },
         { id: 'services', enabled: true },
@@ -258,10 +426,8 @@ export default async function CreatorStorefront({
         { id: 'newsletter', enabled: true },
     ]) as Array<{ id: string; enabled: boolean }>;
 
-    // ── Google Fonts ──
     const fontsUrl = getGoogleFontsUrl(theme.fontFamily);
 
-    // ── JSON-LD structured data ──
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in';
     const jsonLd = {
         '@context': 'https://schema.org',
@@ -273,23 +439,8 @@ export default async function CreatorStorefront({
         sameAs: Object.values(profile?.socialLinks || {}).filter(Boolean),
     };
 
-    // ── Analytics & referral (fire-and-forget) ──
-    const { AnalyticsEvent } = await import('@/lib/models/AnalyticsEvent');
-    AnalyticsEvent.create({
-        eventType: 'page_view',
-        creatorId: creator._id,
-        path: `/u/${username}`,
-        metadata: { source: 'server-component', ref },
-    }).catch(console.error);
-
-    if (ref && typeof ref === 'string') {
-        const { default: ReferralModel } = await import('@/lib/models/Referral');
-        ReferralModel.findOneAndUpdate({ code: ref }, { $inc: { clicks: 1 } }).catch(console.error);
-    }
-
     return (
         <>
-            {/* Google Fonts */}
             {fontsUrl && (
                 <>
                     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -297,8 +448,6 @@ export default async function CreatorStorefront({
                     <link rel="stylesheet" href={fontsUrl} />
                 </>
             )}
-
-            {/* JSON-LD structured data */}
             <Script
                 id="creator-jsonld"
                 type="application/ld+json"
@@ -314,106 +463,63 @@ export default async function CreatorStorefront({
                 <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-32 pb-12 space-y-16 relative">
                     {layout.map((section) => {
                         if (!section.enabled) return null;
-
                         switch (section.id) {
-                            // ── Hero ──────────────────────────────────────────
                             case 'hero':
                                 return (
                                     <div key="hero">
                                         <CreatorBio creator={plainCreator} />
                                         <div className="mt-6">
-                                            <ShareButtons
-                                                username={creator.username}
-                                                displayName={creator.displayName}
-                                            />
+                                            <ShareButtons username={creator.username} displayName={creator.displayName} />
                                         </div>
                                     </div>
                                 );
-
-                            // ── Service Buttons ───────────────────────────────
                             case 'services':
                                 return (
                                     <section key="services" id="services" aria-label="Services">
                                         <Suspense fallback={<ServiceButtonsSkeleton count={3} />}>
-                                            <StorefrontInteractive
-                                                serviceButtons={serviceButtons}
-                                                theme={theme}
-                                                creatorUsername={creator.username}
-                                            />
+                                            <StorefrontInteractive serviceButtons={serviceButtons} theme={theme} creatorUsername={creator.username} />
                                         </Suspense>
                                     </section>
                                 );
-
-                            // ── Links ─────────────────────────────────────────
                             case 'links':
                                 return activeLinks.length > 0 ? (
                                     <section key="links" id="links" aria-label="Links">
                                         <Suspense fallback={<LinksSectionSkeleton count={4} />}>
-                                            <LinksSection
-                                                links={activeLinks}
-                                                theme={theme}
-                                                creatorId={creator._id.toString()}
-                                            />
+                                            <LinksSection links={activeLinks} theme={theme} creatorId={creator._id.toString()} />
                                         </Suspense>
                                     </section>
                                 ) : null;
-
-                            // ── Products ──────────────────────────────────────
                             case 'products':
                                 return plainProducts.length > 0 ? (
                                     <section key="products" id="products" className="space-y-8" aria-label="Products">
                                         <div className="flex items-center gap-6">
-                                            <h2 className="text-2xl font-black uppercase tracking-widest whitespace-nowrap">
-                                                Featured Products
-                                            </h2>
+                                            <h2 className="text-2xl font-black uppercase tracking-widest whitespace-nowrap">Featured Products</h2>
                                             <div className="h-px flex-1 bg-white/10 hidden md:block" />
                                         </div>
                                         <Suspense fallback={<ProductGridSkeleton />}>
                                             <ProductGrid
                                                 products={plainProducts}
                                                 purchasedProductIds={purchasedProductIds}
-                                                creator={{
-                                                    id: creator._id.toString(),
-                                                    username: creator.username,
-                                                    displayName: creator.displayName,
-                                                }}
+                                                creator={{ id: creator._id.toString(), username: creator.username, displayName: creator.displayName }}
                                                 theme={theme}
                                             />
                                         </Suspense>
                                     </section>
                                 ) : null;
-
-                            // ── Newsletter ────────────────────────────────────
                             case 'newsletter':
                                 return profile?.features?.newsletterEnabled !== false ? (
                                     <section key="newsletter" id="newsletter" className="max-w-xl mx-auto" aria-label="Newsletter">
-                                        <NewsletterSignup
-                                            creatorId={creator._id.toString()}
-                                            theme={theme}
-                                        />
+                                        <NewsletterSignup creatorId={creator._id.toString()} theme={theme} />
                                     </section>
                                 ) : null;
-
-                            // ── Testimonials ──────────────────────────────────
                             case 'testimonials':
-                                return profile?.testimonials?.length > 0 ? (
-                                    <TestimonialsSection
-                                        key="testimonials"
-                                        testimonials={profile.testimonials}
-                                        theme={theme}
-                                    />
+                                return (profile?.testimonials && profile.testimonials.length > 0) ? (
+                                    <TestimonialsSection key="testimonials" testimonials={profile.testimonials} theme={theme} />
                                 ) : null;
-
-                            // ── FAQ ───────────────────────────────────────────
                             case 'faq':
-                                return profile?.faqs?.length > 0 ? (
-                                    <FAQSection
-                                        key="faq"
-                                        faqs={profile.faqs}
-                                        theme={theme}
-                                    />
+                                return (profile?.faqs && profile.faqs.length > 0) ? (
+                                    <FAQSection key="faq" faqs={profile.faqs} theme={theme} />
                                 ) : null;
-
                             default:
                                 return null;
                         }
@@ -425,10 +531,9 @@ export default async function CreatorStorefront({
                         </p>
                     </footer>
 
-                    {/* Real-time Chat */}
                     <ChatWidget creatorId={creator._id.toString()} />
                 </main>
-            </div >
+            </div>
         </>
     );
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
 import CreatorProfile from '@/lib/models/CreatorProfile';
+import { getCached } from '@/lib/cache';
 
 export const dynamic = 'force-static';
 export const revalidate = 60;
@@ -22,11 +23,70 @@ export async function GET(
     try {
         await connectToDatabase();
 
-        const creator = await User.findOne({ username: username.toLowerCase() })
-            .select('displayName username avatar bio createdAt isSuspended status')
-            .lean();
+        const response = await getCached(`storefront:${username.toLowerCase()}`, 120, async () => {
+            const creator = await User.findOne({ username: username.toLowerCase() })
+                .select('displayName username avatar bio createdAt isSuspended status')
+                .lean();
 
-        if (!creator) {
+            if (!creator) return null;
+
+            // Return suspended state without full profile
+            if ((creator as any).isSuspended || (creator as any).status === 'suspended') {
+                return { suspended: true };
+            }
+
+            const profile = await CreatorProfile.findOne({ creatorId: (creator as any)._id })
+                .select('-availability.googleCalendarTokens -availability.googleCalendarId')
+                .lean();
+
+            const defaultTheme = {
+                primaryColor: '#6366f1',
+                secondaryColor: '#a855f7',
+                accentColor: '#ec4899',
+                backgroundColor: '#030303',
+                textColor: '#ffffff',
+                fontFamily: 'Inter',
+                borderRadius: 'md',
+                buttonStyle: 'rounded',
+            };
+
+            return {
+                creator: {
+                    displayName: (creator as any).displayName || username,
+                    username: (creator as any).username,
+                    bio: (profile as any)?.description || (creator as any).bio || '',
+                    avatar: (creator as any).avatar || '',
+                    logo: (profile as any)?.logo || null,
+                    joinedDate: (creator as any).createdAt
+                        ? new Date((creator as any).createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                        : '2024',
+                    socialLinks: (profile as any)?.socialLinks || {},
+                },
+                profile: {
+                    theme: (profile as any)?.theme || defaultTheme,
+                    serviceButtons: ((profile as any)?.serviceButtons || [])
+                        .filter((b: any) => b.isVisible)
+                        .sort((a: any, b: any) => a.order - b.order),
+                    links: ((profile as any)?.links || [])
+                        .filter((l: any) => {
+                            if (!l.isActive || !l.url) return false;
+                            const now = new Date();
+                            if (l.scheduleStart && new Date(l.scheduleStart) > now) return false;
+                            if (l.scheduleEnd && new Date(l.scheduleEnd) < now) return false;
+                            return true;
+                        })
+                        .sort((a: any, b: any) => a.order - b.order),
+                    socialLinks: (profile as any)?.socialLinks || {},
+                    features: {
+                        newsletterEnabled: (profile as any)?.features?.newsletterEnabled ?? true,
+                        whatsappEnabled: (profile as any)?.features?.whatsappEnabled ?? true,
+                        storefrontEnabled: (profile as any)?.features?.storefrontEnabled ?? true,
+                    },
+                },
+            };
+        });
+
+        if (!response) {
             return NextResponse.json(
                 { error: 'Creator not found' },
                 {
@@ -39,8 +99,7 @@ export async function GET(
             );
         }
 
-        // Return suspended state without full profile
-        if ((creator as any).isSuspended || (creator as any).status === 'suspended') {
+        if (response.suspended) {
             return NextResponse.json(
                 { error: 'Creator suspended', suspended: true },
                 {
@@ -52,56 +111,6 @@ export async function GET(
                 }
             );
         }
-
-        const profile = await CreatorProfile.findOne({ creatorId: (creator as any)._id })
-            .select('-availability.googleCalendarTokens -availability.googleCalendarId')
-            .lean();
-
-        const defaultTheme = {
-            primaryColor: '#6366f1',
-            secondaryColor: '#a855f7',
-            accentColor: '#ec4899',
-            backgroundColor: '#030303',
-            textColor: '#ffffff',
-            fontFamily: 'Inter',
-            borderRadius: 'md',
-            buttonStyle: 'rounded',
-        };
-
-        const response = {
-            creator: {
-                displayName: (creator as any).displayName || username,
-                username: (creator as any).username,
-                bio: (profile as any)?.description || (creator as any).bio || '',
-                avatar: (creator as any).avatar || '',
-                logo: (profile as any)?.logo || null,
-                joinedDate: (creator as any).createdAt
-                    ? new Date((creator as any).createdAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-                    : '2024',
-                socialLinks: (profile as any)?.socialLinks || {},
-            },
-            profile: {
-                theme: (profile as any)?.theme || defaultTheme,
-                serviceButtons: ((profile as any)?.serviceButtons || [])
-                    .filter((b: any) => b.isVisible)
-                    .sort((a: any, b: any) => a.order - b.order),
-                links: ((profile as any)?.links || [])
-                    .filter((l: any) => {
-                        if (!l.isActive || !l.url) return false;
-                        const now = new Date();
-                        if (l.scheduleStart && new Date(l.scheduleStart) > now) return false;
-                        if (l.scheduleEnd && new Date(l.scheduleEnd) < now) return false;
-                        return true;
-                    })
-                    .sort((a: any, b: any) => a.order - b.order),
-                socialLinks: (profile as any)?.socialLinks || {},
-                features: {
-                    newsletterEnabled: (profile as any)?.features?.newsletterEnabled ?? true,
-                    whatsappEnabled: (profile as any)?.features?.whatsappEnabled ?? true,
-                    storefrontEnabled: (profile as any)?.features?.storefrontEnabled ?? true,
-                },
-            },
-        };
 
         return NextResponse.json(response, {
             status: 200,

@@ -14,7 +14,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const isDashboard = pathname?.startsWith('/dashboard');
     const isStorefront = pathname?.startsWith('/u/');
     const isAdmin = pathname?.startsWith('/admin');
-    const isAuth = pathname?.startsWith('/auth');
+    const isAuth = pathname?.startsWith('/auth') || pathname === '/login' || pathname === '/signup';
     const isCart = pathname?.startsWith('/cart');
     const isAutoDMPage = pathname?.startsWith('/autodm');
 

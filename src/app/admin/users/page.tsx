@@ -23,6 +23,7 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, Eye } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);

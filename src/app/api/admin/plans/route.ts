@@ -40,22 +40,26 @@ export const POST = withAdminAuth(async (req, user, context) => {
         if (body.tier !== 'free') {
             try {
                 // Create Monthly Plan in Razorpay
-                const monthlyRp = await syncRazorpayPlan({
-                    name: body.name,
-                    description: body.description,
-                    amount: body.monthlyPrice,
-                    interval: 'monthly'
-                });
-                razorpayMonthlyPlanId = monthlyRp.id;
+                if (body.monthlyPrice > 0) {
+                    const monthlyRp = await syncRazorpayPlan({
+                        name: body.name,
+                        description: body.description,
+                        amount: body.monthlyPrice,
+                        interval: 'monthly'
+                    });
+                    razorpayMonthlyPlanId = monthlyRp.id;
+                }
 
                 // Create Yearly Plan in Razorpay
-                const yearlyRp = await syncRazorpayPlan({
-                    name: body.name,
-                    description: body.description,
-                    amount: body.yearlyPrice,
-                    interval: 'yearly'
-                });
-                razorpayYearlyPlanId = yearlyRp.id;
+                if (body.yearlyPrice > 0) {
+                    const yearlyRp = await syncRazorpayPlan({
+                        name: body.name,
+                        description: body.description,
+                        amount: body.yearlyPrice,
+                        interval: 'yearly'
+                    });
+                    razorpayYearlyPlanId = yearlyRp.id;
+                }
             } catch (syncError: any) {
                 console.error('Razorpay sync failed:', syncError);
                 return NextResponse.json({

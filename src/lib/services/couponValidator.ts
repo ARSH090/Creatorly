@@ -115,18 +115,29 @@ export async function validateCoupon(
         let discount = 0;
         if (coupon.discountType === 'percentage') {
             discount = (orderAmount * coupon.discountValue) / 100;
-
-            // Apply max discount cap
             if (coupon.maxDiscountAmount && discount > coupon.maxDiscountAmount) {
                 discount = coupon.maxDiscountAmount;
             }
-        } else {
-            // Fixed amount
+        } else if (coupon.discountType === 'fixed') {
             discount = Math.min(coupon.discountValue, orderAmount);
+        } else if (coupon.discountType === 'bogo') {
+            // "Buy 1 Get 1" - Usually means the cheapest of the applicable products is discounted
+            const Product = (await import('@/lib/models/Product')).default;
+            const products = await Product.find({ _id: { $in: productIds } }).select('pricing price').lean();
+
+            if (products.length >= (coupon.bogoConfig?.buyQuantity || 1) + (coupon.bogoConfig?.getQuantity || 1)) {
+                // Simplified BOGO: Discount the cheapest item by getDiscountValue%
+                const prices = products.map(p => p.pricing?.basePrice || p.price || 0).sort((a, b) => a - b);
+                const cheapest = prices[0];
+                discount = (cheapest * (coupon.bogoConfig?.getDiscountValue || 100)) / 100;
+            } else {
+                return { valid: false, discount: 0, error: 'Add more items to unlock BOGO offer' };
+            }
         }
 
         // Round to 2 decimals
         discount = Math.round(discount * 100) / 100;
+
 
         return {
             valid: true,
