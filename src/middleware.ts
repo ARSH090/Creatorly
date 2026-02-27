@@ -148,6 +148,32 @@ export default clerkMiddleware(async (auth, req) => {
         'subscription'
     ];
 
+    const hostname = req.headers.get("host") || "";
+    const cleanHostname = hostname.split(':')[0];
+    const isCustomDomain =
+        !cleanHostname.includes("localhost") &&
+        !cleanHostname.includes(process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, '').split(':')[0] || "creatorly.in") &&
+        !cleanHostname.includes("vercel.app");
+
+    if (isCustomDomain && hasRedis) {
+        try {
+            const { Redis } = await import('@upstash/redis');
+            const redis = Redis.fromEnv();
+            const username = await redis.get(`domain:${cleanHostname}`);
+
+            if (username && typeof username === 'string') {
+                const url = req.nextUrl.clone();
+                // Map root and storefront subpaths to /u/[username]
+                if (pathname === '/' || pathname === '/book' || pathname === '/community' || pathname === '/learn') {
+                    url.pathname = `/u/${username}${pathname === '/' ? '' : pathname}`;
+                    return NextResponse.rewrite(url);
+                }
+            }
+        } catch (err) {
+            console.error('Redis domain mapping error in middleware:', err);
+        }
+    }
+
     if (firstSegment && !reservedPaths.includes(firstSegment) && !pathname.includes('.')) {
         const url = req.nextUrl.clone();
         url.pathname = `/u/${pathname.substring(1)}`;

@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Settings, Bell, Shield, Globe, Zap, Loader2, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
+import { Settings, Bell, Shield, Globe, Zap, Loader2, CheckCircle2, AlertCircle, ExternalLink, ShieldAlert } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 export default function SettingsPage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [settings, setSettings] = useState<any>({
         autoSendEnabled: true,
         googleSheetsConnected: false,
@@ -62,6 +63,24 @@ export default function SettingsPage() {
         }
     };
 
+    const handleDeleteStore = async () => {
+        if (!confirm('Are you absolutely sure you want to delete your store? This action cannot be undone and will permanently delete your storefront data.')) return;
+        try {
+            setIsDeleting(true);
+            const res = await fetch('/api/creator/store/delete', { method: 'DELETE' });
+            if (res.ok) {
+                toast.success('Store deleted successfully');
+                window.location.href = '/dashboard';
+            } else {
+                toast.error('Failed to delete store');
+            }
+        } catch (error) {
+            toast.error('An error occurred while deleting store');
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px]">
@@ -104,19 +123,110 @@ export default function SettingsPage() {
                     <div className="p-8 space-y-8">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-3">
+                                <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Store / Display Name</label>
+                                <div className="flex group">
+                                    <input
+                                        type="text"
+                                        value={settings?.settings?.profile?.displayName || settings.displayName || ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (settings?.settings?.profile) {
+                                                setSettings({
+                                                    ...settings,
+                                                    settings: {
+                                                        ...settings.settings,
+                                                        profile: { ...settings.settings.profile, displayName: val }
+                                                    }
+                                                });
+                                            } else {
+                                                setSettings({ ...settings, displayName: val });
+                                            }
+                                        }}
+                                        className="flex-1 bg-black border border-white/5 rounded-l-2xl px-5 py-4 text-white text-sm font-bold transition-all focus:outline-none focus:border-indigo-500/50"
+                                    />
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                setSaving(true);
+                                                const name = settings?.settings?.profile?.displayName || settings.displayName || '';
+                                                const res = await fetch('/api/creator/profile', {
+                                                    method: 'PATCH',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ displayName: name })
+                                                });
+                                                if (res.ok) {
+                                                    toast.success('Store name updated successfully!');
+                                                } else {
+                                                    toast.error('Failed to update store name');
+                                                }
+                                            } catch (error) {
+                                                toast.error('Network error');
+                                            } finally {
+                                                setSaving(false);
+                                            }
+                                        }}
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-r-2xl px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-colors"
+                                    >
+                                        Update
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
                                 <label className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] ml-1">Universal Store Slug</label>
                                 <div className="flex group">
                                     <span className="bg-zinc-800/80 border border-white/10 border-r-0 rounded-l-2xl px-5 py-4 text-zinc-500 text-sm font-bold">creatorly.in/</span>
                                     <input
                                         type="text"
-                                        value={settings.storeSlug || settings.username || ''}
-                                        disabled
-                                        className="flex-1 bg-black/40 border border-white/5 rounded-r-2xl px-5 py-4 text-zinc-500 cursor-not-allowed text-sm font-bold transition-all"
+                                        value={settings?.settings?.profile?.storeSlug || settings.storeSlug || ''}
+                                        onChange={(e) => {
+                                            const val = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '');
+                                            if (settings?.settings?.profile) {
+                                                setSettings({
+                                                    ...settings,
+                                                    settings: {
+                                                        ...settings.settings,
+                                                        profile: { ...settings.settings.profile, storeSlug: val }
+                                                    }
+                                                });
+                                            } else {
+                                                setSettings({ ...settings, storeSlug: val });
+                                            }
+                                        }}
+                                        className="flex-1 bg-black border border-white/5 px-5 py-4 text-white text-sm font-bold transition-all focus:outline-none focus:border-indigo-500/50"
                                     />
+                                    <button
+                                        onClick={async () => {
+                                            try {
+                                                setSaving(true);
+                                                const slug = settings?.settings?.profile?.storeSlug || settings.storeSlug || '';
+                                                const res = await fetch('/api/user/update-username', {
+                                                    method: 'POST',
+                                                    headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ username: slug })
+                                                });
+                                                const data = await res.json();
+                                                if (res.ok) {
+                                                    toast.success('Store slug updated successfully!');
+                                                    // Invalidate queries / refresh cache
+                                                    window.location.reload();
+                                                } else {
+                                                    toast.error(data.error || 'Failed to update store slug');
+                                                }
+                                            } catch (error) {
+                                                toast.error('Network error while updating slug');
+                                            } finally {
+                                                setSaving(false);
+                                            }
+                                        }}
+                                        className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-r-2xl px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] transition-colors"
+                                    >
+                                        Update
+                                    </button>
                                 </div>
                                 <p className="text-[9px] text-zinc-600 font-bold uppercase tracking-widest flex items-center gap-1.5 ml-1">
-                                    <Shield size={10} />
-                                    Slug migration requires administrative clearance
+                                    <CheckCircle2 size={10} className="text-emerald-500" />
+                                    Slug update will instantly migrate your storefront
                                 </p>
                             </div>
                         </div>
@@ -277,6 +387,35 @@ export default function SettingsPage() {
                                 <p className="text-[10px] font-medium text-zinc-600 uppercase tracking-widest">Real-time mobile resonance</p>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Danger Zone */}
+                <div className="bg-red-500/5 rounded-[2.5rem] border border-red-500/20 overflow-hidden mt-8">
+                    <div className="p-8 border-b border-red-500/10">
+                        <div className="flex items-center gap-4">
+                            <div className="p-3 bg-red-500/10 rounded-2xl border border-red-500/20">
+                                <ShieldAlert className="w-6 h-6 text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-white uppercase italic tracking-tight">Danger Zone</h3>
+                                <p className="text-[10px] font-bold text-red-500 uppercase tracking-widest mt-0.5">Irreversible Actions</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-8 space-y-6 flex items-center justify-between">
+                        <div>
+                            <h4 className="text-sm font-bold text-white uppercase italic tracking-tight">Delete Storefront</h4>
+                            <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest max-w-sm mt-1">Permanently delete your public storefront and reset your store slug. Your products will remain but will not be publicly accessible.</p>
+                        </div>
+                        <button
+                            onClick={handleDeleteStore}
+                            disabled={isDeleting}
+                            className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-500 px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] transition-all disabled:opacity-50"
+                        >
+                            {isDeleting ? 'Deleting...' : 'Delete Store'}
+                        </button>
                     </div>
                 </div>
             </div>

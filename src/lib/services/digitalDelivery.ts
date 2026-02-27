@@ -43,11 +43,33 @@ export class DigitalDeliveryService {
      * Grant access to a course
      */
     private static async grantCourseAccess(email: string, product: any) {
-        // Find or create a student user record?
-        // For now, we assume course progress is tracked by email/userId
         console.log(`[Delivery] Granting course access: ${product.title} to ${email}`);
 
-        // Potential logic: Create a CourseProgress record or add to a 'purchasedCourses' list
+        const buyer = await User.findOne({ email: email.toLowerCase() });
+        if (!buyer) {
+            console.log(`[Delivery] Buyer not found for ${email}`);
+            return;
+        }
+
+        const { CourseProgress } = await import('@/lib/models/CourseProgress');
+
+        await CourseProgress.findOneAndUpdate(
+            { userId: buyer._id, productId: product._id },
+            {
+                $setOnInsert: {
+                    userId: buyer._id,
+                    studentEmail: email.toLowerCase(),
+                    productId: product._id,
+                    creatorId: product.creatorId,
+                    completedLessons: [],
+                    isCompleted: false,
+                    percentComplete: 0,
+                    startedAt: new Date(),
+                    lastAccessedAt: new Date()
+                }
+            },
+            { upsert: true, new: true }
+        );
     }
 
     /**

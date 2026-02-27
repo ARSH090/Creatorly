@@ -42,11 +42,11 @@ export async function applyPurchaseTags(creatorId: string, subscriberId: string,
         // Bulk insert tags, ignore duplicates
         const operations = tags.map(tag => ({
             updateOne: {
-                filter: { subscriberId, tag },
+                filter: { subscriberId: new mongoose.Types.ObjectId(subscriberId), tag },
                 update: {
                     $setOnInsert: {
-                        creatorId,
-                        subscriberId,
+                        creatorId: new mongoose.Types.ObjectId(creatorId),
+                        subscriberId: new mongoose.Types.ObjectId(subscriberId),
                         tag,
                         source: 'purchase',
                         createdAt: new Date()
@@ -56,7 +56,7 @@ export async function applyPurchaseTags(creatorId: string, subscriberId: string,
             }
         }));
 
-        await SubscriberTag.bulkWrite(operations);
+        await SubscriberTag.bulkWrite(operations as any);
     } catch (error) {
         console.error('Error applying purchase tags:', error);
     }

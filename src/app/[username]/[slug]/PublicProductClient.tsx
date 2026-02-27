@@ -133,6 +133,21 @@ export default function PublicProductClient({
                 <div className="flex flex-col lg:flex-row gap-16">
                     {/* Left Content */}
                     <div className="flex-1 space-y-12">
+                        {/* Cover Image */}
+                        {product.image && (
+                            <div className="relative w-full aspect-video rounded-[3rem] overflow-hidden border border-white/10 shadow-2xl group">
+                                <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors z-10" />
+                                <NextImage
+                                    src={product.image}
+                                    alt={product.title}
+                                    fill
+                                    className="object-cover transition-transform duration-700 group-hover:scale-105"
+                                    sizes="(max-width: 1024px) 100vw, 60vw"
+                                    priority
+                                />
+                            </div>
+                        )}
+
                         {/* Hero */}
                         <div className="space-y-6">
                             <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-400">

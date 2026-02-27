@@ -160,6 +160,8 @@ export default function StorefrontBuilder() {
     });
 
     const [showProfilePhoto, setShowProfilePhoto] = useState(true);
+    const [isPublished, setIsPublished] = useState(true);
+    const [currency, setCurrency] = useState('INR');
 
     const [layout, setLayout] = useState([
         { id: 'hero', enabled: true },
@@ -196,6 +198,12 @@ export default function StorefrontBuilder() {
                 if (data.storefrontData?.faqs) setFaqs(data.storefrontData.faqs);
                 if (data.storefrontData?.showProfilePhoto !== undefined) {
                     setShowProfilePhoto(data.storefrontData.showProfilePhoto);
+                }
+                if (data.storefrontData?.isPublished !== undefined) {
+                    setIsPublished(data.storefrontData.isPublished);
+                }
+                if (data.storefrontData?.currency) {
+                    setCurrency(data.storefrontData.currency);
                 }
             } catch (err) {
                 console.error('fetchProfile', err);
@@ -274,7 +282,7 @@ export default function StorefrontBuilder() {
             const res = await fetch('/api/creator/profile', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ theme, layout, links, testimonials, faqs, showProfilePhoto }),
+                body: JSON.stringify({ theme, layout, links, testimonials, faqs, showProfilePhoto, isPublished, currency }),
             });
             if (!res.ok) throw new Error('Save failed');
             toast.success('Storefront saved!');
@@ -423,6 +431,35 @@ export default function StorefrontBuilder() {
                                         <span className="text-xs font-bold">Show Profile Photo</span>
                                         {showProfilePhoto ? <ToggleRight className="w-5 h-5 text-indigo-500" /> : <ToggleLeft className="w-5 h-5" />}
                                     </button>
+                                    <button
+                                        onClick={() => setIsPublished(!isPublished)}
+                                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${isPublished ? 'border-indigo-500/30 bg-indigo-500/5 text-white' : 'border-white/5 bg-white/5 text-zinc-500'}`}
+                                    >
+                                        <div className="text-left">
+                                            <span className="text-xs font-bold block">Store Status</span>
+                                            <span className="text-[10px] opacity-70 font-normal">{isPublished ? 'Published' : 'Hidden'}</span>
+                                        </div>
+                                        {isPublished ? <ToggleRight className="w-5 h-5 text-indigo-500" /> : <ToggleLeft className="w-5 h-5" />}
+                                    </button>
+                                </div>
+                            </section>
+
+                            {/* Store Currency */}
+                            <section className="space-y-4">
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                    <Zap className="w-3 h-3" /> Store Currency
+                                </h3>
+                                <div>
+                                    <select
+                                        value={currency}
+                                        onChange={(e) => setCurrency(e.target.value)}
+                                        className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-4 py-4 text-white text-sm font-bold focus:outline-none focus:border-indigo-500/50 appearance-none transition-all"
+                                    >
+                                        <option value="INR" className="bg-zinc-900 text-white">₹ Indian Rupee (INR)</option>
+                                        <option value="USD" className="bg-zinc-900 text-white">$ US Dollar (USD)</option>
+                                        <option value="EUR" className="bg-zinc-900 text-white">€ Euro (EUR)</option>
+                                        <option value="GBP" className="bg-zinc-900 text-white">£ British Pound (GBP)</option>
+                                    </select>
                                 </div>
                             </section>
 

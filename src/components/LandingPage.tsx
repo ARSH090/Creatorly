@@ -5,11 +5,15 @@ import HeroSection from './landing/HeroSection';
 import ProblemSolutionSection from './landing/ProblemSolutionSection';
 import HowItWorksSection from './landing/HowItWorksSection';
 import CoreServicesSection from './landing/CoreServicesSection';
+import DeepFeatureSections from './landing/DeepFeatureSections';
 import FeatureGridSection from './landing/FeatureGridSection';
 import UseCasesSection from './landing/UseCasesSection';
 import SocialProofSection from './landing/SocialProofSection';
+import ComparisonSection from './landing/ComparisonSection';
 import PricingPreviewSection from './landing/PricingPreviewSection';
+import FAQSection from './landing/FAQSection';
 import FinalCTASection from './landing/FinalCTASection';
+import MobileStickyCTA from './landing/MobileStickyCTA';
 
 const LandingPage: React.FC = () => {
   return (
@@ -27,12 +31,18 @@ const LandingPage: React.FC = () => {
         <ProblemSolutionSection />
         <HowItWorksSection />
         <CoreServicesSection />
+        <DeepFeatureSections />
         <FeatureGridSection />
         <UseCasesSection />
         <SocialProofSection />
+        <ComparisonSection />
         <PricingPreviewSection />
+        <FAQSection />
         <FinalCTASection />
       </div>
+
+      {/* Mobile Sticky CTA */}
+      <MobileStickyCTA />
     </div>
   );
 };

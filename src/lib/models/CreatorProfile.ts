@@ -159,6 +159,7 @@ export interface ICreatorProfile extends Document {
     // New customization fields
     showProfilePhoto: boolean;
     isPublished: boolean;
+    currency?: string;
 
     createdAt: Date;
     updatedAt: Date;
@@ -188,6 +189,7 @@ const CreatorProfileSchema: Schema = new Schema({
 
     showProfilePhoto: { type: Boolean, default: true },
     isPublished: { type: Boolean, default: true },
+    currency: { type: String, default: 'INR' },
 
     socialLinks: {
         instagram: String,

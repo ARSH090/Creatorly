@@ -259,10 +259,30 @@ function ProductCard({ product, view, index }: { product: any, view: 'grid' | 'l
     const getStatusColor = (status: string) => {
         switch (status) {
             case 'published': return 'bg-emerald-500';
+            case 'active': return 'bg-emerald-500';
             case 'draft': return 'bg-yellow-500';
             case 'paused': return 'bg-zinc-500';
             case 'archived': return 'bg-red-500';
             default: return 'bg-zinc-500';
+        }
+    };
+
+    const handleArchive = async () => {
+        if (!confirm('Are you sure you want to unpublish/archive this product?')) return;
+        try {
+            const res = await fetch(`/api/products/${product._id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: 'archived', isActive: false, isPublic: false })
+            });
+            if (res.ok) {
+                window.location.reload();
+            } else {
+                alert('Failed to archive product.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Failed to archive product.');
         }
     };
 
@@ -435,7 +455,7 @@ function ProductCard({ product, view, index }: { product: any, view: 'grid' | 'l
                     <Share2 className="w-3.5 h-3.5 text-zinc-400 mb-1" />
                     <span className="text-[9px] font-bold text-white">Share</span>
                 </button>
-                <button className="bg-black/80 backdrop-blur-xl p-3 rounded-2xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-all">
+                <button onClick={handleArchive} className="bg-black/80 backdrop-blur-xl p-3 rounded-2xl border border-white/10 flex flex-col items-center hover:bg-white/10 transition-all z-10">
                     <Archive className="w-3.5 h-3.5 text-zinc-400 mb-1" />
                     <span className="text-[9px] font-bold text-white">Archive</span>
                 </button>

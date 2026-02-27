@@ -138,6 +138,7 @@ export default function ProductEditor({ initialData }: { initialData?: ProductFo
             try {
                 const payload = {
                     ...formData,
+                    productType: formData.type === 'digital' ? 'digital_download' : (formData.type === 'coaching' ? 'service' : formData.type),
                     price: Number(formData.price) || 0,
                     isActive: productId ? formData.isPublic : false // Draft logic
                 };
@@ -174,6 +175,20 @@ export default function ProductEditor({ initialData }: { initialData?: ProductFo
     };
 
     const handlePublish = async () => {
+        // Frontend Publish Validation
+        if (!formData.name.trim()) {
+            alert('Product name is required.');
+            return;
+        }
+        if (Number(formData.price) < 0 || isNaN(Number(formData.price))) {
+            alert('Valid price is required (can be 0 for free).');
+            return;
+        }
+        if (formData.type === 'digital' && formData.files.length === 0) {
+            alert('At least one file is required for digital products.');
+            return;
+        }
+
         try {
             setIsPublishing(true);
             const url = productId ? `/api/products/${productId}` : '/api/products';
@@ -184,6 +199,7 @@ export default function ProductEditor({ initialData }: { initialData?: ProductFo
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     ...formData,
+                    productType: formData.type === 'digital' ? 'digital_download' : (formData.type === 'coaching' ? 'service' : formData.type),
                     price: Number(formData.price),
                     isActive: true
                 }),
@@ -365,7 +381,18 @@ export default function ProductEditor({ initialData }: { initialData?: ProductFo
                                         onUploadError={(err) => console.error('Upload failed', err)}
                                     />
                                     {formData.files.map((f, i) => (
-                                        <div key={i} className="flex items-center gap-3 bg-white/5 p-3 rounded-xl"><FileText size={16} /><span className="text-sm">{f.name}</span></div>
+                                        <div key={i} className="flex items-center justify-between bg-white/5 p-3 rounded-xl">
+                                            <div className="flex items-center gap-3">
+                                                <FileText size={16} />
+                                                <span className="text-sm">{f.name}</span>
+                                            </div>
+                                            <button
+                                                onClick={() => setFormData(p => ({ ...p, files: p.files.filter((_, idx) => idx !== i) }))}
+                                                className="text-zinc-500 hover:text-rose-500 transition-colors p-2"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     ))}
                                 </div>
                             ))}

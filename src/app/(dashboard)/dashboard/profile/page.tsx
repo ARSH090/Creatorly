@@ -18,6 +18,14 @@ export default function ProfilePage() {
         email: '',
         username: '',
         bio: '',
+        socialLinks: {
+            instagram: '',
+            twitter: '',
+            youtube: '',
+            tiktok: '',
+            linkedin: '',
+            website: '',
+        }
     });
 
     useEffect(() => {
@@ -39,7 +47,8 @@ export default function ProfilePage() {
                         displayName: profileData.displayName || user.fullName || '',
                         username: profileData.username || user.username || '',
                         bio: profileData.bio || '',
-                        email: profileData.email || user.primaryEmailAddress?.emailAddress || ''
+                        email: profileData.email || user.primaryEmailAddress?.emailAddress || '',
+                        socialLinks: profileData.socialLinks || { instagram: '', twitter: '', youtube: '', tiktok: '', linkedin: '', website: '' }
                     }));
                     if (profileData.avatar) setAvatarUrl(profileData.avatar);
                 })
@@ -273,6 +282,36 @@ export default function ProfilePage() {
                                 className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500/50 transition-colors resize-none"
                                 placeholder="Tell us about yourself..."
                             />
+                        </div>
+
+                        <div className="pt-4 border-t border-white/5 space-y-6">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="p-2 bg-indigo-500/10 rounded-lg">
+                                    <ExternalLink className="w-5 h-5 text-indigo-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Social Links</h3>
+                                    <p className="text-xs text-zinc-500">Connect your profiles to display them on your storefront.</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {['instagram', 'twitter', 'youtube', 'tiktok', 'linkedin', 'website'].map((platform) => (
+                                    <div key={platform} className="space-y-2">
+                                        <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest px-1">{platform}</label>
+                                        <input
+                                            type="text"
+                                            value={formData.socialLinks[platform as keyof typeof formData.socialLinks]}
+                                            onChange={(e) => setFormData({
+                                                ...formData,
+                                                socialLinks: { ...formData.socialLinks, [platform]: e.target.value }
+                                            })}
+                                            className="w-full bg-black border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-indigo-500/50 transition-colors"
+                                            placeholder={`https://${platform === 'website' ? 'yourwebsite.com' : `${platform}.com/username`}`}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
                         <div className="pt-4 flex flex-col sm:flex-row gap-4">

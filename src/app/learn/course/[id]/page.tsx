@@ -187,8 +187,8 @@ export default function CoursePlayerPage() {
                                 <button
                                     onClick={() => toggleLessonCompletion(currentLesson._id)}
                                     className={`shrink-0 flex items-center gap-3 px-6 py-4 rounded-2xl border font-black text-[10px] uppercase tracking-widest transition-all ${progress.completedLessons.includes(currentLesson?._id)
-                                            ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                                            : 'bg-white/5 border-white/5 text-zinc-500 hover:text-white hover:bg-white/10'
+                                        ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                                        : 'bg-white/5 border-white/5 text-zinc-500 hover:text-white hover:bg-white/10'
                                         }`}
                                 >
                                     {progress.completedLessons.includes(currentLesson?._id) ? (
@@ -257,18 +257,20 @@ export default function CoursePlayerPage() {
                                             {section.lessons.map((lesson: any, lIdx: number) => {
                                                 const isActive = currentLesson?._id === lesson._id;
                                                 const isCompleted = progress.completedLessons.includes(lesson._id);
+                                                const isLocked = lesson.isLocked;
 
                                                 return (
                                                     <button
                                                         key={lIdx}
+                                                        disabled={isLocked}
                                                         onClick={() => setCurrentLesson(lesson)}
-                                                        className={`w-full px-8 py-4 flex items-center gap-4 group transition-all relative ${isActive ? 'bg-indigo-500/5' : 'hover:bg-white/[0.02]'}`}
+                                                        className={`w-full px-8 py-4 flex items-center gap-4 group transition-all relative ${isActive ? 'bg-indigo-500/5' : 'hover:bg-white/[0.02]'} ${isLocked ? 'opacity-50 cursor-not-allowed' : ''}`}
                                                     >
                                                         {isActive && <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500" />}
 
-                                                        <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isCompleted ? 'bg-emerald-500/10 text-emerald-400' : 'bg-zinc-900 text-zinc-600'
+                                                        <div className={`shrink-0 w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isCompleted ? 'bg-emerald-500/10 text-emerald-400' : isLocked ? 'bg-zinc-900/50 text-zinc-800' : 'bg-zinc-900 text-zinc-600'
                                                             }`}>
-                                                            {isCompleted ? <Check className="w-4 h-4" /> : <Play className="w-3 h-3" />}
+                                                            {isCompleted ? <Check className="w-4 h-4" /> : isLocked ? <X className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                                                         </div>
 
                                                         <div className="flex-1 text-left space-y-1">
@@ -276,7 +278,11 @@ export default function CoursePlayerPage() {
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest">{lesson.type}</span>
                                                                 <div className="w-1 h-1 rounded-full bg-zinc-900" />
-                                                                <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest">{lesson.duration || 0}m</span>
+                                                                {isLocked ? (
+                                                                    <span className="text-[8px] font-black text-indigo-500/50 uppercase tracking-widest italic">Available {new Date(lesson.availableAt).toLocaleDateString()}</span>
+                                                                ) : (
+                                                                    <span className="text-[8px] font-black text-zinc-700 uppercase tracking-widest">{lesson.duration || 0}m</span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </button>

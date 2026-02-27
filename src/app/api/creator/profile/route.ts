@@ -91,6 +91,8 @@ const profileUpdateSchema = z.object({
     blocksLayout: z.array(z.any()).optional(),
     themeV2: z.record(z.any()).optional(),
     showProfilePhoto: z.boolean().optional(),
+    currency: z.string().optional(),
+    isPublished: z.boolean().optional(),
 });
 
 /**
@@ -112,7 +114,7 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
         displayName, bio, avatar, storeSlug,
         theme, layout, links, socialLinks, customDomain,
         testimonials, faqs, blocksLayout, themeV2,
-        showProfilePhoto
+        showProfilePhoto, currency, isPublished
     } = validation.data;
 
     const userUpdates: any = {};
@@ -142,7 +144,8 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
     if (showProfilePhoto !== undefined) profileUpdates.showProfilePhoto = showProfilePhoto;
     if (blocksLayout) profileUpdates.blocksLayout = blocksLayout;
     if (themeV2) profileUpdates.themeV2 = themeV2;
-    if (showProfilePhoto !== undefined) profileUpdates.showProfilePhoto = showProfilePhoto;
+    if (currency) profileUpdates.currency = currency;
+    if (isPublished !== undefined) profileUpdates.isPublished = isPublished;
 
     // Handle Domain Changes
     if (customDomain !== undefined) {
