@@ -191,8 +191,8 @@ export async function POST(req: NextRequest) {
                     // Calculate discount
                     if (coupon.discountType === 'percentage') {
                         discountAmount = (totalAmount * coupon.discountValue) / 100;
-                        if (coupon.maxDiscountAmount) {
-                            discountAmount = Math.min(discountAmount, coupon.maxDiscountAmount);
+                        if (coupon.maxDiscountCap) {
+                            discountAmount = Math.min(discountAmount, coupon.maxDiscountCap);
                         }
                     } else if (coupon.discountType === 'fixed') {
                         discountAmount = coupon.discountValue;

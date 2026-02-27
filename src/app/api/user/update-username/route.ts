@@ -2,6 +2,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import User from '@/lib/models/User';
 import { NextResponse } from 'next/server';
 import { withAuth } from '@/lib/auth/withAuth';
+import { revalidatePath } from 'next/cache';
 
 export const POST = withAuth(async (req, user) => {
     try {
@@ -23,10 +24,13 @@ export const POST = withAuth(async (req, user) => {
             return NextResponse.json({ error: 'Username already taken' }, { status: 400 });
         }
 
-        // Update user
+        // Update user with both username and storeSlug (for custom domain reselling)
         const updatedUser = await User.findOneAndUpdate(
             { _id: user._id },
-            { username: username.toLowerCase() },
+            { 
+                username: username.toLowerCase(),
+                storeSlug: username.toLowerCase() // Sync storeSlug with username
+            },
             { new: true }
         );
 
@@ -42,9 +46,26 @@ export const POST = withAuth(async (req, user) => {
             console.error('Failed to sync username with domains:', syncErr);
         }
 
+        // Revalidate the old storefront path (if it was different)
+        if (user.username) {
+            try {
+                revalidatePath(`/u/${user.username}`);
+            } catch (err) {
+                console.error('Failed to revalidate old storefront path:', err);
+            }
+        }
+
+        // Revalidate the new storefront path
+        try {
+            revalidatePath(`/u/${updatedUser.username}`);
+        } catch (err) {
+            console.error('Failed to revalidate new storefront path:', err);
+        }
+
         return NextResponse.json({
             success: true,
-            username: updatedUser.username
+            username: updatedUser.username,
+            storeSlug: updatedUser.storeSlug
         });
 
     } catch (error: any) {

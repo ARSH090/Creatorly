@@ -46,6 +46,31 @@ async function getHandler(req: NextRequest, user: any, { params }: any) {
         });
     }
 
+    // 4. Calculate Drip Logic
+    const sectionsWithDrip = (course.sections || []).map((section: any) => ({
+        ...section,
+        lessons: (section.lessons || []).map((lesson: any) => {
+            let isLocked = false;
+            let availableAt = null;
+
+            if (lesson.dripDelayDays > 0 && progress.startedAt) {
+                const availableDate = new Date(progress.startedAt);
+                availableDate.setDate(availableDate.getDate() + lesson.dripDelayDays);
+
+                if (new Date() < availableDate) {
+                    isLocked = true;
+                    availableAt = availableDate;
+                }
+            }
+
+            return {
+                ...lesson,
+                isLocked,
+                availableAt
+            };
+        })
+    }));
+
     return NextResponse.json({
         success: true,
         course: {
@@ -53,13 +78,14 @@ async function getHandler(req: NextRequest, user: any, { params }: any) {
             title: course.title,
             description: course.description,
             thumbnail: course.thumbnailKey,
-            sections: course.sections,
+            sections: sectionsWithDrip,
             creatorId: course.creatorId
         },
         progress: {
             completedLessons: progress.completedLessons,
             percentComplete: progress.percentComplete,
-            lastAccessedAt: progress.lastAccessedAt
+            lastAccessedAt: progress.lastAccessedAt,
+            startedAt: progress.startedAt
         }
     });
 }

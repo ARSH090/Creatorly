@@ -37,6 +37,9 @@ export interface ICoupon extends Document {
     showHintOnStorefront: boolean;
     internalNote?: string;
 
+    maxDiscountCap?: number; // Maximum discount amount for percentage coupons
+    isPublished: boolean;
+
     isBulkGenerated: boolean;
     bulkBatchId?: string;
 
@@ -82,6 +85,9 @@ const CouponSchema = new Schema<ICoupon>({
 
     showHintOnStorefront: { type: Boolean, default: false },
     internalNote: String,
+
+    maxDiscountCap: { type: Number, default: null },
+    isPublished: { type: Boolean, default: true, index: true },
 
     isBulkGenerated: { type: Boolean, default: false },
     bulkBatchId: String,

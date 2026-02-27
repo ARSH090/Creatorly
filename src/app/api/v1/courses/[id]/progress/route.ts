@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { CourseProgress } from '@/lib/models/CourseProgress';
 import { CourseLesson } from '@/lib/models/CourseContent';
+import Product from '@/lib/models/Product';
 import { getMongoUser } from '@/lib/auth/get-user';
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
@@ -20,11 +21,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             const lesson = await CourseLesson.findById(lessonId);
             if (!lesson) return NextResponse.json({ error: 'Lesson not found' }, { status: 404 });
 
+            const product = await Product.findById(params.id);
+            if (!product) return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+
             progress = await CourseProgress.create({
                 userId: user._id,
                 studentEmail: user.email,
                 productId: params.id,
-                creatorId: lesson.creatorId,
+                creatorId: product.creatorId,
                 completedLessons: [],
                 startedAt: new Date()
             });

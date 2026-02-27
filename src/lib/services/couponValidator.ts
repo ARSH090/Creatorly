@@ -115,8 +115,8 @@ export async function validateCoupon(
         let discount = 0;
         if (coupon.discountType === 'percentage') {
             discount = (orderAmount * coupon.discountValue) / 100;
-            if (coupon.maxDiscountAmount && discount > coupon.maxDiscountAmount) {
-                discount = coupon.maxDiscountAmount;
+            if (coupon.maxDiscountCap && discount > coupon.maxDiscountCap) {
+                discount = coupon.maxDiscountCap;
             }
         } else if (coupon.discountType === 'fixed') {
             discount = Math.min(coupon.discountValue, orderAmount);

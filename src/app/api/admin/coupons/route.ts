@@ -66,7 +66,7 @@ async function postHandler(req: NextRequest, user: any) {
       description: body.description,
       type: body.discountType,
       value: body.discountValue,
-      maxAmount: body.maxDiscountAmount,
+      maxAmount: body.maxDiscountCap,
       validUntil: body.validUntil ? new Date(body.validUntil) : undefined
     });
     razorpayOfferId = rpOffer.id;

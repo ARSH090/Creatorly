@@ -29,11 +29,38 @@ async function getHandler(req: NextRequest, user: any, { params }: any) {
     const course = await Product.findById(id);
     if (!course) return NextResponse.json(errorResponse('Course not found'), { status: 404 });
 
+    // 3. Check for Drip Lock
+    const CourseProgress = (await import('@/lib/models/CourseProgress')).default;
+    const progress = await CourseProgress.findOne({ userId: user._id, productId: id });
+
     let lessonFileKey = null;
-    course.sections?.forEach((s: any) => {
-        const lesson = s.lessons.find((l: any) => l._id.toString() === lessonId);
-        if (lesson) lessonFileKey = lesson.fileKey;
-    });
+    let isLocked = false;
+    let availableAt: Date | null = null;
+
+    if (course.sections) {
+        for (const section of course.sections) {
+            const lesson = section.lessons?.find((l: any) => l._id.toString() === lessonId);
+            if (lesson) {
+                lessonFileKey = lesson.fileKey;
+
+                if (lesson.dripDelayDays && lesson.dripDelayDays > 0 && progress?.startedAt) {
+                    const availableDate = new Date(progress.startedAt);
+                    availableDate.setDate(availableDate.getDate() + lesson.dripDelayDays);
+
+                    if (new Date() < availableDate) {
+                        isLocked = true;
+                        availableAt = availableDate;
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    if (isLocked && availableAt) {
+        const dateStr = (availableAt as Date).toLocaleDateString();
+        return NextResponse.json(errorResponse(`This lesson will be available on ${dateStr}`), { status: 403 });
+    }
 
     if (!lessonFileKey) {
         return NextResponse.json(errorResponse('Lesson content not found'), { status: 404 });

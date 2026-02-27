@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import SubscriberTag from '@/lib/models/SubscriberTag';
 import Subscriber from '@/lib/models/Subscriber';
 import { getMongoUser } from '@/lib/auth/get-user';
+import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +14,9 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
         const user = await getMongoUser();
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+        const subscriberId = new mongoose.Types.ObjectId(params.id);
         const tags = await SubscriberTag.find({
-            subscriberId: params.id,
+            subscriberId: subscriberId,
             creatorId: user._id
         }).sort({ createdAt: -1 });
 
@@ -39,13 +41,14 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
             return NextResponse.json({ error: 'Tags array required' }, { status: 400 });
         }
 
+        const subscriberId = new mongoose.Types.ObjectId(params.id);
         const operations = tags.map(tag => ({
             updateOne: {
-                filter: { subscriberId: params.id, tag: tag.trim() },
+                filter: { subscriberId: subscriberId, tag: tag.trim() },
                 update: {
                     $setOnInsert: {
                         creatorId: user._id,
-                        subscriberId: params.id,
+                        subscriberId: subscriberId,
                         tag: tag.trim(),
                         source: 'manual'
                     }

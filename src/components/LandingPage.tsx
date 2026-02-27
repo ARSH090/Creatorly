@@ -4,6 +4,7 @@ import React from 'react';
 import HeroSection from './landing/HeroSection';
 import ProblemSolutionSection from './landing/ProblemSolutionSection';
 import HowItWorksSection from './landing/HowItWorksSection';
+import CoreServicesSection from './landing/CoreServicesSection';
 import FeatureGridSection from './landing/FeatureGridSection';
 import UseCasesSection from './landing/UseCasesSection';
 import SocialProofSection from './landing/SocialProofSection';
@@ -25,6 +26,7 @@ const LandingPage: React.FC = () => {
         <HeroSection />
         <ProblemSolutionSection />
         <HowItWorksSection />
+        <CoreServicesSection />
         <FeatureGridSection />
         <UseCasesSection />
         <SocialProofSection />

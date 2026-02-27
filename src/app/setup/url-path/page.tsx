@@ -46,11 +46,17 @@ export default function SetupUrlPath() {
             }
 
             setSuccess(true);
+            
             // Update session to reflect new username
             await refreshUser();
+            
+            // Refresh the router cache to ensure new URL is available
+            router.refresh();
 
             setTimeout(() => {
-                router.push('/dashboard');
+                // Redirect to the new storefront instead of dashboard
+                // This ensures they see their storefront with the new URL
+                router.push(`/u/${username}`);
             }, 1500);
         } catch (err: any) {
             setError('A system error occurred. Please try again.');

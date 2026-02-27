@@ -5,6 +5,7 @@ import Product from '@/lib/models/Product';
 import User from '@/lib/models/User';
 import AbandonedCheckout from '@/lib/models/AbandonedCheckout';
 import Coupon from '@/lib/models/Coupon';
+import UpsellOffer from '@/lib/models/UpsellOffer';
 import { verifyRazorpaySignature } from '@/lib/payments/razorpay';
 import { DigitalDeliveryService } from '@/lib/services/digitalDelivery';
 import { enrollInSequence } from '@/lib/services/sequence-enroll';

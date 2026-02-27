@@ -3,7 +3,6 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import UpsellOffer from '@/lib/models/UpsellOffer';
 import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
-import { connectToRazorpay } from '@/lib/payment/razorpay';
 import mongoose from 'mongoose';
 
 export const dynamic = 'force-dynamic';
@@ -34,14 +33,25 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         const upsellPrice = upsell.priceOverride || offerProduct.pricing.basePrice;
 
         // Create new order for the upsell
+        const orderNumber = `ORD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
         const upsellOrder = await Order.create({
+            orderNumber,
+            items: [{
+                productId: offerProduct._id,
+                name: offerProduct.title,
+                price: upsellPrice,
+                quantity: 1,
+                type: offerProduct.productType,
+            }],
             creatorId: upsell.creatorId,
-            customerId: originalOrder.customerId,
+            userId: originalOrder.userId,
             customerEmail: originalOrder.customerEmail,
-            productId: offerProduct._id,
+            customerName: originalOrder.customerName,
             amount: upsellPrice,
-            currency: offerProduct.pricing.currency || originalOrder.currency,
+            total: upsellPrice,
+            currency: offerProduct.pricing?.currency || originalOrder.currency,
             status: 'completed', // In production, this would wait for payment success
+            paymentStatus: 'paid',
             paymentGateway: originalOrder.paymentGateway,
             parentOrderId: originalOrder._id, // Link to original
             metadata: {
