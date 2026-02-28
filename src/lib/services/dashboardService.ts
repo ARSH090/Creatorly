@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps, react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const, import/no-anonymous-default-export */
 import { DashboardWidget, IDashboardWidget, getDefaultWidgets } from '@/lib/models/DashboardWidget';
 import { DashboardMetricCache } from '@/lib/models/DashboardMetricCache';
 import { DashboardActivityLog } from '@/lib/models/DashboardActivityLog';

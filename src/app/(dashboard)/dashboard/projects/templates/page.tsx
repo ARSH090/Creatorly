@@ -123,9 +123,9 @@ export default function TemplatesPage() {
 
                             <div className="flex items-start justify-between mb-8 relative z-10">
                                 <div className={`p-4 rounded-2xl ${template.category === 'Design' ? 'bg-pink-500/10 text-pink-500' :
-                                        template.category === 'Development' ? 'bg-indigo-500/10 text-indigo-500' :
-                                            template.category === 'Content' ? 'bg-amber-500/10 text-amber-500' :
-                                                'bg-zinc-800 text-zinc-400'
+                                    template.category === 'Development' ? 'bg-indigo-500/10 text-indigo-500' :
+                                        template.category === 'Content' ? 'bg-amber-500/10 text-amber-500' :
+                                            'bg-zinc-800 text-zinc-400'
                                     }`}>
                                     <Layout className="w-6 h-6" />
                                 </div>
@@ -197,7 +197,7 @@ export default function TemplatesPage() {
                 <div className="bg-indigo-600 rounded-[3rem] p-12 text-white relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 blur-[80px] group-hover:scale-110 transition-transform" />
                     <BookOpen className="w-12 h-12 mb-8" />
-                    <h3 className="text-3xl font-black mb-4 tracking-tighter italic">"Scale through structure."</h3>
+                    <h3 className="text-3xl font-black mb-4 tracking-tighter italic">&quot;Scale through structure.&quot;</h3>
                     <p className="text-indigo-100 text-sm font-medium mb-10 max-w-md leading-relaxed">Templates are more than just task lists. They define your standard of quality and ensure every client receives the same premium experience.</p>
                     <div className="flex items-center gap-4">
                         <div className="flex -space-x-3">

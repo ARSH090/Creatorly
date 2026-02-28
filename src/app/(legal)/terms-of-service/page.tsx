@@ -23,7 +23,7 @@ export default function TermsOfService() {
             <section className="mb-8">
                 <h2 className="text-2xl font-bold mb-4 text-white">3. Payments and Payouts</h2>
                 <p className="text-zinc-300 leading-relaxed">
-                    Payments are processed via Razorpay. Creatorly charges a platform fee on every transaction. Payouts are made to the creator's verified bank account or UPI ID.
+                    Payments are processed via Razorpay. Creatorly charges a platform fee on every transaction. Payouts are made to the creator&apos;s verified bank account or UPI ID.
                 </p>
             </section>
 

@@ -22,7 +22,7 @@ export default function TeamPage() {
                 <div>
                     <h3 className="text-amber-500 font-bold mb-1">Plan Limit Reached</h3>
                     <p className="text-amber-500/80 text-sm">
-                        Your current <span className="font-bold">Basic</span> plan doesn't support team collaboration.
+                        Your current <span className="font-bold">Basic</span> plan doesn&apos;t support team collaboration.
                         Upgrade to <span className="font-bold">Pro</span> to add up to 3 team members.
                     </p>
                 </div>

@@ -42,7 +42,7 @@ export async function POST(
         const lastModule = await CourseModule.findOne({ productId: id }).sort('-orderIndex');
         const nextOrder = lastModule ? lastModule.orderIndex + 1 : 0;
 
-        const module = await CourseModule.create({
+        const courseModule = await CourseModule.create({
             productId: id,
             title: body.title,
             description: body.description,
@@ -50,7 +50,7 @@ export async function POST(
             isFreePreview: body.isFreePreview || false
         });
 
-        return NextResponse.json({ module }, { status: 201 });
+        return NextResponse.json({ module: courseModule }, { status: 201 });
 
     } catch (error: any) {
         console.error('Error creating module:', error);

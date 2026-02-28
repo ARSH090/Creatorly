@@ -93,7 +93,7 @@ export default function AutomationPage() {
                                             </div>
                                             <div className="text-sm text-muted-foreground flex items-center mt-2">
                                                 <MessageSquare className="h-4 w-4 mr-1" />
-                                                Response: "{rule.response?.substring(0, 60)}{rule.response?.length > 60 ? '...' : ''}"
+                                                Response: &quot;{rule.response?.substring(0, 60)}{rule.response?.length > 60 ? '...' : ''}&quot;
                                             </div>
                                             <p className="text-xs text-muted-foreground mt-1">
                                                 To: {rule.action === 'auto_reply' ? 'Reply via DM' : rule.action} • Triggered: {rule.triggerCount} times

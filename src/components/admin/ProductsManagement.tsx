@@ -7,6 +7,7 @@ import {
     Archive, Tag, IndianRupee, User,
     ChevronLeft, ChevronRight, Globe
 } from 'lucide-react';
+import Image from 'next/image';
 
 interface Product {
     _id: string;
@@ -164,9 +165,15 @@ export function ProductsManagement() {
                                 <tr key={p._id} className="hover:bg-white/[0.02] transition-colors group">
                                     <td className="px-8 py-6">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-14 h-14 rounded-2xl bg-black border border-white/5 overflow-hidden flex-shrink-0">
+                                            <div className="w-14 h-14 rounded-2xl bg-black border border-white/5 overflow-hidden flex-shrink-0 relative">
                                                 {p.thumbnail ? (
-                                                    <img src={p.thumbnail} alt={p.name} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                                                    <Image
+                                                        src={p.thumbnail}
+                                                        alt={p.name}
+                                                        fill
+                                                        sizes="56px"
+                                                        className="object-cover opacity-80 group-hover:opacity-100 transition-opacity"
+                                                    />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center text-zinc-800">
                                                         <Package size={24} />

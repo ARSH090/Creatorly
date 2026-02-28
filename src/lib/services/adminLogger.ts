@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps, react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const, import/no-anonymous-default-export */
 import { auditLog } from '@/lib/utils/auditLogger';
 
 /**

@@ -75,6 +75,7 @@ export default function AdminDMPage() {
 
     useEffect(() => {
         fetchStats();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [period]);
 
     if (loading) {

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton-loaders';
+import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 
@@ -177,10 +178,13 @@ export default function ProfilePage() {
                                         <Loader2 className="w-10 h-10 text-white animate-spin" />
                                     </div>
                                 ) : (
-                                    <img
-                                        src={avatarUrl || user?.imageUrl}
+                                    <Image
+                                        src={avatarUrl || user?.imageUrl || '/avatar-placeholder.png'}
                                         alt="Identity"
-                                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                        fill
+                                        sizes="160px"
+                                        className="object-cover transition-transform duration-700 group-hover:scale-110"
+                                        priority
                                     />
                                 )}
                             </div>

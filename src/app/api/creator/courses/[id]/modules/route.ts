@@ -40,7 +40,7 @@ async function handler(req: NextRequest, user: any, context: any) {
         moduleOrder = lastModule ? (lastModule as any).orderIndex + 1 : 0;
     }
 
-    const module = await Module.create({
+    const courseModule = await Module.create({
         productId: courseId,
         title,
         description,
@@ -50,7 +50,7 @@ async function handler(req: NextRequest, user: any, context: any) {
 
     return {
         success: true,
-        module,
+        module: courseModule,
         message: 'Module created successfully'
     };
 }

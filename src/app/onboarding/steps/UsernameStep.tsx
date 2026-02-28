@@ -65,15 +65,15 @@ export default function UsernameStep({ value, onChange, onNext }: UsernameStepPr
                     Hey @{value || 'Username'} 👋
                 </h2>
                 <p className="text-zinc-500 text-base font-medium">
-                    Let's monetize your following!
+                    Let&apos;s monetize your following!
                 </p>
             </div>
 
             <div className="space-y-4">
                 <div className="relative">
                     <div className={`flex items-center w-full px-4 py-5 bg-white border-2 rounded-2xl transition-all duration-200 ${status === 'available' ? 'border-emerald-500 ring-4 ring-emerald-500/10' :
-                            status === 'taken' || status === 'invalid' ? 'border-rose-500 ring-4 ring-rose-500/10' :
-                                'border-zinc-200 focus-within:border-indigo-600 focus-within:ring-4 focus-within:ring-indigo-600/10'
+                        status === 'taken' || status === 'invalid' ? 'border-rose-500 ring-4 ring-rose-500/10' :
+                            'border-zinc-200 focus-within:border-indigo-600 focus-within:ring-4 focus-within:ring-indigo-600/10'
                         }`}>
                         <div className="flex items-center text-zinc-400 font-bold text-lg pointer-events-none">
                             <span className="mr-1">@</span>

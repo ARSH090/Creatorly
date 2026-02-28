@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     BarChart3,
@@ -17,48 +18,49 @@ import {
     Download,
     Activity
 } from 'lucide-react';
-import {
-    ResponsiveContainer,
-    Bar,
-    BarChart as RechartsBarChart,
-    XAxis,
-    YAxis,
-    Tooltip,
-    Cell,
-    Line,
-    LineChart as RechartsLineChart
-} from 'recharts';
+import dynamic from 'next/dynamic';
 import { StatsSkeleton, Skeleton } from '@/components/ui/skeleton-loaders';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'react-hot-toast';
 
+const BarChartComponent = dynamic(() => import('@/components/charts/BarChartComponent'), {
+    ssr: false,
+    loading: () => <div className="h-[300px] w-full bg-white/5 animate-pulse rounded-2xl" />
+});
+
+const LineChartComponent = dynamic(() => import('recharts').then(mod => {
+    const { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } = mod;
+    return function DynamicLineChart({ data }: { data: any[] }) {
+        return (
+            <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={data}>
+                    <XAxis dataKey="date" hide />
+                    <YAxis hide />
+                    <Tooltip
+                        contentStyle={{ backgroundColor: '#09090b', border: 'none', borderRadius: '1rem', fontSize: '10px', fontWeight: '900' }}
+                    />
+                    <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={4} dot={false} />
+                </LineChart>
+            </ResponsiveContainer>
+        );
+    };
+}), { ssr: false, loading: () => <div className="h-[300px] w-full bg-white/5 animate-pulse rounded-2xl" /> });
+
 export default function AdminAnalyticsPage() {
-    const [data, setData] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
     const [range, setRange] = useState('7d');
 
-    const fetchAnalytics = async () => {
-        setLoading(true);
-        try {
+    const { data: result, isLoading: loading, error, refetch } = useQuery({
+        queryKey: ['admin-analytics', range],
+        queryFn: async () => {
             const res = await fetch(`/api/admin/analytics?range=${range}`);
-            if (res.ok) {
-                const result = await res.json();
-                setData(result.data);
-            } else {
-                throw new Error('Signal lost');
-            }
-        } catch (error) {
-            toast.error('Failed to sync with analytics relay');
-        } finally {
-            setLoading(false);
+            if (!res.ok) throw new Error('Signal lost');
+            return res.json();
         }
-    };
+    });
 
-    useEffect(() => {
-        fetchAnalytics();
-    }, [range]);
+    const data = result?.data;
 
     if (loading) {
         return (
@@ -79,14 +81,14 @@ export default function AdminAnalyticsPage() {
         );
     }
 
-    if (!data) {
+    if (!data && !loading) {
         return (
             <EmptyState
                 icon={PieChart}
                 title="Telemetry Offline"
                 description="The analytics engine is currently processing real-time signals."
                 actionLabel="Reconnect Relay"
-                onAction={fetchAnalytics}
+                onAction={() => refetch()}
             />
         );
     }
@@ -152,17 +154,12 @@ export default function AdminAnalyticsPage() {
                     </CardHeader>
                     <CardContent className="p-8">
                         <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <RechartsBarChart data={data.dailyRevenue || []}>
-                                    <XAxis dataKey="date" hide />
-                                    <YAxis hide />
-                                    <Tooltip
-                                        cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                                        contentStyle={{ backgroundColor: '#09090b', border: 'none', borderRadius: '1rem', fontSize: '10px', fontWeight: '900' }}
-                                    />
-                                    <Bar dataKey="value" fill="#6366f1" radius={[4, 4, 4, 4]} />
-                                </RechartsBarChart>
-                            </ResponsiveContainer>
+                            <BarChartComponent
+                                data={data.dailyRevenue || []}
+                                dataKey="value"
+                                xAxisKey="date"
+                                height={300}
+                            />
                         </div>
                     </CardContent>
                 </Card>
@@ -174,16 +171,7 @@ export default function AdminAnalyticsPage() {
                     </CardHeader>
                     <CardContent className="p-8">
                         <div className="h-[300px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <RechartsLineChart data={data.dailyGrowth || []}>
-                                    <XAxis dataKey="date" hide />
-                                    <YAxis hide />
-                                    <Tooltip
-                                        contentStyle={{ backgroundColor: '#09090b', border: 'none', borderRadius: '1rem', fontSize: '10px', fontWeight: '900' }}
-                                    />
-                                    <Line type="monotone" dataKey="value" stroke="#8b5cf6" strokeWidth={4} dot={false} />
-                                </RechartsLineChart>
-                            </ResponsiveContainer>
+                            <LineChartComponent data={data.dailyGrowth || []} />
                         </div>
                     </CardContent>
                 </Card>

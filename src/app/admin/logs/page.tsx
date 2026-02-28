@@ -9,7 +9,6 @@ import {
     Calendar,
     RefreshCw,
     ShieldCheck,
-    FileJson,
     History as HistoryIcon
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -57,6 +56,7 @@ export default function AdminLogsPage() {
     useEffect(() => {
         setLoading(true);
         fetchLogs();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, filters.action, filters.status]);
 
     useEffect(() => {
@@ -65,6 +65,7 @@ export default function AdminLogsPage() {
             fetchLogs();
         }, 500);
         return () => clearTimeout(debounce);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters.search]);
 
     useEffect(() => {
@@ -73,6 +74,7 @@ export default function AdminLogsPage() {
             interval = setInterval(fetchLogs, 30000);
         }
         return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [autoRefresh, page, filters.action, filters.status, filters.search]);
 
     const handleExport = () => {

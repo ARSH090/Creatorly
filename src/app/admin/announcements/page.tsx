@@ -139,10 +139,10 @@ export default function AdminAnnouncementsPage() {
                                     value={formData.type}
                                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                                 >
-                                    <SelectItem value="info">Information</SelectItem>
-                                    <SelectItem value="warning">Warning Alert</SelectItem>
-                                    <SelectItem value="success">Success Signal</SelectItem>
-                                    <SelectItem value="error">Critical Failure</SelectItem>
+                                    <option value="info">Information</option>
+                                    <option value="warning">Warning Alert</option>
+                                    <option value="success">Success Signal</option>
+                                    <option value="error">Critical Failure</option>
                                 </select>
                             </div>
                         </div>

@@ -34,8 +34,8 @@ export async function POST(
         }
 
         // Verify Module belongs to Product
-        const module = await CourseModule.findOne({ _id: moduleId, productId: id });
-        if (!module) {
+        const courseModule = await CourseModule.findOne({ _id: moduleId, productId: id });
+        if (!courseModule) {
             return NextResponse.json({ error: 'Module not found for this product' }, { status: 404 });
         }
 

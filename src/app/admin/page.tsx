@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, ShoppingBag, CreditCard, TrendingUp, ShieldCheck, Activity } from 'lucide-react';
-import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
+import dynamic from 'next/dynamic';
 import { StatsSkeleton, Skeleton } from '@/components/ui/skeleton-loaders';
 import { EmptyState } from '@/components/ui/empty-state';
 import { toast } from 'react-hot-toast';
@@ -16,6 +16,11 @@ interface DashboardStats {
     totalRevenue: number;
     recentRevenue: any[];
 }
+
+const BarChartComponent = dynamic(() => import('@/components/charts/BarChartComponent'), {
+    ssr: false,
+    loading: () => <div className="h-[350px] w-full bg-white/5 animate-pulse rounded-[3rem]" />
+});
 
 export default function AdminDashboard() {
     const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -108,37 +113,12 @@ export default function AdminDashboard() {
                     </CardHeader>
                     <CardContent className="p-8">
                         <div className="h-[350px] w-full">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={stats.recentRevenue}>
-                                    <XAxis
-                                        dataKey="date"
-                                        stroke="#3f3f46"
-                                        fontSize={10}
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickFormatter={(v) => v.toUpperCase()}
-                                    />
-                                    <YAxis
-                                        stroke="#3f3f46"
-                                        fontSize={10}
-                                        tickLine={false}
-                                        axisLine={false}
-                                        tickFormatter={(v) => `₹${v}`}
-                                    />
-                                    <Tooltip
-                                        cursor={{ fill: 'rgba(255,255,255,0.03)' }}
-                                        contentStyle={{
-                                            backgroundColor: '#09090b',
-                                            border: '1px solid rgba(255,255,255,0.05)',
-                                            borderRadius: '1rem',
-                                            fontSize: '10px',
-                                            fontWeight: '900',
-                                            textTransform: 'uppercase'
-                                        }}
-                                    />
-                                    <Bar dataKey="value" fill="#6366f1" radius={[8, 8, 8, 8]} barSize={24} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                            <BarChartComponent
+                                data={stats.recentRevenue}
+                                dataKey="value"
+                                xAxisKey="date"
+                                height={350}
+                            />
                         </div>
                     </CardContent>
                 </Card>

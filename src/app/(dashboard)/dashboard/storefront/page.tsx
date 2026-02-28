@@ -10,6 +10,7 @@ import {
     Star, Tag, Clock, ToggleLeft, ToggleRight, GripVertical,
     Monitor
 } from 'lucide-react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import StoreThemeSelector from '@/components/storefront/StoreThemeSelector';
@@ -423,7 +424,7 @@ export default function StorefrontBuilder() {
                                     <div className="text-center py-12 text-zinc-700">
                                         <Globe className="w-8 h-8 mx-auto mb-3 opacity-30" />
                                         <p className="text-sm font-bold">No links yet</p>
-                                        <p className="text-xs mt-1">Click "Add Link" to get started</p>
+                                        <p className="text-xs mt-1">Click &quot;Add Link&quot; to get started</p>
                                     </div>
                                 )}
                                 {links.map((link, idx) => {
@@ -449,11 +450,16 @@ export default function StorefrontBuilder() {
 
                                                 {/* Icon preview */}
                                                 <div
-                                                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                                                    className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 relative overflow-hidden"
                                                     style={{ backgroundColor: link.badgeColor || theme.primaryColor + '22' }}
                                                 >
                                                     {link.thumbnail
-                                                        ? <img src={link.thumbnail} alt="" className="w-full h-full object-cover rounded-xl" />
+                                                        ? <Image
+                                                            src={link.thumbnail}
+                                                            alt=""
+                                                            fill
+                                                            className="object-cover rounded-xl"
+                                                        />
                                                         : <IconComp className="w-4 h-4" style={{ color: link.badgeColor || theme.primaryColor }} />
                                                     }
                                                 </div>
@@ -581,8 +587,14 @@ export default function StorefrontBuilder() {
                                                                 <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Thumbnail Image</label>
                                                                 <div className="flex items-center gap-2">
                                                                     {link.thumbnail && (
-                                                                        // eslint-disable-next-line @next/next/no-img-element
-                                                                        <img src={link.thumbnail} alt="thumb" className="w-10 h-10 rounded-lg object-cover border border-white/10 flex-shrink-0" />
+                                                                        <div className="w-10 h-10 rounded-lg relative overflow-hidden border border-white/10 flex-shrink-0">
+                                                                            <Image
+                                                                                src={link.thumbnail}
+                                                                                alt="thumb"
+                                                                                fill
+                                                                                className="object-cover"
+                                                                            />
+                                                                        </div>
                                                                     )}
                                                                     <input
                                                                         ref={el => { thumbnailInputRefs.current[idx] = el; }}

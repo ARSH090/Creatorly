@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
     Plus, Edit2, Trash2, Tag,
     Zap, Shield, Globe, Users,
@@ -58,12 +58,7 @@ export default function CouponsManagementEnhanced() {
 
     const [formData, setFormData] = useState(initialFormState);
 
-    useEffect(() => {
-        fetchCoupons();
-        fetchPlans();
-    }, []);
-
-    const fetchCoupons = async () => {
+    const fetchCoupons = useCallback(async () => {
         try {
             setLoading(true);
             const res = await fetch('/api/admin/coupons');
@@ -74,13 +69,18 @@ export default function CouponsManagementEnhanced() {
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
 
-    const fetchPlans = async () => {
+    const fetchPlans = useCallback(async () => {
         const res = await fetch('/api/admin/plans');
         const data = await res.json();
         if (data.plans) setPlans(data.plans.filter((p: any) => p.tier !== 'free'));
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchCoupons();
+        fetchPlans();
+    }, [fetchCoupons, fetchPlans]);
 
     const handleOpen = (coupon: any = null) => {
         if (coupon) {

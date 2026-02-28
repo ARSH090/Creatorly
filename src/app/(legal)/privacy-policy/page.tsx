@@ -33,7 +33,7 @@ export default function PrivacyPolicy() {
             <section className="mb-8">
                 <h2 className="text-2xl font-bold mb-4 text-white">4. Security</h2>
                 <p className="text-zinc-300 leading-relaxed">
-                    We implement enterprise-grade security including SSL encryption, database hardening, and secure session management. All payment transactions are processed through Razorpay's secure infrastructure.
+                    We implement enterprise-grade security including SSL encryption, database hardening, and secure session management. All payment transactions are processed through Razorpay&apos;s secure infrastructure.
                 </p>
             </section>
 

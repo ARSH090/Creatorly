@@ -11,7 +11,7 @@ export default function SupportPage() {
                     <LifeBuoy className="w-10 h-10 text-indigo-400" />
                 </div>
                 <h1 className="text-3xl font-black text-white">Help & Support</h1>
-                <p className="text-zinc-500 max-w-lg mx-auto">We're here to help you succeed. Find answers in our documentation or talk to our team.</p>
+                <p className="text-zinc-500 max-w-lg mx-auto">We&apos;re here to help you succeed. Find answers in our documentation or talk to our team.</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

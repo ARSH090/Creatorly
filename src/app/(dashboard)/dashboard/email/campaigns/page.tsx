@@ -90,7 +90,7 @@ export default function EmailCampaignsPage() {
                                                 </Badge>
                                             </div>
                                             <div className="text-xs sm:text-sm text-zinc-500 truncate">
-                                                Subject: <span className="text-zinc-400">"{campaign.subject}"</span>
+                                                Subject: <span className="text-zinc-400">&quot;{campaign.subject}&quot;</span>
                                             </div>
                                             <div className="flex flex-wrap items-center gap-3 text-[10px] sm:text-xs text-zinc-500 mt-2">
                                                 <span className="flex items-center">
