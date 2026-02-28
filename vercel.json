@@ -1,24 +1,12 @@
 {
-    "functions": {
-        "src/app/api/**/*": {
-            "maxDuration": 60
-        }
-    },
-    "regions": [
-        "sin1"
-    ],
     "crons": [
         {
-            "path": "/api/cron/reminders",
-            "schedule": "0 6 * * *"
+            "path": "/api/cron/check-followers",
+            "schedule": "*/2 * * * *"
         },
         {
-            "path": "/api/cron/process-sequences",
-            "schedule": "0 0 * * *"
-        },
-        {
-            "path": "/api/cron/trial-expiry",
-            "schedule": "0 2 * * *"
+            "path": "/api/cron/refresh-instagram-tokens",
+            "schedule": "0 0 */30 * *"
         }
     ]
 }

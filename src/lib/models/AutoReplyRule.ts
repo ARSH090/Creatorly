@@ -57,11 +57,18 @@ export interface IAutoReplyRule extends Document {
 
     loopPreventionId: string;
 
+    // ManyChat-style reply variants (up to 5, rotated to avoid spam flags)
+    commentReplies?: Array<{ text: string }>;
+    lastUsedReplyIndex?: number;
+
     // Performance
     stats: {
         totalSent: number;
         totalFailed: number;
         followConversions: number;
+        emailsCollected: number;
+        linksClicked: number;
+        triggered: number;
         lastFiredAt?: Date;
     };
 
@@ -114,10 +121,20 @@ const AutoReplyRuleSchema: Schema = new Schema({
     attachmentId: { type: String },
     loopPreventionId: { type: String, required: true, index: true },
 
+    // ManyChat anti-spam: rotate between up to 5 reply variants
+    commentReplies: [{
+        text: { type: String, required: true },
+        _id: false,
+    }],
+    lastUsedReplyIndex: { type: Number, default: -1 },
+
     stats: {
         totalSent: { type: Number, default: 0 },
         totalFailed: { type: Number, default: 0 },
         followConversions: { type: Number, default: 0 },
+        emailsCollected: { type: Number, default: 0 },
+        linksClicked: { type: Number, default: 0 },
+        triggered: { type: Number, default: 0 },
         lastFiredAt: Date
     },
 

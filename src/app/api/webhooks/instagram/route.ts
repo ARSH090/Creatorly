@@ -8,6 +8,9 @@ import { PendingFollowRequest } from '@/lib/models/PendingFollowRequest';
 import { SocialAccount } from '@/lib/models/SocialAccount';
 import { decryptTokenGCM, decryptTokenWithVersion } from '@/lib/security/encryption';
 import { QueueJob } from '@/lib/models/QueueJob';
+import { getRandomReply } from '@/lib/services/autoDMService';
+import { handleFlowReply, getActiveSession, startFlow } from '@/lib/services/flowExecutor';
+import { AutoDMFlow } from '@/lib/models/AutoDMFlow';
 
 /**
  * Instagram Webhook Endpoint
@@ -88,8 +91,13 @@ export async function POST(request: NextRequest) {
                         console.error('[Instagram Webhook] handleCommentTrigger error:', err)
                     );
                 } else if (change.field === 'follows') {
-                    await handleFollowEvent(change.value).catch(err =>
+                    await handleFollowEvent(change.value, entry.id).catch(err =>
                         console.error('[Instagram Webhook] handleFollowEvent error:', err)
+                    );
+                } else if (change.field === 'mentions') {
+                    // Story reply trigger
+                    await handleStoryReplyTrigger(change.value, entry.id).catch(err =>
+                        console.error('[Instagram Webhook] handleStoryReplyTrigger error:', err)
                     );
                 } else {
                     await handleStatusUpdate(change).catch(err =>
@@ -153,13 +161,26 @@ async function handleCommentTrigger(commentValue: any, pageId: string) {
             }
         }
 
-        // Enqueue Delivery
-        await enqueueDelivery(creatorId, commenterId, rule, accessToken, {
+        // Pick random reply variant (ManyChat anti-spam rotation)
+        const { text: replyVariant, index: usedIndex } = getRandomReply(rule, rule.lastUsedReplyIndex);
+        if (usedIndex !== -1 && usedIndex !== rule.lastUsedReplyIndex) {
+            rule.lastUsedReplyIndex = usedIndex;
+            await (rule as any).save();
+        }
+
+        // Update triggered stats
+        await AutoReplyRule.findByIdAndUpdate(rule._id, {
+            $inc: { 'stats.triggered': 1 },
+        });
+
+        // Enqueue Delivery with variant reply text
+        await enqueueDelivery(creatorId, commenterId, { ...rule.toObject(), replyText: replyVariant }, accessToken, {
             firstName: commenterUsername,
             firstNameInferred: true,
             source: triggerType
         });
 
+        break; // Only fire the highest-priority matching rule
     }
 }
 
@@ -180,17 +201,60 @@ async function handleIncomingMessage(message: any) {
         await DMLog.findByIdAndUpdate(dmLog._id, { deliveryStatus: 'delivered' });
     }
 
-    // Part 2: Handle Auto-Reply Logic
-    const messageText = message.message?.text || message.message?.attachments?.[0]?.type;
+    // Identify Creator early (needed for flow session lookup)
+    const socialAccountEarly = await SocialAccount.findOne({ instagramBusinessId: recipientId, isActive: true });
+    if (!socialAccountEarly) return;
+    const creatorIdEarly = socialAccountEarly.userId.toString();
+
+    const messageText = message.message?.text || '';
+
+    // Part 1b: Route to active flow session if exists (email_collect, button replies)
+    const activeSession = getActiveSession(senderId, creatorIdEarly);
+    if (activeSession) {
+        const routed = await handleFlowReply({
+            senderIgId: senderId,
+            creatorId: creatorIdEarly,
+            messageText,
+        });
+        if (routed) return; // Handled by flow executor
+    }
+
+    // Part 2: Handle Auto-Reply Logic (DM Keyword trigger + story mention)
     const isStoryMention = !!message.message?.attachments?.find((a: any) => a.type === 'story_mention');
 
-    // Identify Creator
-    const socialAccount = await SocialAccount.findOne({ instagramBusinessId: recipientId, isActive: true });
-    if (!socialAccount) return;
+    const socialAccount = socialAccountEarly;
     const creatorId = socialAccount.userId;
 
     const triggerType = isStoryMention ? AutomationTriggerType.STORY_MENTION : AutomationTriggerType.DIRECT_MESSAGE;
 
+    // ── Check if DM keyword matches an active AutoDMFlow (multi-step) ───────
+    if (!isStoryMention && messageText) {
+        const accessTokenForFlow = decryptTokenWithVersion(
+            socialAccount.pageAccessToken, socialAccount.tokenIV, socialAccount.tokenTag, socialAccount.keyVersion
+        );
+        const flows = await AutoDMFlow.find({
+            creatorId,
+            isActive: true,
+            'trigger.type': 'dm_keyword',
+        });
+        for (const flow of flows) {
+            const kwMatch = flow.trigger.keywords?.length === 0 ||
+                flow.trigger.keywords?.some((kw: string) => messageText.toLowerCase().includes(kw.toLowerCase()));
+            if (kwMatch && flow.steps.length > 0) {
+                await startFlow({
+                    flowId: flow._id.toString(),
+                    recipientIgId: senderId,
+                    recipientUsername: message.sender?.username ?? '',
+                    creatorId: creatorId.toString(),
+                    accessToken: accessTokenForFlow,
+                    igUserId: socialAccount.instagramBusinessId,
+                });
+                return; // Flow started, stop rule matching
+            }
+        }
+    }
+
+    // ── Fall back to simple AutoReplyRules ───────────────────────────────────
     const rules = await AutoReplyRule.find({
         creatorId,
         triggerType: { $in: [triggerType, AutomationTriggerType.DM_KEYWORD] },
@@ -329,13 +393,50 @@ async function enqueueDelivery(creatorId: any, recipientId: string, rule: any, a
     }).catch(() => { });
 }
 
-async function handleFollowEvent(followValue: any) {
+// ─── Story Reply Trigger ──────────────────────────────────────────────────────
+
+async function handleStoryReplyTrigger(mentionValue: any, pageId: string) {
+    if (mentionValue?.media_type !== 'STORY') return;
+
+    const replyText = mentionValue?.text || '';
+    const replierIgId = mentionValue?.from?.id;
+    const replierUsername = mentionValue?.from?.username || '';
+
+    console.log(`[Instagram Webhook] Story reply from ${replierUsername}: ${replyText}`);
+
+    const socialAccount = await SocialAccount.findOne({ instagramBusinessId: pageId, isActive: true });
+    if (!socialAccount) return;
+    const creatorId = socialAccount.userId;
+
+    const rules = await AutoReplyRule.find({
+        creatorId,
+        triggerType: AutomationTriggerType.STORY_REPLY,
+        isActive: true,
+    }).sort({ priority: -1 });
+
+    for (const rule of rules) {
+        if (replyText && !isMatch(replyText, rule)) continue;
+        if (await isDeduplicated(creatorId, replierIgId, rule)) continue;
+
+        const accessToken = decryptTokenWithVersion(socialAccount.pageAccessToken, socialAccount.tokenIV, socialAccount.tokenTag, socialAccount.keyVersion);
+        const { text: replyVariant } = getRandomReply(rule, rule.lastUsedReplyIndex);
+
+        await enqueueDelivery(creatorId, replierIgId, { ...rule.toObject(), replyText: replyVariant }, accessToken, {
+            firstName: replierUsername,
+            source: 'story_reply',
+        });
+        break;
+    }
+}
+
+// ─── New Follower ──────────────────────────────────────────────────────────────
+
+async function handleFollowEvent(followValue: any, pageId?: string) {
     const followerId = followValue.id;
     const followerUsername = followValue.username;
 
     console.log(`[Instagram Webhook] New follower: ${followerUsername} (${followerId})`);
 
-    // Look up the creator via their SocialAccount (instagramBusinessId matches the 'to' field in follow events)
     const socialAccount = await SocialAccount.findOne({
         instagramBusinessId: followValue.to?.id,
         platform: 'instagram',
@@ -391,6 +492,46 @@ async function handleFollowEvent(followValue: any) {
 
             console.log(`[Instagram Webhook] Pending DM sent to new follower ${followerUsername}`);
         }
+    }
+
+    // ── Also fire new_follow AutoReplyRules (welcome DM) ─────────────────────
+    if (!socialAccount) return;
+    const creator = await User.findById(socialAccount.userId);
+    if (!creator) return;
+
+    const welcomeRules = await AutoReplyRule.find({
+        creatorId: creator._id,
+        triggerType: AutomationTriggerType.NEW_FOLLOW,
+        isActive: true,
+    }).sort({ priority: -1 }).limit(1);
+
+    if (welcomeRules.length > 0) {
+        const accessToken = decryptTokenWithVersion(socialAccount.pageAccessToken, socialAccount.tokenIV, socialAccount.tokenTag, socialAccount.keyVersion);
+        const rule = welcomeRules[0];
+        const { text: welcomeText } = getRandomReply(rule, rule.lastUsedReplyIndex);
+        const personalised = welcomeText
+            .replace('{{name}}', followerUsername)
+            .replace('{{username}}', followerUsername);
+
+        await InstagramService.sendDirectMessage({
+            recipientId: followerId,
+            message: personalised,
+            accessToken,
+            igUserId: socialAccount.instagramBusinessId,
+        });
+
+        await DMLog.create({
+            creatorId: creator._id,
+            recipientId: followerId,
+            recipientUsername: followerUsername,
+            messageSent: personalised,
+            status: 'success',
+            deliveryStatus: 'sent',
+            provider: 'instagram',
+            triggerSource: 'automation',
+            lastInteractionAt: new Date(),
+            ruleId: rule._id,
+        });
     }
 }
 

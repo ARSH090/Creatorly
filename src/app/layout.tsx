@@ -3,9 +3,9 @@ import { Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 
-// Fallback fonts for Windows ESM absolute path issue
-const geistSans = { variable: "font-sans" };
-const geistMono = { variable: "font-mono" };
+// Global inter font
+import { Inter } from "next/font/google";
+const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: {
@@ -91,7 +91,7 @@ export default function RootLayout({
           <link rel="dns-prefetch" href="https://graph.facebook.com" />
           <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
         </head>
-        <body className={`${geistSans.variable} ${geistMono.variable} antialiased`} data-suppress-hydration-warning="true">
+        <body className={`${inter.variable} ${inter.className} antialiased`} data-suppress-hydration-warning="true">
           <PostHogProvider>
             <QueryProvider>
               <ErrorBoundary>
