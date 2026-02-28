@@ -1,152 +1,167 @@
 ﻿// @ts-nocheck
-import AdminDashboardMetrics from '@/components/admin/DashboardMetrics';
-import GrowthTrendCard from '@/components/admin/GrowthTrendCard';
-import UserManagement from '@/components/admin/UserManagement';
-import {
-    Users,
-    ShoppingCart,
-    ArrowUpRight,
-    TrendingUp,
-    ShieldAlert,
-    Clock,
-    ChevronRight,
-    Search,
-    Download,
-    Shield,
-    AlertTriangle
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { getCurrentUser } from '@/lib/auth/server-auth';
-import { redirect } from 'next/navigation';
-import { getSecurityEventsDB } from '@/lib/security/monitoring';
+'use client';
 
-export const dynamic = 'force-dynamic';
+import { useEffect, useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Users, ShoppingBag, CreditCard, TrendingUp, Loader2 } from 'lucide-react';
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 
-function formatRelativeTime(date: Date) {
-    const diff = Date.now() - new Date(date).getTime();
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return 'Just now';
-    if (minutes < 60) return `${minutes}m ago`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return new Date(date).toLocaleDateString();
+interface DashboardStats {
+    totalUsers: number;
+    activeCreators: number;
+    totalProducts: number;
+    totalRevenue: number;
+    recentRevenue: any[];
 }
 
-export default async function AdminDashboard() {
-    const user = await getCurrentUser();
+export default function AdminDashboard() {
+    const [stats, setStats] = useState<DashboardStats | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    if (!user || (user.role !== 'admin' && user.role !== 'super-admin')) {
-        redirect('/auth/login');
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const res = await fetch('/api/admin/analytics/summary');
+                if (res.ok) {
+                    const data = await res.json();
+                    setStats(data);
+                }
+            } catch (error) {
+                console.error("Failed to fetch dashboard stats", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchStats();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex h-[50vh] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+            </div>
+        );
     }
 
-    const adminName = user.displayName || 'Admin';
-    const adminEmail = user.email || '';
-
-    // Fetch real security events
-    const securityEvents = await getSecurityEventsDB({}, 6);
+    if (!stats) return <div>Failed to load data.</div>;
 
     return (
-        <div className="min-h-screen p-2 lg:p-4">
-            <div className="max-w-7xl mx-auto space-y-8">
-                <header className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-4xl font-black text-white flex items-center gap-4 tracking-tighter italic">
-                            <Shield className="w-10 h-10 text-indigo-500" />
-                            CORE OVERRIDE
-                        </h1>
-                        <p className="text-[10px] font-black text-zinc-600 mt-1 uppercase tracking-[0.3em]">
-                            Platform Surveillance • Node v2.0.4
+        <div className="space-y-6">
+            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                        <CreditCard className="h-4 w-4 text-emerald-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">â‚¹{stats.totalRevenue.toLocaleString()}</div>
+                        <p className="text-xs text-muted-foreground">+20.1% from last month</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+                        <Users className="h-4 w-4 text-blue-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalUsers}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {stats.activeCreators} Creators
                         </p>
-                    </div>
-                    <div className="flex items-center gap-5 bg-zinc-900/50 p-2 pl-5 rounded-[2rem] border border-white/5 backdrop-blur-3xl shadow-2xl">
-                        <div className="text-right">
-                            <p className="text-xs font-black text-white tracking-widest uppercase">{adminName}</p>
-                            <p className="text-[9px] font-bold text-zinc-600 uppercase tracking-tighter">{adminEmail}</p>
-                        </div>
-                        <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black shadow-xl shadow-indigo-500/20 border border-white/10 group-hover:scale-105 transition-transform">
-                            {adminName.charAt(0)}
-                        </div>
-                    </div>
-                </header>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Products</CardTitle>
+                        <ShoppingBag className="h-4 w-4 text-purple-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.totalProducts}</div>
+                        <p className="text-xs text-muted-foreground">+12 new this week</p>
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+                        <TrendingUp className="h-4 w-4 text-orange-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">3.2%</div>
+                        <p className="text-xs text-muted-foreground">+0.4% from last month</p>
+                    </CardContent>
+                </Card>
+            </div>
 
-                <AdminDashboardMetrics />
-
-                <div className="grid lg:grid-cols-2 gap-8">
-                    {/* Recent Alerts */}
-                    <div className="bg-zinc-900/40 rounded-[3rem] border border-white/5 p-10 shadow-3xl relative overflow-hidden group backdrop-blur-sm">
-                        <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform duration-1000">
-                            <AlertTriangle className="w-32 h-32 text-amber-500" />
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+                <Card className="col-span-4">
+                    <CardHeader>
+                        <CardTitle>Revenue Overview</CardTitle>
+                    </CardHeader>
+                    <CardContent className="pl-2">
+                        <div className="h-[350px] w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={stats.recentRevenue}>
+                                    <XAxis
+                                        dataKey="date"
+                                        stroke="#888888"
+                                        fontSize={12}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+                                    <YAxis
+                                        stroke="#888888"
+                                        fontSize={12}
+                                        tickLine={false}
+                                        axisLine={false}
+                                        tickFormatter={(value) => `â‚¹${value}`}
+                                    />
+                                    <Tooltip
+                                        cursor={{ fill: 'transparent' }}
+                                        contentStyle={{ borderRadius: '8px' }}
+                                    />
+                                    <Bar dataKey="value" fill="#4f46e5" radius={[4, 4, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
                         </div>
-                        <div className="relative z-10">
-                            <h2 className="text-xl font-black text-white mb-10 flex items-center gap-4 uppercase tracking-tighter italic">
-                                <div className="w-2.5 h-8 bg-amber-500 rounded-full shadow-[0_0_15px_rgba(245,158,11,0.5)]" />
-                                Threat Detection Feed
-                            </h2>
-                            <div className="space-y-4">
-                                {securityEvents.length > 0 ? securityEvents.map((event) => (
-                                    <div
-                                        key={event.eventId}
-                                        className="flex items-start gap-5 p-5 rounded-3xl bg-black/40 hover:bg-white/[0.03] border border-white/5 transition-all cursor-pointer group/item"
-                                    >
-                                        <div className={`w-3 h-3 rounded-full mt-2 shrink-0 shadow-lg ${event.severity === 'critical' ? 'bg-rose-500 shadow-rose-500/30' :
-                                            event.severity === 'high' ? 'bg-orange-500 shadow-orange-500/30' : 'bg-amber-400 shadow-amber-400/30'
-                                            }`} />
-                                        <div className="flex-1">
-                                            <div className="flex justify-between items-start">
-                                                <p className="font-black text-xs text-zinc-300 group-hover/item:text-indigo-400 transition-colors uppercase tracking-[0.1em]">
-                                                    {event.eventType.replace(/_/g, ' ')}
-                                                </p>
-                                                <span className="text-[9px] font-black text-zinc-600 group-hover/item:text-zinc-500 uppercase tracking-widest whitespace-nowrap">
-                                                    {formatRelativeTime(event.timestamp)}
-                                                </span>
-                                            </div>
-                                            <p className="text-[10px] text-zinc-500 font-bold mt-2 line-clamp-1 opacity-60 font-mono uppercase tracking-tighter">
-                                                {event.ipAddress} • {JSON.stringify(event.context).slice(0, 50)}...
-                                            </p>
-                                        </div>
-                                    </div>
-                                )) : (
-                                    <div className="text-center py-10">
-                                        <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">No active threats detected</p>
-                                    </div>
-                                )}
+                    </CardContent>
+                </Card>
+
+                {/* Recent Sales / Activity Card could go here */}
+                <Card className="col-span-3">
+                    <CardHeader>
+                        <CardTitle>Platform Health</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Database (MongoDB)</span>
+                                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                    Operational
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Cache (Redis)</span>
+                                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                    Operational
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Storage (S3)</span>
+                                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                    Operational
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Payments (Razorpay)</span>
+                                <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                                    Operational
+                                </span>
                             </div>
                         </div>
-                    </div>
-
-                    {/* User Growth */}
-                    <div className="bg-zinc-900/40 rounded-[3rem] border border-white/5 p-10 shadow-3xl relative overflow-hidden group backdrop-blur-sm">
-                        <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform duration-1000">
-                            <TrendingUp className="w-32 h-32 text-indigo-500" />
-                        </div>
-                        <div className="relative z-10">
-                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10">
-                                <h1 className="text-xl font-black text-white tracking-tighter italic uppercase flex items-center gap-4">
-                                    <div className="w-2.5 h-8 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.5)]" />
-                                    METRIC SURVEILLANCE
-                                </h1>
-                                <div className="flex items-center gap-4">
-                                    <Button
-                                        asChild
-                                        variant="outline"
-                                        className="bg-white/5 border-white/5 hover:bg-white/10 text-white font-bold uppercase tracking-widest text-[10px] px-8 h-14 rounded-2xl"
-                                    >
-                                        <a href="/api/admin/export/transactions">
-                                            <Download className="w-4 h-4 mr-2 text-indigo-400" />
-                                            Export Payments
-                                        </a>
-                                    </Button>
-                                </div>
-                            </div>
-                            <GrowthTrendCard />
-                        </div>
-                    </div>
-                </div>
-
-                {/* User Management Section */}
-                <section className="space-y-6">
-                    <UserManagement />
-                </section>
+                    </CardContent>
+                </Card>
             </div>
         </div>
     );

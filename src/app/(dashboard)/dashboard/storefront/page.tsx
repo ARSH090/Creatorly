@@ -7,8 +7,8 @@ import {
     ArrowUp, ArrowDown, Trash2, Plus, Zap, Upload, Loader2,
     MessageCircle, Camera, Play, Mail, Calendar, Send,
     Twitter, Linkedin, Music2, ExternalLink, Globe,
-    Tag, Clock, ToggleLeft, ToggleRight, GripVertical,
-    Monitor, Link as LinkIcon, Star
+    Star, Tag, Clock, ToggleLeft, ToggleRight, GripVertical,
+    Monitor
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
@@ -67,23 +67,7 @@ const SECTIONS = [
     { id: 'links', name: 'Custom Links' },
     { id: 'products', name: 'Product Grid' },
     { id: 'newsletter', name: 'Newsletter' },
-    { id: 'testimonials', name: 'Testimonials' },
-    { id: 'faq', name: 'FAQ' },
 ];
-
-const newTestimonial = () => ({
-    id: Math.random().toString(36).substr(2, 9),
-    name: 'Customer Name',
-    role: 'Product Designer',
-    content: 'This product changed my life! Highly recommended.',
-    avatar: '',
-});
-
-const newFAQ = () => ({
-    id: Math.random().toString(36).substr(2, 9),
-    question: 'How does it work?',
-    answer: 'It works by integrating directly with your workflow...',
-});
 
 const BADGE_COLORS = [
     '#6366f1', '#a855f7', '#ec4899', '#f59e0b',
@@ -110,40 +94,11 @@ const newLink = (order: number) => ({
 export default function StorefrontBuilder() {
     const { user, email, displayName, photoURL } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'design' | 'links' | 'layout' | 'testimonials' | 'faq'>('design');
+    const [activeTab, setActiveTab] = useState<'design' | 'links' | 'layout'>('design');
     const [expandedLinkIdx, setExpandedLinkIdx] = useState<number | null>(null);
-    const [expandedTestimonialIdx, setExpandedTestimonialIdx] = useState<number | null>(null);
-    const [expandedFAQIdx, setExpandedFAQIdx] = useState<number | null>(null);
     const [showMobilePreview, setShowMobilePreview] = useState(false);
     const [uploadingThumbnailIdx, setUploadingThumbnailIdx] = useState<number | null>(null);
     const thumbnailInputRefs = useRef<(HTMLInputElement | null)[]>([]);
-    const bgInputRef = useRef<HTMLInputElement>(null);
-
-    // ... (rest of the state)
-
-    const handleBackgroundUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        try {
-            toast.loading('Uploading background...');
-            const presignRes = await fetch('/api/creator/upload', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ filename: file.name, contentType: file.type, fileSize: file.size }),
-            });
-            if (!presignRes.ok) throw new Error('Failed to get upload URL');
-            const { uploadUrl, publicUrl } = await presignRes.json();
-            await fetch(uploadUrl, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-            setTheme(prev => ({ ...prev, backgroundImage: publicUrl }));
-            toast.dismiss();
-            toast.success('Background updated!');
-        } catch (err: any) {
-            toast.dismiss();
-            toast.error(err.message || 'Upload failed');
-        } finally {
-            if (bgInputRef.current) bgInputRef.current.value = '';
-        }
-    };
 
     const [theme, setTheme] = useState({
         primaryColor: '#6366f1',
@@ -154,14 +109,7 @@ export default function StorefrontBuilder() {
         fontFamily: 'Outfit',
         buttonStyle: 'rounded',
         backgroundImage: '',
-        productLayout: 'grid',
-        buttonColor: '#6366f1',
-        buttonTextColor: '#ffffff',
     });
-
-    const [showProfilePhoto, setShowProfilePhoto] = useState(true);
-    const [isPublished, setIsPublished] = useState(true);
-    const [currency, setCurrency] = useState('INR');
 
     const [layout, setLayout] = useState([
         { id: 'hero', enabled: true },
@@ -172,8 +120,6 @@ export default function StorefrontBuilder() {
     ]);
 
     const [links, setLinks] = useState<any[]>([]);
-    const [testimonials, setTestimonials] = useState<any[]>([]);
-    const [faqs, setFaqs] = useState<any[]>([]);
     const [storeSlug, setStoreSlug] = useState<string>('');
 
     // ── Fetch saved data ──
@@ -194,17 +140,6 @@ export default function StorefrontBuilder() {
                     ...newLink(l.order ?? 0),
                     ...l,
                 })));
-                if (data.storefrontData?.testimonials) setTestimonials(data.storefrontData.testimonials);
-                if (data.storefrontData?.faqs) setFaqs(data.storefrontData.faqs);
-                if (data.storefrontData?.showProfilePhoto !== undefined) {
-                    setShowProfilePhoto(data.storefrontData.showProfilePhoto);
-                }
-                if (data.storefrontData?.isPublished !== undefined) {
-                    setIsPublished(data.storefrontData.isPublished);
-                }
-                if (data.storefrontData?.currency) {
-                    setCurrency(data.storefrontData.currency);
-                }
             } catch (err) {
                 console.error('fetchProfile', err);
             }
@@ -282,7 +217,7 @@ export default function StorefrontBuilder() {
             const res = await fetch('/api/creator/profile', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ theme, layout, links, testimonials, faqs, showProfilePhoto, isPublished, currency }),
+                body: JSON.stringify({ theme, layout, links }),
             });
             if (!res.ok) throw new Error('Save failed');
             toast.success('Storefront saved!');
@@ -308,31 +243,12 @@ export default function StorefrontBuilder() {
                         <Monitor className="w-4 h-4 text-indigo-400" /> Storefront Editor
                     </h2>
                     <div className="flex gap-2">
-                        {/* ── New drag-and-drop block builder ── */}
-                        <a
-                            href="/dashboard/storefront/editor"
-                            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:opacity-90 text-white text-xs font-black rounded-xl transition-all shadow-lg shadow-indigo-500/20"
-                        >
-                            <span>✨</span> New Builder
-                        </a>
-
                         <button
                             onClick={() => setShowMobilePreview(!showMobilePreview)}
                             className="md:hidden p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
                             title="Toggle preview"
                         >
                             <Monitor className="w-4 h-4 text-indigo-400" />
-                        </button>
-                        <button
-                            onClick={() => {
-                                const url = `${window.location.origin}/u/${effectiveUsername}`;
-                                navigator.clipboard.writeText(url);
-                                toast.success('Link copied to clipboard!');
-                            }}
-                            className="p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
-                            title="Copy store link"
-                        >
-                            <LinkIcon className="w-4 h-4 text-indigo-400" />
                         </button>
                         <button
                             onClick={() => window.open(`/u/${effectiveUsername}`, '_blank')}
@@ -353,8 +269,8 @@ export default function StorefrontBuilder() {
                 </div>
 
                 {/* Tabs */}
-                <div className="flex border-b border-white/5 flex-shrink-0 bg-black/20 overflow-x-auto scrollbar-hide">
-                    {(['design', 'links', 'layout', 'testimonials', 'faq'] as const).map(tab => (
+                <div className="flex border-b border-white/5 flex-shrink-0 bg-black/20">
+                    {(['design', 'links', 'layout'] as const).map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -363,7 +279,7 @@ export default function StorefrontBuilder() {
                                 : 'text-zinc-600 hover:text-zinc-400'
                                 }`}
                         >
-                            <span className="relative z-10 whitespace-nowrap">{tab === 'faq' ? 'FAQ' : tab}</span>
+                            <span className="relative z-10">{tab}</span>
                             {activeTab === tab && (
                                 <motion.div
                                     layoutId="activeTabIndicator"
@@ -397,8 +313,6 @@ export default function StorefrontBuilder() {
                                         { label: 'Secondary', key: 'secondaryColor' },
                                         { label: 'Background', key: 'backgroundColor' },
                                         { label: 'Text Color', key: 'textColor' },
-                                        { label: 'Button Color', key: 'buttonColor' },
-                                        { label: 'Btn Text', key: 'buttonTextColor' },
                                     ].map(({ label, key }) => (
                                         <div key={key} className="flex items-center justify-between p-3 bg-white/[0.03] rounded-xl border border-white/5">
                                             <span className="text-sm text-zinc-400">{label}</span>
@@ -418,111 +332,24 @@ export default function StorefrontBuilder() {
                                 </div>
                             </section>
 
-                            {/* Visibility Toggles */}
-                            <section className="space-y-4">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                                    <Eye className="w-3 h-3" /> Visibility
-                                </h3>
-                                <div className="space-y-2">
-                                    <button
-                                        onClick={() => setShowProfilePhoto(!showProfilePhoto)}
-                                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${showProfilePhoto ? 'border-indigo-500/30 bg-indigo-500/5 text-white' : 'border-white/5 bg-white/5 text-zinc-500'}`}
-                                    >
-                                        <span className="text-xs font-bold">Show Profile Photo</span>
-                                        {showProfilePhoto ? <ToggleRight className="w-5 h-5 text-indigo-500" /> : <ToggleLeft className="w-5 h-5" />}
-                                    </button>
-                                    <button
-                                        onClick={() => setIsPublished(!isPublished)}
-                                        className={`w-full flex items-center justify-between p-4 rounded-xl border transition-all ${isPublished ? 'border-indigo-500/30 bg-indigo-500/5 text-white' : 'border-white/5 bg-white/5 text-zinc-500'}`}
-                                    >
-                                        <div className="text-left">
-                                            <span className="text-xs font-bold block">Store Status</span>
-                                            <span className="text-[10px] opacity-70 font-normal">{isPublished ? 'Published' : 'Hidden'}</span>
-                                        </div>
-                                        {isPublished ? <ToggleRight className="w-5 h-5 text-indigo-500" /> : <ToggleLeft className="w-5 h-5" />}
-                                    </button>
-                                </div>
-                            </section>
-
-                            {/* Store Currency */}
-                            <section className="space-y-4">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                                    <Zap className="w-3 h-3" /> Store Currency
-                                </h3>
-                                <div>
-                                    <select
-                                        value={currency}
-                                        onChange={(e) => setCurrency(e.target.value)}
-                                        className="w-full bg-white/[0.03] border border-white/5 rounded-xl px-4 py-4 text-white text-sm font-bold focus:outline-none focus:border-indigo-500/50 appearance-none transition-all"
-                                    >
-                                        <option value="INR" className="bg-zinc-900 text-white">₹ Indian Rupee (INR)</option>
-                                        <option value="USD" className="bg-zinc-900 text-white">$ US Dollar (USD)</option>
-                                        <option value="EUR" className="bg-zinc-900 text-white">€ Euro (EUR)</option>
-                                        <option value="GBP" className="bg-zinc-900 text-white">£ British Pound (GBP)</option>
-                                    </select>
-                                </div>
-                            </section>
-
-                            {/* Layout Toggle */}
-                            <section className="space-y-4">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
-                                    <Layout className="w-3 h-3" /> Product Layout
-                                </h3>
-                                <div className="grid grid-cols-2 gap-2">
-                                    {[
-                                        { value: 'grid', label: 'Grid View' },
-                                        { value: 'list', label: 'List View' }
-                                    ].map(l => (
-                                        <button
-                                            key={l.value}
-                                            onClick={() => setTheme(prev => ({ ...prev, productLayout: l.value as any }))}
-                                            className={`p-3 rounded-xl border text-xs font-bold transition-all ${theme.productLayout === l.value
-                                                ? 'border-indigo-500 bg-indigo-500/10 text-white'
-                                                : 'border-white/5 bg-white/[0.03] text-zinc-500 hover:border-white/10'
-                                                }`}
-                                        >
-                                            {l.label}
-                                        </button>
-                                    ))}
-                                </div>
-                            </section>
-
                             {/* Background image */}
                             <section className="space-y-3">
                                 <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500 flex items-center gap-2">
                                     <ImageIcon className="w-3 h-3" /> Background Image
                                 </h3>
-
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="url"
-                                        value={theme.backgroundImage}
-                                        onChange={e => setTheme(prev => ({ ...prev, backgroundImage: e.target.value }))}
-                                        className="flex-1 bg-zinc-900 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50"
-                                        placeholder="https://example.com/bg.jpg"
-                                    />
-                                    <button
-                                        onClick={() => bgInputRef.current?.click()}
-                                        className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl border border-white/5 transition-colors group flex-shrink-0"
-                                        title="Upload background"
-                                    >
-                                        <Upload className="w-4 h-4 text-zinc-500 group-hover:text-indigo-400" />
-                                    </button>
-                                    <input
-                                        type="file"
-                                        ref={bgInputRef}
-                                        onChange={handleBackgroundUpload}
-                                        className="hidden"
-                                        accept="image/*"
-                                    />
-                                </div>
-
+                                <input
+                                    type="url"
+                                    value={theme.backgroundImage}
+                                    onChange={e => setTheme(prev => ({ ...prev, backgroundImage: e.target.value }))}
+                                    className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50"
+                                    placeholder="https://example.com/bg.jpg"
+                                />
                                 {theme.backgroundImage && (
                                     <button
                                         onClick={() => setTheme(prev => ({ ...prev, backgroundImage: '' }))}
-                                        className="text-[10px] text-zinc-600 hover:text-rose-400 transition-colors flex items-center gap-1"
+                                        className="text-[10px] text-zinc-600 hover:text-rose-400 transition-colors"
                                     >
-                                        <Trash2 className="w-3 h-3" /> Clear background
+                                        ✕ Clear image
                                     </button>
                                 )}
                             </section>
@@ -912,161 +739,6 @@ export default function StorefrontBuilder() {
                         </div>
                     )}
 
-                    {/* ══ TESTIMONIALS TAB ══════════════════════════════════ */}
-                    {activeTab === 'testimonials' && (
-                        <div className="p-6 space-y-5">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Testimonials</h3>
-                                    <p className="text-[10px] text-zinc-700 mt-0.5">{testimonials.length} testimonial{testimonials.length !== 1 ? 's' : ''}</p>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        const t = newTestimonial();
-                                        setTestimonials(prev => [...prev, t]);
-                                        setExpandedTestimonialIdx(testimonials.length);
-                                    }}
-                                    className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500 rounded-xl hover:bg-indigo-600 transition-colors text-xs font-bold text-white"
-                                >
-                                    <Plus className="w-3.5 h-3.5" /> Add New
-                                </button>
-                            </div>
-
-                            <div className="space-y-3">
-                                {testimonials.map((t, idx) => (
-                                    <div key={t.id} className="border border-white/10 bg-zinc-900/60 rounded-2xl overflow-hidden">
-                                        <div className="p-4 flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center overflow-hidden">
-                                                {t.avatar ? <img src={t.avatar} alt="" className="w-full h-full object-cover" /> : <Star className="w-4 h-4 text-indigo-400" />}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold truncate">{t.name || 'Anonymous'}</p>
-                                                <p className="text-[10px] text-zinc-500 truncate">{t.role || 'Customer'}</p>
-                                            </div>
-                                            <div className="flex gap-1">
-                                                <button onClick={() => setExpandedTestimonialIdx(expandedTestimonialIdx === idx ? null : idx)} className="p-1.5 hover:bg-white/10 rounded-lg text-zinc-500">
-                                                    {expandedTestimonialIdx === idx ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
-                                                </button>
-                                                <button onClick={() => setTestimonials(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 hover:bg-rose-500/10 text-zinc-600 hover:text-rose-400">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <AnimatePresence>
-                                            {expandedTestimonialIdx === idx && (
-                                                <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden border-t border-white/5 bg-black/20 p-4 space-y-4">
-                                                    <div className="grid grid-cols-2 gap-3">
-                                                        <div className="space-y-1">
-                                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Name</label>
-                                                            <input
-                                                                value={t.name}
-                                                                onChange={e => setTestimonials(prev => prev.map((item, i) => i === idx ? { ...item, name: e.target.value } : item))}
-                                                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-1">
-                                                            <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Role / Company</label>
-                                                            <input
-                                                                value={t.role}
-                                                                onChange={e => setTestimonials(prev => prev.map((item, i) => i === idx ? { ...item, role: e.target.value } : item))}
-                                                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Content</label>
-                                                        <textarea
-                                                            value={t.content}
-                                                            onChange={e => setTestimonials(prev => prev.map((item, i) => i === idx ? { ...item, content: e.target.value } : item))}
-                                                            rows={3}
-                                                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white resize-none focus:outline-none"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Avatar URL</label>
-                                                        <input
-                                                            value={t.avatar}
-                                                            onChange={e => setTestimonials(prev => prev.map((item, i) => i === idx ? { ...item, avatar: e.target.value } : item))}
-                                                            placeholder="https://..."
-                                                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                                                        />
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* ══ FAQ TAB ═══════════════════════════════════════════ */}
-                    {activeTab === 'faq' && (
-                        <div className="p-6 space-y-5">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Frequently Asked Questions</h3>
-                                    <p className="text-[10px] text-zinc-700 mt-0.5">{faqs.length} question{faqs.length !== 1 ? 's' : ''}</p>
-                                </div>
-                                <button
-                                    onClick={() => {
-                                        const f = newFAQ();
-                                        setFaqs(prev => [...prev, f]);
-                                        setExpandedFAQIdx(faqs.length);
-                                    }}
-                                    className="flex items-center gap-1.5 px-3 py-2 bg-indigo-500 rounded-xl hover:bg-indigo-600 transition-colors text-xs font-bold text-white"
-                                >
-                                    <Plus className="w-3.5 h-3.5" /> Add FAQ
-                                </button>
-                            </div>
-
-                            <div className="space-y-3">
-                                {faqs.map((f, idx) => (
-                                    <div key={f.id} className="border border-white/10 bg-zinc-900/60 rounded-2xl overflow-hidden">
-                                        <div className="p-4 flex items-center justify-between gap-3">
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold truncate">{f.question || 'Untitled Question'}</p>
-                                            </div>
-                                            <div className="flex gap-1">
-                                                <button onClick={() => setExpandedFAQIdx(expandedFAQIdx === idx ? null : idx)} className="p-1.5 hover:bg-white/10 rounded-lg text-zinc-500">
-                                                    {expandedFAQIdx === idx ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
-                                                </button>
-                                                <button onClick={() => setFaqs(prev => prev.filter((_, i) => i !== idx))} className="p-1.5 hover:bg-rose-500/10 text-zinc-600 hover:text-rose-400">
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </div>
-
-                                        <AnimatePresence>
-                                            {expandedFAQIdx === idx && (
-                                                <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden border-t border-white/5 bg-black/20 p-4 space-y-4">
-                                                    <div className="space-y-1">
-                                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Question</label>
-                                                        <input
-                                                            value={f.question}
-                                                            onChange={e => setFaqs(prev => prev.map((item, i) => i === idx ? { ...item, question: e.target.value } : item))}
-                                                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-1">
-                                                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Answer</label>
-                                                        <textarea
-                                                            value={f.answer}
-                                                            onChange={e => setFaqs(prev => prev.map((item, i) => i === idx ? { ...item, answer: e.target.value } : item))}
-                                                            rows={3}
-                                                            className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2 text-xs text-white resize-none focus:outline-none"
-                                                        />
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
                     {/* ══ LAYOUT TAB ════════════════════════════════════════ */}
                     {activeTab === 'layout' && (
                         <div className="p-6 space-y-6">
@@ -1093,9 +765,7 @@ export default function StorefrontBuilder() {
                                                     {item.id === 'hero' ? 'Profile picture and bio' :
                                                         item.id === 'services' ? 'Action buttons' :
                                                             item.id === 'links' ? 'Custom link list' :
-                                                                item.id === 'products' ? 'Featured products' :
-                                                                    item.id === 'newsletter' ? 'Email subscription' :
-                                                                        item.id === 'testimonials' ? 'Social proof' : 'Questions & Answers'}
+                                                                item.id === 'products' ? 'Featured products' : 'Email subscription'}
                                                 </span>
                                             </div>
                                         </div>
@@ -1288,48 +958,6 @@ export default function StorefrontBuilder() {
                                                         your@email.com
                                                     </div>
                                                     <div className="bg-indigo-500 rounded-lg px-3 py-1.5 text-[9px] font-bold">Join</div>
-                                                </div>
-                                            </div>
-                                        );
-                                    case 'testimonials':
-                                        return (
-                                            <div key="testimonials" className="space-y-4">
-                                                <div className="flex items-center gap-3">
-                                                    <h2 className="text-[10px] font-black uppercase tracking-widest opacity-30">What people say</h2>
-                                                    <div className="h-px flex-1 bg-white/5" />
-                                                </div>
-                                                <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-2">
-                                                    {(testimonials.length > 0 ? testimonials : [newTestimonial()]).map((t, i) => (
-                                                        <div key={i} className="min-w-[240px] p-4 bg-white/5 border border-white/10 rounded-2xl space-y-3">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center overflow-hidden">
-                                                                    {t.avatar ? <img src={t.avatar} alt="" className="w-full h-full object-cover" /> : <Star className="w-3 h-3 text-indigo-400" />}
-                                                                </div>
-                                                                <div>
-                                                                    <p className="text-[10px] font-bold">{t.name}</p>
-                                                                    <p className="text-[8px] opacity-40">{t.role}</p>
-                                                                </div>
-                                                            </div>
-                                                            <p className="text-[10px] italic leading-relaxed opacity-70">"{t.content}"</p>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        );
-                                    case 'faq':
-                                        return (
-                                            <div key="faq" className="space-y-4">
-                                                <div className="flex items-center gap-3">
-                                                    <h2 className="text-[10px] font-black uppercase tracking-widest opacity-30">FAQ</h2>
-                                                    <div className="h-px flex-1 bg-white/5" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                    {(faqs.length > 0 ? faqs : [newFAQ()]).map((f, i) => (
-                                                        <div key={i} className="p-3 bg-white/5 border border-white/10 rounded-xl space-y-1">
-                                                            <p className="text-[10px] font-bold">{f.question}</p>
-                                                            <p className="text-[9px] opacity-60 leading-relaxed">{f.answer}</p>
-                                                        </div>
-                                                    ))}
                                                 </div>
                                             </div>
                                         );

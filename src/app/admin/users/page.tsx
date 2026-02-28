@@ -23,7 +23,6 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Search, Eye } from 'lucide-react';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 export default function UsersPage() {
   const [users, setUsers] = useState<any[]>([]);
@@ -105,12 +104,8 @@ export default function UsersPage() {
 
     setActionLoading(true);
     try {
-      const endpoint = `/api/admin/users/${userId}/actions`;
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action })
-      });
+      const endpoint = `/api/admin/users/${userId}/${action}`;
+      const res = await fetch(endpoint, { method: 'POST' });
       if (res.ok) {
         fetchUsers();
       }
@@ -122,65 +117,59 @@ export default function UsersPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-4xl font-black text-white tracking-tighter italic uppercase flex items-center gap-4">
-            <div className="w-3 h-10 bg-indigo-500 rounded-full shadow-[0_0_15px_rgba(99,102,241,0.3)]" />
-            Entity Overseer
-          </h1>
-          <p className="text-[10px] font-black text-zinc-600 uppercase tracking-[0.3em] ml-7">Platform Population • Authorized Access Only</p>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight">Users</h1>
         <div className="flex gap-2">
           {selectedUsers.length > 0 && (
             <div className="flex gap-2 animate-in fade-in slide-in-from-top-1">
-              <Button variant="ghost" className="bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white uppercase font-black text-[10px] tracking-widest rounded-xl" onClick={() => handleBulkAction('suspend')} disabled={actionLoading}>Freeze ({selectedUsers.length})</Button>
-              <Button variant="ghost" className="bg-zinc-900 border border-white/5 text-zinc-400 hover:text-white uppercase font-black text-[10px] tracking-widest rounded-xl" onClick={() => handleBulkAction('unsuspend')} disabled={actionLoading}>Verify</Button>
-              <Button variant="destructive" className="uppercase font-black text-[10px] tracking-widest rounded-xl px-6" onClick={() => handleBulkAction('delete')} disabled={actionLoading}>Purge</Button>
+              <Button variant="outline" size="sm" onClick={() => handleBulkAction('suspend')} disabled={actionLoading}>Suspend ({selectedUsers.length})</Button>
+              <Button variant="outline" size="sm" onClick={() => handleBulkAction('unsuspend')} disabled={actionLoading}>Unsuspend</Button>
+              <Button variant="destructive" size="sm" onClick={() => handleBulkAction('delete')} disabled={actionLoading}>Delete</Button>
             </div>
           )}
         </div>
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="relative flex-1 max-w-sm group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-600 group-focus-within:text-indigo-500 transition-colors" />
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search entities..."
-            className="pl-12 bg-black/40 border-white/5 rounded-2xl h-12 text-sm text-white placeholder:text-zinc-700 focus:border-indigo-500/50 transition-all font-medium"
+            placeholder="Search users..."
+            className="pl-8"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
         <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[180px] bg-zinc-900 border-white/5 text-white font-bold uppercase tracking-widest text-[10px] rounded-xl h-12">
+          <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
-          <SelectContent className="bg-zinc-900 border-white/10 text-white">
-            <SelectItem value="all">All Entities</SelectItem>
-            <SelectItem value="active">Verified</SelectItem>
-            <SelectItem value="suspended">Frozen</SelectItem>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="suspended">Suspended</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <div className="rounded-[2.5rem] border border-white/5 bg-zinc-900/40 overflow-hidden shadow-2xl backdrop-blur-sm">
+      <div className="rounded-md border bg-white">
         <Table>
-          <TableHeader className="bg-white/[0.02]">
-            <TableRow className="border-white/5 hover:bg-transparent">
-              <TableHead className="w-12 px-8 py-6 border-b border-white/5">
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-12">
                 <input
                   type="checkbox"
-                  className="rounded border-zinc-300 accent-indigo-500"
+                  className="rounded border-zinc-300"
                   checked={users.length > 0 && selectedUsers.length === users.length}
                   onChange={toggleSelectAll}
                 />
               </TableHead>
-              <TableHead className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest border-b border-white/5">Entity</TableHead>
-              <TableHead className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest border-b border-white/5">Role</TableHead>
-              <TableHead className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest border-b border-white/5">Tier</TableHead>
-              <TableHead className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-widest border-b border-white/5">Status</TableHead>
-              <TableHead className="px-8 py-6 text-right text-[10px] font-black text-zinc-500 uppercase tracking-widest border-b border-white/5">Operations</TableHead>
+              <TableHead>User</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Plan</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -198,30 +187,30 @@ export default function UsersPage() {
               </TableRow>
             ) : (
               users.map((user) => (
-                <TableRow key={user._id} className={cn("border-white/5 hover:bg-white/[0.02] transition-colors group", selectedUsers.includes(user._id) ? 'bg-white/[0.03]' : '')}>
-                  <TableCell className="px-8 py-6">
+                <TableRow key={user._id} className={selectedUsers.includes(user._id) ? 'bg-zinc-50' : ''}>
+                  <TableCell>
                     <input
                       type="checkbox"
-                      className="rounded border-zinc-300 accent-indigo-500"
+                      className="rounded border-zinc-300"
                       checked={selectedUsers.includes(user._id)}
                       onChange={() => toggleSelectUser(user._id)}
                     />
                   </TableCell>
-                  <TableCell className="px-8 py-6">
+                  <TableCell>
                     <div className="flex flex-col">
-                      <span className="font-black text-sm text-white tracking-tight uppercase italic">{user.displayName}</span>
-                      <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-tighter">{user.email}</span>
+                      <span className="font-medium">{user.displayName}</span>
+                      <span className="text-sm text-muted-foreground">{user.email}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="px-8 py-6">
-                    <Badge variant="outline" className="uppercase text-[9px] font-black tracking-widest border-white/10 text-zinc-400">{user.role}</Badge>
+                  <TableCell className="capitalize">
+                    <Badge variant="outline">{user.role}</Badge>
                   </TableCell>
-                  <TableCell className="px-8 py-6 uppercase text-[10px] font-black text-zinc-500 tracking-widest">{user.plan}</TableCell>
-                  <TableCell className="px-8 py-6">
+                  <TableCell className="capitalize">{user.plan}</TableCell>
+                  <TableCell>
                     {user.isSuspended ? (
-                      <Badge variant="destructive" className="uppercase text-[9px] font-black tracking-widest">Frozen</Badge>
+                      <Badge variant="destructive">Suspended</Badge>
                     ) : (
-                      <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 uppercase text-[9px] font-black tracking-widest">Verified</Badge>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">Active</Badge>
                     )}
                   </TableCell>
                   <TableCell className="text-right flex items-center justify-end gap-2">
