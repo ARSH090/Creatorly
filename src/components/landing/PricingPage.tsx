@@ -69,14 +69,14 @@ export default function PricingPage() {
   const handleProPayment = (planName: string) => {
     setSelectedPlan(planName);
     setShowRazorpay(true);
-    
+
     // Initialize Razorpay
     const script = document.createElement('script');
     script.src = 'https://checkout.razorpay.com/v1/checkout.js';
     script.async = true;
     script.onload = () => {
       const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'your_key_id',
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
         amount: 999 * 100, // Amount in paise (₹999)
         currency: 'INR',
         name: 'Creatorly',
@@ -126,11 +126,10 @@ export default function PricingPage() {
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`relative bg-zinc-900/50 border rounded-3xl p-8 h-full flex flex-col ${
-                plan.popular
+              className={`relative bg-zinc-900/50 border rounded-3xl p-8 h-full flex flex-col ${plan.popular
                   ? 'border-indigo-500/50 shadow-2xl shadow-indigo-500/10 md:scale-105'
                   : 'border-white/5'
-              }`}
+                }`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
@@ -168,22 +167,20 @@ export default function PricingPage() {
               {plan.tier === 'pro' ? (
                 <button
                   onClick={() => handleProPayment(plan.name)}
-                  className={`block w-full py-4 rounded-2xl font-bold transition-all ${
-                    plan.popular
+                  className={`block w-full py-4 rounded-2xl font-bold transition-all ${plan.popular
                       ? 'bg-white text-black hover:bg-zinc-100'
                       : 'bg-white/5 text-white hover:bg-white/10 border border-white/10'
-                  }`}
+                    }`}
                 >
                   {plan.cta}
                 </button>
               ) : (
                 <Link
                   href={plan.href}
-                  className={`block w-full py-4 rounded-2xl font-bold transition-all text-center ${
-                    plan.popular
+                  className={`block w-full py-4 rounded-2xl font-bold transition-all text-center ${plan.popular
                       ? 'bg-white text-black hover:bg-zinc-100'
                       : 'bg-white/5 text-white hover:bg-white/10 border border-white/10'
-                  }`}
+                    }`}
                 >
                   {plan.cta}
                 </Link>
@@ -195,7 +192,7 @@ export default function PricingPage() {
         {/* Features Comparison */}
         <div className="mb-24">
           <h2 className="text-3xl font-bold text-center mb-12">Plan Comparison</h2>
-          
+
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>

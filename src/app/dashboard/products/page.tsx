@@ -239,7 +239,7 @@ export default function ProductsOverview() {
                 </div>
             ) : (
                 <EmptyState
-                    icon={Package}
+                    imageUrl="/empty-products.png"
                     title="No products found"
                     description="Get started by creating your first digital product. It only takes a few minutes to set up and start selling."
                     actionLabel="Create My First Product"

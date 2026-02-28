@@ -60,6 +60,13 @@ async function putHandler(req: NextRequest, user: any, context: any) {
         data.description = sanitizeHTML(data.description);
     }
 
+    // Handle pricing updates natively
+    if (data.price !== undefined) {
+        if (!product.pricing) product.pricing = { basePrice: 0, currency: 'INR', taxInclusive: false };
+        product.pricing.basePrice = data.price * 100; // convert INR to paise
+        delete data.price;
+    }
+
     // Update fields safely
     Object.assign(product, data);
 

@@ -4,6 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Mail, BookOpen, TrendingUp, Check } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface DeepFeature {
     id: string;
@@ -12,7 +13,7 @@ interface DeepFeature {
     description: string;
     features: string[];
     stat: string;
-    icon: React.ReactNode;
+    image: string;
     layout: 'left' | 'right';
     cta: string;
 }
@@ -32,7 +33,7 @@ const deepFeatures: DeepFeature[] = [
             'Coupon and discount code engine'
         ],
         stat: 'Creators using Creatorly stores earn 3x more than link-in-bio only',
-        icon: <ShoppingCart className="w-12 h-12 text-indigo-400" />,
+        image: "/landing-store.png",
         layout: 'left',
         cta: 'Start Selling Free'
     },
@@ -50,7 +51,7 @@ const deepFeatures: DeepFeature[] = [
             'Deliverability analytics: open rate, click rate, revenue per email'
         ],
         stat: 'Creators using email automation see 5x higher conversion rates',
-        icon: <Mail className="w-12 h-12 text-orange-400" />,
+        image: "/landing-email.png",
         layout: 'right',
         cta: 'Replace Your Email Tool'
     },
@@ -68,7 +69,7 @@ const deepFeatures: DeepFeature[] = [
             'Multiple membership tiers with different pricing'
         ],
         stat: 'Course creators on Creatorly save $8-15k annually in platform fees',
-        icon: <BookOpen className="w-12 h-12 text-emerald-400" />,
+        image: "/landing-courses.png",
         layout: 'left',
         cta: 'Launch Your First Course'
     },
@@ -86,7 +87,7 @@ const deepFeatures: DeepFeature[] = [
             'Daily digest email: yesterday\'s performance summary'
         ],
         stat: 'Creators with data insight increase revenue by 40% on average',
-        icon: <TrendingUp className="w-12 h-12 text-cyan-400" />,
+        image: "/landing-analytics.png",
         layout: 'right',
         cta: 'See Your Real Numbers'
     }
@@ -197,7 +198,13 @@ export default function DeepFeatureSections() {
                                     </div>
 
                                     <div className="relative z-10 flex items-center justify-center">
-                                        {feature.icon}
+                                        <Image
+                                            src={feature.image}
+                                            alt={feature.title}
+                                            width={240}
+                                            height={240}
+                                            className="object-contain drop-shadow-2xl"
+                                        />
                                     </div>
                                 </div>
                             </motion.div>

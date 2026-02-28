@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@clerk/nextjs';
+import EmptyState from '@/components/dashboard/EmptyState';
 
 type RangeKey = '7D' | '30D' | '90D' | 'All';
 type TabKey = 'overview' | 'financials' | 'marketing' | 'engagement';
@@ -301,8 +302,12 @@ export default function AnalyticsPage() {
                                         </div>
                                     ))}
                                     {(!leadData?.dm?.providerBreakdown || leadData.dm.providerBreakdown.length === 0) && (
-                                        <div className="col-span-2 py-12 text-center text-zinc-600 text-xs font-medium italic">
-                                            No DM automation logs yet.
+                                        <div className="col-span-2">
+                                            <EmptyState
+                                                icon={MessageCircle}
+                                                title="No DM Activity"
+                                                description="Your automated DM logs will appear here once active."
+                                            />
                                         </div>
                                     )}
                                 </div>
@@ -380,7 +385,11 @@ function TopProducts({ products, loading }: any) {
             <h3 className="text-xl font-black text-white uppercase tracking-tight">Recent Activity</h3>
             <div className="space-y-6">
                 {products.length === 0 ? (
-                    <div className="py-20 text-center text-zinc-600 text-xs font-black uppercase tracking-widest italic">Waiting for transactions...</div>
+                    <EmptyState
+                        imageUrl="/empty-analytics.png"
+                        title="Waiting for Data"
+                        description="Your real-time sales and activity feeds will populate as they occur."
+                    />
                 ) : products.map((p: any) => (
                     <div key={p.id} className="flex items-center gap-4 group">
                         <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-zinc-500 group-hover:text-indigo-400 transition-colors">

@@ -26,12 +26,34 @@ async function handler(req: NextRequest, user: any, context: any) {
         throw new Error('name, subject, and content are required');
     }
 
+    let recipientsPool: string[] = [];
+
+    if (listId && listId !== 'all') {
+        const { EmailList } = await import('@/lib/models/EmailList');
+        const list = await EmailList.findById(listId);
+        if (list && list.subscribers) {
+            recipientsPool = list.subscribers;
+        }
+    } else {
+        const { Order } = await import('@/lib/models/Order');
+        const orders = await Order.find({
+            creatorId: user._id,
+            paymentStatus: 'paid',
+            customerEmail: { $exists: true, $ne: null }
+        }).select('customerEmail').lean();
+
+        // Get unique emails
+        const emails = orders.map(o => o.customerEmail).filter(Boolean);
+        recipientsPool = [...new Set(emails)] as string[];
+    }
+
     const campaign = await EmailCampaign.create({
         creatorId: user._id,
         name,
         subject,
         content,
-        listId,
+        listId: listId && listId !== 'all' ? listId : undefined,
+        recipients: recipientsPool,
         status: scheduledAt ? 'scheduled' : 'draft',
         scheduledAt: scheduledAt ? new Date(scheduledAt) : undefined,
         stats: {

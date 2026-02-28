@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
+import Logo from "@/components/Logo";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const { user } = useUser();
@@ -103,11 +104,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 <Menu className="w-6 h-6" />
                             </button>
 
-                            <Link href="/dashboard" className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                                    <Sparkles className="w-5 h-5 text-white fill-white" />
-                                </div>
-                                <span className="text-2xl font-bold text-white tracking-tighter hidden sm:block">Creatorly</span>
+                            <Link href="/dashboard">
+                                <Logo showText={true} iconClassName="w-10 h-10" />
                             </Link>
 
                             <div className="hidden md:flex items-center gap-6 ml-8 pl-8 border-l border-white/5">
@@ -304,11 +302,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 className="absolute left-0 top-0 bottom-0 w-80 bg-[#0A0A0A] border-r border-white/10 p-6 flex flex-col"
                             >
                                 <div className="flex items-center justify-between mb-8">
-                                    <Link href="/dashboard" className="flex items-center gap-2">
-                                        <div className="w-8 h-8 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center">
-                                            <Sparkles className="w-4 h-4 text-white fill-white" />
-                                        </div>
-                                        <span className="text-xl font-bold text-white tracking-tight">Creatorly</span>
+                                    <Link href="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                                        <Logo iconClassName="w-8 h-8" />
                                     </Link>
                                     <button onClick={() => setIsMobileMenuOpen(false)}>
                                         <X className="w-6 h-6 text-zinc-500" />

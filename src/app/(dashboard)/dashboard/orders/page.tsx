@@ -5,6 +5,7 @@ import {
     Search, Filter, ShoppingBag, Clock, CheckCircle, XCircle, RefreshCw, ChevronRight, Eye, User, Mail, Calendar, FileText, Download, X, Save, Share
 } from 'lucide-react';
 import { useAuth } from '@clerk/nextjs';
+import EmptyState from '@/components/dashboard/EmptyState';
 import { generateCSV, downloadCSV } from '@/lib/utils/export-utils';
 
 export default function OrdersPage() {
@@ -169,15 +170,11 @@ export default function OrdersPage() {
                     ))}
                 </div>
             ) : orders.length === 0 ? (
-                <div className="bg-zinc-900/50 rounded-[3rem] border border-dashed border-white/10 p-20 text-center flex flex-col items-center justify-center space-y-6">
-                    <div className="w-24 h-24 bg-white/5 rounded-full flex items-center justify-center">
-                        <ShoppingBag className="w-12 h-12 text-zinc-700" />
-                    </div>
-                    <div>
-                        <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">No orders found</h2>
-                        <p className="text-zinc-500 font-medium max-w-sm mx-auto">None of your orders matched the current filters.</p>
-                    </div>
-                </div>
+                <EmptyState
+                    imageUrl="/empty-orders.png"
+                    title="No orders found"
+                    description="None of your orders matched the current filters. Your sales will appear here once customers start purchasing."
+                />
             ) : (
                 <div className="space-y-4">
                     {orders.map((order) => (

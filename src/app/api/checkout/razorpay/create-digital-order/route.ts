@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
             orderId: razorpayOrder?.id, // null for free products
             amount: finalAmount,
             currency: product.pricing?.currency || 'INR',
-            key: process.env.RAZORPAY_KEY_ID,
+            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
             product: {
                 title: product.title,
                 thumbnail: product.thumbnailKey

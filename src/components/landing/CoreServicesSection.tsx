@@ -7,11 +7,12 @@ import {
     ShoppingCart, BookOpen, Mail, Users, TrendingUp, Palette,
     Check
 } from 'lucide-react';
+import Image from 'next/image';
 
 const CoreServicesSection: React.FC = () => {
     const services = [
         {
-            icon: ShoppingCart,
+            image: "/landing-store.png",
             color: "text-indigo-400",
             bg: "bg-indigo-500/10",
             border: "border-indigo-500/20",
@@ -25,7 +26,7 @@ const CoreServicesSection: React.FC = () => {
             ]
         },
         {
-            icon: BookOpen,
+            image: "/landing-courses.png",
             color: "text-emerald-400",
             bg: "bg-emerald-500/10",
             border: "border-emerald-500/20",
@@ -39,7 +40,7 @@ const CoreServicesSection: React.FC = () => {
             ]
         },
         {
-            icon: Mail,
+            image: "/landing-email.png",
             color: "text-orange-400",
             bg: "bg-orange-500/10",
             border: "border-orange-500/20",
@@ -53,7 +54,7 @@ const CoreServicesSection: React.FC = () => {
             ]
         },
         {
-            icon: Users,
+            image: "/landing-success.png",
             color: "text-rose-400",
             bg: "bg-rose-500/10",
             border: "border-rose-500/20",
@@ -67,7 +68,7 @@ const CoreServicesSection: React.FC = () => {
             ]
         },
         {
-            icon: TrendingUp,
+            image: "/landing-analytics.png",
             color: "text-cyan-400",
             bg: "bg-cyan-500/10",
             border: "border-cyan-500/20",
@@ -81,7 +82,7 @@ const CoreServicesSection: React.FC = () => {
             ]
         },
         {
-            icon: Palette,
+            image: "/logo.png",
             color: "text-violet-400",
             bg: "bg-violet-500/10",
             border: "border-violet-500/20",
@@ -129,7 +130,6 @@ const CoreServicesSection: React.FC = () => {
                 {/* Services Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-20">
                     {services.map((service, i) => {
-                        const Icon = service.icon;
                         return (
                             <motion.div
                                 key={i}
@@ -138,9 +138,15 @@ const CoreServicesSection: React.FC = () => {
                                 transition={{ duration: 0.6, delay: i * 0.05 }}
                                 className={`group relative p-8 rounded-2xl border ${service.border} ${service.bg} backdrop-blur-sm hover:bg-opacity-20 transition-all duration-300 hover:shadow-xl hover:shadow-${service.color.split('-')[1]}-500/20`}
                             >
-                                {/* Icon */}
-                                <div className={`w-14 h-14 rounded-xl ${service.bg} border ${service.border} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                                    <Icon className={`w-7 h-7 ${service.color}`} />
+                                {/* Icon / Image */}
+                                <div className={`w-14 h-14 rounded-xl ${service.bg} border ${service.border} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform relative overflow-hidden`}>
+                                    <Image
+                                        src={service.image}
+                                        alt={service.title}
+                                        width={80}
+                                        height={80}
+                                        className="object-contain p-2"
+                                    />
                                 </div>
 
                                 {/* Title */}

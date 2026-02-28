@@ -28,6 +28,35 @@ export async function GET(req: NextRequest) {
 
         await connectToDatabase();
 
+        // 1.5. Development Bypass
+        if (process.env.NODE_ENV === 'development' && code === 'dev_mock_code') {
+            const { encryptedData, iv, tag } = encryptTokenGCM('mock_dev_token_123');
+            await SocialAccount.findOneAndUpdate(
+                { instagramBusinessId: 'mock_ig_id_789' },
+                {
+                    userId,
+                    platform: 'instagram',
+                    pageId: 'mock_page_id_456',
+                    instagramBusinessId: 'mock_ig_id_789',
+                    pageAccessToken: encryptedData,
+                    tokenIV: iv,
+                    tokenTag: tag,
+                    tokenStatus: 'valid',
+                    lastTokenCheck: new Date(),
+                    isActive: true,
+                    isBusiness: true,
+                    connectedAt: new Date(),
+                    metadata: {
+                        username: 'mock_creator_account',
+                        accountType: 'BUSINESS',
+                        pageName: 'Mock Creator Page'
+                    }
+                },
+                { upsert: true, new: true }
+            );
+            return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/automation?success=true`);
+        }
+
         // 2. Exchange Code for Short-Lived Access Token
         const tokenResponse = await axios.get(`${GRAPH_BASE_URL}/oauth/access_token`, {
             params: {
@@ -121,7 +150,7 @@ export async function GET(req: NextRequest) {
         }
 
         // Redirect back to dashboard
-        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/automations?success=true`);
+        return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard/automation?success=true`);
     } catch (error: any) {
         console.error('Instagram Callback Error:', error.response?.data || error.message);
         return NextResponse.json({ error: 'Failed to complete Instagram connection' }, { status: 500 });

@@ -2,27 +2,28 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { UserPlus, Link as LinkIcon, ShoppingBag, TrendingUp } from 'lucide-react';
 
 const HowItWorksSection: React.FC = () => {
     const steps = [
         {
-            icon: UserPlus,
+            image: "/landing-success.png",
             title: "Sign Up",
             desc: "Create your free account in 30 seconds."
         },
         {
-            icon: LinkIcon,
+            image: "/logo.png",
             title: "Claim Link",
             desc: "Get your custom creatorly.link/username."
         },
         {
-            icon: ShoppingBag,
+            image: "/landing-store.png",
             title: "Add Products",
             desc: "List digital downloads or services."
         },
         {
-            icon: TrendingUp,
+            image: "/landing-analytics.png",
             title: "Monetize",
             desc: "Share your link and start earning."
         }
@@ -52,13 +53,21 @@ const HowItWorksSection: React.FC = () => {
                             className="relative flex flex-col items-center text-center group"
                         >
                             {/* Icon Container */}
-                            <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-400 group-hover:text-indigo-400 group-hover:border-indigo-500/30 group-hover:shadow-[0_0_30px_rgba(99,102,241,0.15)] transition-all duration-300 z-10 mb-6">
-                                <step.icon className="w-6 h-6" />
+                            <div className="w-24 h-24 rounded-3xl bg-zinc-900/50 border border-white/5 flex items-center justify-center group-hover:border-indigo-500/30 group-hover:shadow-[0_0_50px_rgba(99,102,241,0.2)] transition-all duration-500 z-10 mb-8 relative">
+                                <Image
+                                    src={step.image}
+                                    alt={step.title}
+                                    width={120}
+                                    height={120}
+                                    className="object-contain transform group-hover:scale-110 transition-transform duration-500 p-4"
+                                />
+                                {/* Glow Effect */}
+                                <div className="absolute inset-0 bg-indigo-500/5 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
 
-                            {/* Step Number */}
-                            <div className="absolute -top-6 text-[100px] font-bold text-zinc-900/50 -z-10 select-none">
-                                {index + 1}
+                            {/* Step Number - Redesigned to be less intrusive */}
+                            <div className="absolute top-0 right-0 text-7xl font-black text-white/[0.03] pointer-events-none select-none -translate-y-8 translate-x-8 italic">
+                                0{index + 1}
                             </div>
 
                             <h3 className="text-lg font-bold text-white mb-2">{step.title}</h3>

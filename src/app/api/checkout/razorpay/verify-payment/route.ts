@@ -9,6 +9,7 @@ import UpsellOffer from '@/lib/models/UpsellOffer';
 import { verifyRazorpaySignature } from '@/lib/payments/razorpay';
 import { DigitalDeliveryService } from '@/lib/services/digitalDelivery';
 import { enrollInSequence } from '@/lib/services/sequence-enroll';
+import Subscriber from '@/lib/models/Subscriber';
 import { errorResponse, successResponse } from '@/types/api';
 
 /**
@@ -40,25 +41,42 @@ export async function POST(req: NextRequest) {
             return NextResponse.json(errorResponse('Invalid payment signature'), { status: 400 });
         }
 
-        // 2. Fetch Product & Creator
+        // 2. Check Idempotency - Prevent duplicate processing if webhook already handled it
+        const existingOrder = await Order.findOne({ razorpayPaymentId: razorpay_payment_id });
+        if (existingOrder && existingOrder.status === 'completed') {
+            return NextResponse.json({
+                success: true,
+                orderId: existingOrder._id,
+                orderNumber: existingOrder.orderNumber,
+                message: 'Payment already verified',
+                accessToken: existingOrder.accessToken
+            });
+        }
+
+        // 3. Fetch Product & Creator
         const product = await Product.findById(productId);
         if (!product) {
             return NextResponse.json(errorResponse('Product not found'), { status: 404 });
         }
 
-        // 3. Find or Create User (Buyer)
+        // 4. Find or Create User (Buyer)
         let buyer = await User.findOne({ email: email.toLowerCase() });
         if (!buyer) {
-            // Create a minimal user record for the buyer
             buyer = await User.create({
                 email: email.toLowerCase(),
                 fullName: customerName || email.split('@')[0],
-                userType: 'buyer', // Assuming a buyer type exists
+                userType: 'buyer',
                 isEmailVerified: true
             });
         }
 
-        // 4. Create Order
+        // 5. Generate Access Token
+        const { randomBytes } = await import('crypto');
+        const accessToken = randomBytes(32).toString('hex');
+        const accessTokenExpiry = new Date();
+        accessTokenExpiry.setDate(accessTokenExpiry.getDate() + 30); // 30 days
+
+        // 6. Create Order
         const orderNumber = `ORD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
         const amount = body.amount || (product.pricing?.salePrice || product.pricing?.basePrice || product.price || 0);
 
@@ -84,16 +102,28 @@ export async function POST(req: NextRequest) {
             status: 'completed',
             paymentStatus: 'paid',
             paidAt: new Date(),
-            couponId: couponCode
+            couponId: couponCode,
+            accessToken,
+            accessTokenExpiry
         });
 
-        // 5. Update Abandoned Checkout
+        // 7. Update Subscriber Stats
+        await Subscriber.findOneAndUpdate(
+            { email: email.toLowerCase(), creatorId: product.creatorId },
+            {
+                $inc: { orderCount: 1, totalSpent: amount },
+                $set: { name: customerName, status: 'active', source: 'checkout' }
+            },
+            { upsert: true }
+        );
+
+        // 8. Update Abandoned Checkout
         await AbandonedCheckout.findOneAndUpdate(
             { buyerEmail: email.toLowerCase(), productId: product._id, status: 'abandoned' },
             { status: 'recovered', recoveredAt: new Date() }
         );
 
-        // 6. Increment Coupon Usage if applicable
+        // 9. Increment Coupon Usage
         if (couponCode) {
             await Coupon.findOneAndUpdate(
                 { code: couponCode.toUpperCase() },
@@ -101,7 +131,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // 7. Success Response preparation
+        // 10. Success Response
         const upsell = await UpsellOffer.findOne({ triggerProductId: product._id, isActive: true });
         let finalRedirectUrl = null;
         if (upsell) {
@@ -112,6 +142,7 @@ export async function POST(req: NextRequest) {
             success: true,
             orderId: order._id,
             orderNumber: order.orderNumber,
+            accessToken: order.accessToken,
             message: 'Payment verified and order fulfilled',
             redirectUrl: finalRedirectUrl
         });

@@ -54,7 +54,7 @@ const Header: React.FC = () => {
                   >
                     {link.label}
                   </Link>
-                  
+
                   {/* Mega Menu Dropdown */}
                   {link.hasMega && (
                     <div className="absolute left-0 mt-0 w-96 bg-black/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pt-4">
@@ -129,7 +129,7 @@ const Header: React.FC = () => {
                     <span className={`transition-transform ${activeMegaMenu === link.label ? 'rotate-180' : ''}`}>›</span>
                   )}
                 </button>
-                
+
                 {/* Mobile Mega Menu */}
                 {link.hasMega && activeMegaMenu === link.label && (
                   <div className="pl-4 py-4 space-y-3 border-l border-indigo-500/30">
@@ -159,7 +159,7 @@ const Header: React.FC = () => {
                 )}
               </div>
             ))}
-            
+
             <hr className="border-white/10 my-4" />
             <Link
               href="/auth/login"

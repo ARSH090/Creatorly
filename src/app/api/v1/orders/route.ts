@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
             razorpayOrderId: razorpayOrder.id,
             amount: amountInPaise,
             currency: currency,
-            key: process.env.RAZORPAY_KEY_ID
+            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
         });
 
     } catch (error: any) {

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { DMLog } from '@/lib/models/DMLog';
-import { AutomationRule } from '@/lib/models/AutomationRule';
+import { AutoReplyRule } from '@/lib/models/AutoReplyRule';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 
@@ -41,7 +41,7 @@ async function handler(req: NextRequest, user: any) {
     ]);
 
     // Get active rules count
-    const activeRules = await AutomationRule.countDocuments({
+    const activeRules = await AutoReplyRule.countDocuments({
         creatorId: user._id,
         isActive: true
     });

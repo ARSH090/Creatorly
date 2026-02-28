@@ -62,14 +62,36 @@ export default function RazorpayCheckout() {
                 description: `Payment for ${cart.length} item(s)`,
                 image: '/logo.png', // Replace with your logo
                 order_id: order.id,
-                handler: function (response: any) {
-                    // Logic after successful payment
+                handler: async function (response: any) {
                     console.log('[Razorpay] Payment success:', response);
 
-                    if (order.upsell) {
-                        setStep('upsell');
-                    } else {
-                        setStep('review');
+                    try {
+                        const verifyRes = await fetch('/api/checkout/razorpay/verify-payment', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                productId: cart[0].id, // Using 'id' from CartItem
+                                email: customer.email,
+                                customerName: customer.name
+                            })
+                        });
+
+                        const verifyData = await verifyRes.json();
+                        if (verifyData.success) {
+                            if (order.upsell) {
+                                setStep('upsell');
+                            } else {
+                                setStep('review');
+                            }
+                        } else {
+                            alert('Payment verification failed. Please contact support.');
+                        }
+                    } catch (err) {
+                        console.error('Verification Error:', err);
+                        alert('Error verifying payment.');
                     }
                 },
                 prefill: {

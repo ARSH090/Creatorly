@@ -42,6 +42,9 @@ export interface IOrder extends Document {
     subscriptionId?: mongoose.Types.ObjectId | string;
     parentOrderId?: mongoose.Types.ObjectId | string;
 
+    accessToken?: string;
+    accessTokenExpiry?: Date;
+
     // Delivery & Tracking
     downloadCount: number;
     downloadLimit: number;
@@ -158,6 +161,8 @@ const OrderSchema: Schema = new Schema({
     metadata: { type: Schema.Types.Mixed, default: {} },
     subscriptionId: { type: Schema.Types.ObjectId, ref: 'Subscription' },
     parentOrderId: { type: Schema.Types.ObjectId, ref: 'Order', index: true },
+    accessToken: { type: String, sparse: true, unique: true },
+    accessTokenExpiry: { type: Date },
     deletedAt: { type: Date, index: true }
 }, { timestamps: true });
 
@@ -169,6 +174,7 @@ OrderSchema.index({ creatorId: 1, isPublished: 1 }); // Generic
 OrderSchema.index({ customerEmail: 1, createdAt: -1 });
 OrderSchema.index({ "items.productId": 1 });
 OrderSchema.index({ razorpayOrderId: 1 }, { unique: true, sparse: true });
+OrderSchema.index({ accessToken: 1 }, { sparse: true, unique: true });
 
 const Order: Model<IOrder> = mongoose.models.Order || mongoose.model<IOrder>('Order', OrderSchema);
 export { Order };

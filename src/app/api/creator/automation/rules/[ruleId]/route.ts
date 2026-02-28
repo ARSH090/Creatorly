@@ -7,9 +7,9 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
 /**
  * PUT /api/creator/automation/rules/[ruleId]
  */
-async function putHandler(req: NextRequest, user: any, params: any) {
+async function putHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
-    const { ruleId } = await params;
+    const { ruleId } = context.params;
 
     const body = await req.json();
     const {
@@ -17,7 +17,10 @@ async function putHandler(req: NextRequest, user: any, params: any) {
         followRequired, cooldownHours, attachmentType, attachmentId
     } = body;
 
-    const rule = await AutoReplyRule.findOne({ _id: ruleId, creatorId: user._id });
+    const rule = await AutoReplyRule.findOne({
+        $or: [{ _id: ruleId }, { ruleId: ruleId }],
+        creatorId: user._id
+    });
     if (!rule) throw new Error('Rule not found');
 
     if (trigger) rule.triggerType = trigger;
@@ -37,11 +40,14 @@ async function putHandler(req: NextRequest, user: any, params: any) {
 /**
  * DELETE /api/creator/automation/rules/[ruleId]
  */
-async function deleteHandler(req: NextRequest, user: any, params: any) {
+async function deleteHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
-    const { ruleId } = await params;
+    const { ruleId } = context.params;
 
-    const result = await AutoReplyRule.deleteOne({ _id: ruleId, creatorId: user._id });
+    const result = await AutoReplyRule.deleteOne({
+        $or: [{ _id: ruleId }, { ruleId: ruleId }],
+        creatorId: user._id
+    });
     if (result.deletedCount === 0) throw new Error('Rule not found');
 
     return { success: true, message: 'Rule deleted' };

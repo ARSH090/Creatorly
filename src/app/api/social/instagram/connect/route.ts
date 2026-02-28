@@ -15,6 +15,12 @@ export const GET = withAuth(async (req, user) => {
         const appId = process.env.INSTAGRAM_APP_ID;
         const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/instagram/callback`;
 
+        // Development Bypass for Missing API Keys
+        if (process.env.NODE_ENV === 'development' && !appId) {
+            const state = Buffer.from(JSON.stringify({ userId: user._id })).toString('base64');
+            return NextResponse.redirect(`${redirectUri}?code=dev_mock_code&state=${state}`);
+        }
+
         if (!appId || !process.env.NEXT_PUBLIC_APP_URL) {
             return NextResponse.json({ error: 'Instagram App configuration missing' }, { status: 500 });
         }

@@ -2,16 +2,22 @@
 @import "tailwindcss";
 
 :root {
-  --primary: #FF9E00;
-  --secondary: #00843D;
-  --accent: #4F46E5;
-  --header-height: 5rem;
+  --primary: #7C3AED;
+  /* Indigo-600 */
+  --secondary: #2DD4BF;
+  /* Teal-400 */
+  --accent: #06B6D4;
+  /* Cyan-500 */
+  --header-height: 4.5rem;
   --footer-height: 7rem;
-  --background: #030303;
-  --foreground: #f0f0f0;
-  --platinum: #111111;
-  --glass: rgba(10, 10, 10, 0.85);
-  --glass-border: rgba(255, 255, 255, 0.05);
+  --background: #020617;
+  /* Slate-950 (Deep Dark) */
+  --foreground: #F8FAFC;
+  /* Slate-50 */
+  --platinum: #0F172A;
+  /* Slate-900 */
+  --glass: rgba(2, 6, 23, 0.8);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
 /* Site utility helpers for consistent spacing */
@@ -58,8 +64,8 @@ body {
   border-bottom: 3px solid var(--primary);
 }
 
-.text-bharat-gradient {
-  background: linear-gradient(90deg, var(--primary), var(--secondary));
+.text-brand-gradient {
+  background: linear-gradient(135deg, #7C3AED, #06B6D4);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;

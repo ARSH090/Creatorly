@@ -12,6 +12,7 @@ import {
     ShieldCheck, X
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import EmptyState from '@/components/dashboard/EmptyState';
 
 export default function AutomationPage() {
     const [loading, setLoading] = useState(true);
@@ -127,7 +128,7 @@ export default function AutomationPage() {
         setTogglingId(rule._id);
         try {
             const res = await fetch(`/api/creator/automation/rules/${rule._id}`, {
-                method: 'PATCH',
+                method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isActive: !rule.isActive })
             });
@@ -233,16 +234,12 @@ export default function AutomationPage() {
                     {loading ? (
                         <div className="flex justify-center p-20"><Loader2 className="h-8 w-8 animate-spin text-indigo-400" /></div>
                     ) : rules.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center py-24 bg-[#0a0a0a] border border-dashed border-white/10 rounded-[2rem] space-y-5">
-                            <div className="w-16 h-16 rounded-full bg-indigo-500/10 flex items-center justify-center border border-indigo-500/20">
-                                <Zap className="h-7 w-7 text-indigo-500" />
-                            </div>
-                            <div className="text-center space-y-1">
-                                <p className="text-sm font-black text-white uppercase tracking-widest">No Automation Rules Yet</p>
-                                <p className="text-[10px] text-zinc-600 font-medium">Create your first rule to start automating</p>
-                            </div>
-                            <AutomationRuleModal onSuccess={fetchRules} />
-                        </div>
+                        <EmptyState
+                            icon={Zap}
+                            title="No Automation Rules Yet"
+                            description="Create your first rule to start automating your Instagram or WhatsApp growth."
+                            actionLabel="Create My First Rule"
+                        />
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {rules.map((rule) => (

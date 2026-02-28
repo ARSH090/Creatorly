@@ -7,6 +7,8 @@ export interface ISubscriber extends Document {
     name?: string;
     status: 'active' | 'unsubscribed' | 'bounced';
     source: string; // e.g. 'storefront', 'checkout'
+    orderCount: number;
+    totalSpent: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -17,7 +19,9 @@ const SubscriberSchema: Schema = new Schema({
     email: { type: String, required: true, lowercase: true, trim: true, index: true },
     name: { type: String, trim: true },
     status: { type: String, enum: ['active', 'unsubscribed', 'bounced'], default: 'active', index: true },
-    source: { type: String, default: 'manual' }
+    source: { type: String, default: 'manual' },
+    orderCount: { type: Number, default: 0, min: 0 },
+    totalSpent: { type: Number, default: 0, min: 0 }
 }, { timestamps: true });
 
 // Unique subscriber per creator

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useClerk } from '@clerk/nextjs';
+import Logo from '@/components/Logo';
 
 const sidebarItems = [
     { href: '/admin', label: 'Dashboard', icon: LayoutDashboard },
@@ -45,9 +46,9 @@ export function AdminSidebar() {
 
     return (
         <div className="flex h-screen w-64 flex-col border-r border-white/5 bg-[#080808] text-white">
-            <div className="flex h-20 items-center border-b border-white/5 px-6 font-black text-lg tracking-tighter uppercase italic">
-                <ShieldAlert className="mr-2 h-6 w-6 text-indigo-500" />
-                Creatorly <span className="text-zinc-600 ml-1 font-bold not-italic">Admin</span>
+            <div className="flex h-20 items-center justify-between border-b border-white/5 px-6">
+                <Logo iconClassName="w-8 h-8" showText={true} />
+                <span className="text-[10px] bg-white/5 border border-white/10 px-2 py-1 rounded-lg text-zinc-500 font-black tracking-widest uppercase ml-2">Admin</span>
             </div>
             <div className="flex-1 overflow-y-auto py-4">
                 <nav className="space-y-1 px-2">

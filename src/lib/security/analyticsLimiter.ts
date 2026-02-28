@@ -15,19 +15,22 @@ export async function analyticsRateLimit(req: NextRequest, limit: number = 30, w
         return null;
     }
 
-    const current = await redis.incr(key);
+    try {
+        const current = await redis.incr(key);
 
-    if (current === 1) {
-        await redis.expire(key, windowSeconds);
-    }
+        if (current === 1) {
+            await redis.expire(key, windowSeconds);
+        }
 
-
-    if (current > limit) {
-        return NextResponse.json({
-            error: 'Too many analytics requests',
-            message: 'You have exceeded the rate limit for analytics reports. Please try again in a minute.',
-            code: 'RATE_LIMIT_EXCEEDED'
-        }, { status: 429 });
+        if (current > limit) {
+            return NextResponse.json({
+                error: 'Too many analytics requests',
+                message: 'You have exceeded the rate limit for analytics reports. Please try again in a minute.',
+                code: 'RATE_LIMIT_EXCEEDED'
+            }, { status: 429 });
+        }
+    } catch (e) {
+        console.warn('Redis connection failed during rate limit check - skipping');
     }
 
     return null;

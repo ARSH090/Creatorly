@@ -154,14 +154,15 @@ async function handler(req: NextRequest, user: any, context: any) {
             }
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error('[Dashboard Stats] Error:', error);
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+        return NextResponse.json({ error: error.message || 'Internal Server Error', stack: error.stack }, { status: 500 });
     }
 }
 
 function formatTimeAgo(date: Date) {
-    const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
+    if (!date) return 'Unknown';
+    const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
     let interval = seconds / 31536000;
     if (interval > 1) return Math.floor(interval) + "y ago";
     interval = seconds / 2592000;

@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
             eventType: event.event,
             payloadHash: crypto.createHash('sha256').update(body).digest('hex'),
             payload: event,
-            status: 'processing',
+            status: 'pending',
             processed: false,
             processedAt: undefined
         });
@@ -226,6 +226,38 @@ export async function POST(req: NextRequest) {
                     }
                 }
 
+                break;
+            }
+
+            case 'payment.failed': {
+                const payment = payload.payment.entity;
+                const razorpayOrderId = payment.order_id;
+                const order = await Order.findOne({ razorpayOrderId });
+
+                if (order && order.status !== 'failed') {
+                    order.status = 'failed';
+                    order.paymentStatus = 'failed';
+                    order.razorpayPaymentId = payment.id;
+                    await order.save();
+                    console.log(`[RAZORPAY WEBHOOK] Order ${order.orderNumber} marked as FAILED`);
+                }
+                break;
+            }
+
+            case 'refund.created': {
+                const refund = payload.refund.entity;
+                const paymentId = refund.payment_id;
+                const order = await Order.findOne({ razorpayPaymentId: paymentId });
+
+                if (order && order.status !== 'refunded') {
+                    order.status = 'refunded';
+                    order.paymentStatus = 'refunded';
+                    order.refundStatus = 'COMPLETED';
+                    order.refundAmount = refund.amount;
+                    order.refundedAt = new Date();
+                    await order.save();
+                    console.log(`[RAZORPAY WEBHOOK] Order ${order.orderNumber} marked as REFUNDED`);
+                }
                 break;
             }
 

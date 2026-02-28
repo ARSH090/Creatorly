@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { Order } from '@/lib/models/Order';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
-
+import mongoose from 'mongoose';
 /**
  * GET /api/creator/analytics/revenue
  * Returns time-series revenue data for charts
@@ -33,10 +33,11 @@ async function handler(req: NextRequest, user: any) {
             dateFormat = '%Y-%m-%d'; // Year-Month-Day
     }
 
+
     const revenueData = await Order.aggregate([
         {
             $match: {
-                creatorId: user._id,
+                creatorId: new mongoose.Types.ObjectId(user._id as string),
                 status: 'completed',
                 paymentStatus: 'paid',
                 paidAt: { $gte: startDate }
