@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import AdminLog from '@/lib/models/AdminLog';
+import { auditLog } from '@/lib/utils/auditLogger';
 import { connectToDatabase } from '@/lib/db/mongodb';
 
 /**
@@ -8,31 +8,27 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 export async function logAdminAction(
     adminEmail: string,
     action: string,
-    targetType: string,
+    targetType: any,
     targetId?: string,
     changes?: any,
     req?: NextRequest
 ) {
     try {
         await connectToDatabase();
+        const User = (await import('@/lib/models/User')).default;
+        const admin = await User.findOne({ email: adminEmail });
 
-        const ipAddress = req?.headers.get('x-forwarded-for') ||
-            req?.headers.get('x-real-ip') ||
-            'unknown';
-        const userAgent = req?.headers.get('user-agent') || 'unknown';
+        if (!admin) return;
 
-        await AdminLog.create({
-            adminEmail,
+        await auditLog({
+            userId: admin._id,
             action,
-            targetType,
-            targetId: targetId as any,
-            changes,
-            ipAddress,
-            userAgent,
-            timestamp: new Date()
+            resourceType: targetType,
+            resourceId: targetId,
+            metadata: changes,
+            req
         });
     } catch (error) {
         console.error('Failed to log admin action:', error);
-        // Don't throw - logging failure shouldn't break the main operation
     }
 }

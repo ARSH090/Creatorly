@@ -1,9 +1,9 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { Coupon } from '@/lib/models/Coupon';
-import { AdminLog } from '@/lib/models/AdminLog';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { auditLog } from '@/lib/utils/auditLogger';
 import { syncRazorpayOffer } from '@/lib/payments/razorpay';
 
 async function getHandler(req: NextRequest) {
@@ -83,13 +83,13 @@ async function postHandler(req: NextRequest, user: any) {
     usedCount: 0
   });
 
-  await AdminLog.create({
-    adminEmail: user.email,
+  await auditLog({
+    userId: user.id || user._id,
     action: 'create_coupon',
-    targetType: 'coupon',
-    targetId: coupon._id,
-    changes: { ...body, razorpayOfferId },
-    ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    resourceType: 'coupon',
+    resourceId: coupon._id,
+    metadata: { ...body, razorpayOfferId },
+    req
   });
 
   return NextResponse.json(coupon);

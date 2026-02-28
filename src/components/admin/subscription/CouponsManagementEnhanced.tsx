@@ -2,40 +2,39 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-    DataGrid,
-    GridColDef,
-    GridActionsCellItem
-} from '@mui/x-data-grid';
+    Plus, Edit2, Trash2, Tag,
+    Zap, Shield, Globe, Users,
+    Activity, Check, X, AlertTriangle,
+    Search, Filter, Percent, Calendar,
+    Lock, ArrowRight, ShieldAlert, BadgeInfo
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
-    Button,
     Dialog,
-    DialogTitle,
     DialogContent,
-    DialogActions,
-    TextField,
-    MenuItem,
-    FormControlLabel,
-    Switch,
-    Typography,
-    Box,
-    Divider,
-    Chip,
-    Alert,
-    Autocomplete
-} from '@mui/material';
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
 import {
-    Add as AddIcon,
-    Edit as EditIcon,
-    Delete as DeleteIcon,
-    LocalOffer as CouponIcon
-} from '@mui/icons-material';
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { TableSkeleton } from '@/components/ui/skeleton-loaders';
+import { toast } from 'react-hot-toast';
+import { cn } from '@/lib/utils';
 
 export default function CouponsManagementEnhanced() {
     const [coupons, setCoupons] = useState([]);
     const [plans, setPlans] = useState([]);
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
-    const [error, setError] = useState<string | null>(null);
     const [editingCoupon, setEditingCoupon] = useState<any>(null);
 
     const initialFormState = {
@@ -71,7 +70,7 @@ export default function CouponsManagementEnhanced() {
             const data = await res.json();
             if (data.coupons) setCoupons(data.coupons);
         } catch (err) {
-            console.error('Failed to fetch coupons', err);
+            toast.error('Failed to query incentive spectrum');
         } finally {
             setLoading(false);
         }
@@ -95,208 +94,192 @@ export default function CouponsManagementEnhanced() {
             setEditingCoupon(null);
             setFormData(initialFormState);
         }
-        setError(null);
         setOpen(true);
     };
-
-    const handleClose = () => setOpen(false);
 
     const handleSubmit = async () => {
         try {
             const method = editingCoupon ? 'PUT' : 'POST';
             const url = '/api/admin/coupons';
 
-            const payload = {
-                ...formData,
-                id: editingCoupon?._id
-            };
-
             const res = await fetch(url, {
                 method,
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({ ...formData, id: editingCoupon?._id })
             });
 
-            const result = await res.json();
-            if (!res.ok) throw new Error(result.error || 'Failed to save coupon');
+            if (!res.ok) throw new Error('Relay Error');
 
-            handleClose();
+            toast.success('Incentive Logic Deployed');
+            setOpen(false);
             fetchCoupons();
         } catch (err: any) {
-            setError(err.message);
+            toast.error('Deployment Failure: Protocol Denied');
         }
     };
 
-    const columns: GridColDef[] = [
-        { field: 'code', headerName: 'Code', width: 150, renderCell: (p: any) => <Typography fontWeight="bold" color="primary">{p.value}</Typography> },
-        { field: 'discountType', headerName: 'Type', width: 130 },
-        {
-            field: 'discountValue', headerName: 'Value', width: 100, renderCell: (p: any) => (
-                <span>{p.row.discountType === 'percentage' ? `${p.value}%` : `₹${p.value}`}</span>
-            )
-        },
-        {
-            field: 'usedCount', headerName: 'Usage', width: 120, renderCell: (p: any) => (
-                <Chip label={`${p.row.usedCount || 0} / ${p.row.usageLimit}`} size="small" variant="outlined" />
-            )
-        },
-        { field: 'validUntil', headerName: 'Expires', width: 150, valueGetter: (params: any) => new Date(params.row.validUntil).toLocaleDateString() },
-        {
-            field: 'status',
-            headerName: 'Status',
-            width: 100,
-            renderCell: (p: any) => (
-                <Chip
-                    label={p.value === 'active' ? 'Active' : p.value}
-                    color={p.value === 'active' ? 'success' : 'default'}
-                    size="small"
-                />
-            )
-        },
-        {
-            field: 'actions',
-            type: 'actions',
-            headerName: 'Actions',
-            width: 100,
-            getActions: (params: any) => [
-                <GridActionsCellItem icon={<EditIcon />} label="Edit" onClick={() => handleOpen(params.row)} />,
-                <GridActionsCellItem icon={<DeleteIcon />} label="Delete" onClick={() => {/* TODO: DELETE API */ }} />,
-            ],
-        },
-    ];
-
     return (
-        <Box sx={{ width: '100%', p: 2, bgcolor: '#fff', borderRadius: 2 }}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h5" fontWeight="bold">Coupons Management</Typography>
-                <Button variant="contained" color="secondary" startIcon={<AddIcon />} onClick={() => handleOpen()}>
-                    Create Coupon
+        <div className="space-y-10 animate-in fade-in duration-700">
+            <header className="flex items-center justify-between">
+                <div className="space-y-1">
+                    <h2 className="text-2xl font-black text-white italic uppercase tracking-tighter">INCENTIVE SPECTRUM</h2>
+                    <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Protocol Overrides & Acquisition Logic</p>
+                </div>
+                <Button
+                    onClick={() => handleOpen()}
+                    className="bg-indigo-600 text-white font-black uppercase text-[10px] tracking-[0.2em] rounded-2xl h-14 px-8 hover:bg-indigo-500 transition-all shadow-xl shadow-indigo-600/20"
+                >
+                    <Plus className="w-4 h-4 mr-3" />
+                    Forge New Code
                 </Button>
-            </Box>
+            </header>
 
-            <div style={{ height: 600, width: '100%' }}>
-                <DataGrid rows={coupons} columns={columns} getRowId={(row) => row._id} loading={loading} />
-            </div>
+            {loading ? (
+                <TableSkeleton rows={8} />
+            ) : (
+                <div className="bg-zinc-900/40 backdrop-blur-3xl rounded-[3rem] p-10 border border-white/5 space-y-10 overflow-hidden">
+                    <div className="overflow-x-auto rounded-[2rem] border border-white/5">
+                        <table className="w-full text-left">
+                            <thead>
+                                <tr className="bg-white/5 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em] italic">
+                                    <th className="py-6 px-10">SIGNAL CODE</th>
+                                    <th className="py-6 px-10">MODULATION</th>
+                                    <th className="py-6 px-10">UTILIZATION</th>
+                                    <th className="py-6 px-10">EXPIRY_SYNC</th>
+                                    <th className="py-6 px-10 text-right">PROTOCOL</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {coupons.map((c: any) => (
+                                    <tr key={c._id} className="text-sm hover:bg-white/[0.02] transition-colors group cursor-pointer" onClick={() => handleOpen(c)}>
+                                        <td className="py-8 px-10">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                                                    <Tag className="w-4 h-4 text-indigo-400" />
+                                                </div>
+                                                <span className="text-[11px] font-black text-white italic tracking-[0.2em] uppercase">{c.code}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-8 px-10">
+                                            <div className="flex flex-col">
+                                                <span className="font-black text-xs text-indigo-400 uppercase tracking-tight italic">
+                                                    {c.discountType === 'percentage' ? `${c.discountValue}% SHIFT` : `₹${c.discountValue} FLAT`}
+                                                </span>
+                                                <span className="text-[9px] font-bold text-zinc-700 tracking-tighter uppercase">{c.discountType} modulation</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-8 px-10">
+                                            <div className="space-y-2 max-w-[120px]">
+                                                <div className="flex justify-between text-[9px] font-black text-zinc-600 uppercase">
+                                                    <span>USAGE</span>
+                                                    <span>{(c.usedCount / c.usageLimit * 100).toFixed(0)}%</span>
+                                                </div>
+                                                <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
+                                                    <div
+                                                        className="h-full bg-indigo-500 rounded-full transition-all duration-1000"
+                                                        style={{ width: `${(c.usedCount / c.usageLimit * 100)}%` }}
+                                                    />
+                                                </div>
+                                                <span className="text-[9px] font-bold text-zinc-700 uppercase tracking-tighter">{c.usedCount} / {c.usageLimit}</span>
+                                            </div>
+                                        </td>
+                                        <td className="py-8 px-10">
+                                            <span className="text-[10px] font-black text-white italic tracking-widest uppercase">{new Date(c.validUntil).toLocaleDateString()}</span>
+                                        </td>
+                                        <td className="py-8 px-10 text-right">
+                                            <Badge className={cn(
+                                                "uppercase text-[9px] font-black tracking-widest px-4 py-1.5 rounded-lg border shadow-sm",
+                                                c.status === 'active' ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-zinc-800 text-zinc-500 border-white/5"
+                                            )}>
+                                                {c.status}
+                                            </Badge>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
-            <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-                <DialogTitle>{editingCoupon ? 'Edit Coupon' : 'Create New Coupon'}</DialogTitle>
-                <DialogContent dividers>
-                    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent className="bg-zinc-950 border-white/5 text-white max-w-4xl p-0 overflow-hidden rounded-[3rem]">
+                    <div className="p-12 space-y-12">
+                        <header className="space-y-2">
+                            <h2 className="text-3xl font-black italic uppercase tracking-tighter">FORGE INCENTIVE</h2>
+                            <p className="text-[10px] font-black text-zinc-600 uppercase tracking-widest">Initialize Acquisition Logic Variable</p>
+                        </header>
 
-                    <Box sx={{ display: 'grid', gap: 3 }}>
-                        <Typography variant="subtitle2" color="primary">Section 1: Coupon Details</Typography>
-                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
-                            <TextField
-                                fullWidth label="Coupon Code" required
-                                value={formData.code}
-                                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().replace(/\s/g, '') })}
-                                disabled={!!editingCoupon}
-                                helperText="Uppercase, no spaces"
-                            />
-                            <TextField
-                                fullWidth label="Description"
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                            />
-                            <TextField
-                                select fullWidth label="Discount Type" required
-                                value={formData.discountType}
-                                onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
-                            >
-                                <MenuItem value="percentage">Percentage (%)</MenuItem>
-                                <MenuItem value="fixed_amount">Fixed Amount (₹)</MenuItem>
-                            </TextField>
-                            <TextField
-                                fullWidth type="number" label="Discount Value" required
-                                value={formData.discountValue}
-                                onChange={(e) => setFormData({ ...formData, discountValue: Number(e.target.value) })}
-                            />
-                        </Box>
-
-                        <Divider />
-                        <Typography variant="subtitle2" color="primary">Section 2: Applicability Rules</Typography>
-                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 2fr' } }}>
-                            <TextField
-                                select fullWidth label="Applies To"
-                                value={formData.appliesTo}
-                                onChange={(e) => setFormData({ ...formData, appliesTo: e.target.value })}
-                            >
-                                <MenuItem value="all_plans">All Paid Plans</MenuItem>
-                                <MenuItem value="specific_plans">Specific Plans</MenuItem>
-                                <MenuItem value="specific_tiers">Specific Tiers</MenuItem>
-                            </TextField>
-                            <Box>
-                                {formData.appliesTo === 'specific_plans' && (
-                                    <Autocomplete
-                                        multiple
-                                        options={plans}
-                                        getOptionLabel={(option: any) => option.name}
-                                        value={plans.filter((p: any) => (formData.applicablePlanIds as any[]).includes(p._id))}
-                                        onChange={(_, newValue) => setFormData({ ...formData, applicablePlanIds: newValue.map((v: any) => v._id) as any })}
-                                        renderInput={(params) => <TextField {...params} label="Select Plans" />}
+                        <div className="grid grid-cols-2 gap-10">
+                            <div className="space-y-8">
+                                <section className="space-y-4">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-4 italic">Signal Identifier</label>
+                                    <Input
+                                        value={formData.code}
+                                        onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
+                                        className="bg-zinc-900 border-white/5 rounded-2xl h-14 px-6 text-white font-black italic tracking-widest"
+                                        placeholder="SIGNAL_HEX"
                                     />
-                                )}
-                                {formData.appliesTo === 'specific_tiers' && (
-                                    <Autocomplete
-                                        multiple
-                                        options={['basic', 'pro', 'enterprise']}
-                                        value={formData.applicableTiers}
-                                        onChange={(_, newValue) => setFormData({ ...formData, applicableTiers: newValue as any })}
-                                        renderInput={(params) => <TextField {...params} label="Select Tiers" />}
-                                    />
-                                )}
-                            </Box>
-                        </Box>
+                                </section>
 
-                        <Divider />
-                        <Typography variant="subtitle2" color="primary">Section 3: Usage Restrictions</Typography>
-                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr 1fr' } }}>
-                            <TextField
-                                fullWidth type="number" label="Max Total Uses" required
-                                value={formData.usageLimit}
-                                onChange={(e) => setFormData({ ...formData, usageLimit: Number(e.target.value) })}
-                            />
-                            <TextField
-                                fullWidth type="number" label="Uses Per User" required
-                                value={formData.usagePerUser}
-                                onChange={(e) => setFormData({ ...formData, usagePerUser: Number(e.target.value) })}
-                            />
-                            <TextField
-                                fullWidth type="number" label="Min Purchase Amt (₹)"
-                                value={formData.minOrderAmount}
-                                onChange={(e) => setFormData({ ...formData, minOrderAmount: Number(e.target.value) })}
-                            />
-                        </Box>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <section className="space-y-4">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-4 italic">Mod Type</label>
+                                        <Select
+                                            value={formData.discountType}
+                                            onValueChange={(val) => setFormData({ ...formData, discountType: val })}
+                                        >
+                                            <SelectTrigger className="bg-zinc-900 border-white/5 rounded-2xl h-14 px-6">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent className="bg-zinc-900 border-white/10 text-white font-black uppercase text-[10px] tracking-widest">
+                                                <SelectItem value="percentage" className="h-12">PERCENT</SelectItem>
+                                                <SelectItem value="fixed_amount" className="h-12">FLAT_AMT</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </section>
+                                    <section className="space-y-4">
+                                        <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-4 italic">Value</label>
+                                        <Input
+                                            type="number"
+                                            value={formData.discountValue}
+                                            onChange={(e) => setFormData({ ...formData, discountValue: Number(e.target.value) })}
+                                            className="bg-zinc-900 border-white/5 rounded-2xl h-14 px-6 text-white font-black italic"
+                                        />
+                                    </section>
+                                </div>
+                            </div>
 
-                        <Divider />
-                        <Typography variant="subtitle2" color="primary">Section 4: Validity & Advanced</Typography>
-                        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' } }}>
-                            <TextField
-                                fullWidth type="date" label="Valid From" InputLabelProps={{ shrink: true }}
-                                value={formData.validFrom}
-                                onChange={(e) => setFormData({ ...formData, validFrom: e.target.value })}
-                            />
-                            <TextField
-                                fullWidth type="date" label="Valid Until" required InputLabelProps={{ shrink: true }}
-                                value={formData.validUntil}
-                                onChange={(e) => setFormData({ ...formData, validUntil: e.target.value })}
-                            />
-                            <FormControlLabel
-                                control={<Switch checked={formData.status === 'active'} onChange={(e) => setFormData({ ...formData, status: e.target.checked ? 'active' : 'inactive' })} />}
-                                label="Is Active"
-                            />
-                            <FormControlLabel
-                                control={<Switch checked={formData.cannotCombineWithOtherCoupons} onChange={(e) => setFormData({ ...formData, cannotCombineWithOtherCoupons: e.target.checked })} />}
-                                label="Cannot Combine Coupons"
-                            />
-                        </Box>
-                    </Box>
+                            <div className="space-y-8">
+                                <section className="space-y-4">
+                                    <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-4 italic">Constraints</label>
+                                    <div className="bg-zinc-900/50 border border-white/5 rounded-[2rem] p-8 space-y-6">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Single Signal Only</span>
+                                            <Switch
+                                                checked={formData.cannotCombineWithOtherCoupons}
+                                                onCheckedChange={(val) => setFormData({ ...formData, cannotCombineWithOtherCoupons: val })}
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Exclude Promo Tiers</span>
+                                            <Switch
+                                                checked={formData.excludeDiscountedItems}
+                                                onCheckedChange={(val) => setFormData({ ...formData, excludeDiscountedItems: val })}
+                                            />
+                                        </div>
+                                    </div>
+                                </section>
+                            </div>
+                        </div>
+
+                        <footer className="flex gap-4 pt-10">
+                            <Button onClick={() => setOpen(false)} variant="ghost" className="flex-1 h-16 rounded-2xl text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white">Abort Signal</Button>
+                            <Button onClick={handleSubmit} className="flex-1 h-16 rounded-2xl bg-indigo-600 text-white font-black uppercase text-[10px] tracking-widest hover:scale-105 transition-all shadow-xl shadow-indigo-600/20">Forge Protocol</Button>
+                        </footer>
+                    </div>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button onClick={handleSubmit} variant="contained" color="secondary">Save Coupon</Button>
-                </DialogActions>
             </Dialog>
-        </Box>
+        </div>
     );
 }

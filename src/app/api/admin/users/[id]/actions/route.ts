@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
-import { AdminLog } from '@/lib/models/AdminLog';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { auditLog } from '@/lib/utils/auditLogger';
 
 async function handler(
     req: NextRequest,
@@ -56,14 +56,13 @@ async function handler(
     await User.findByIdAndUpdate(id, update);
 
     // Record in Audit Log
-    await AdminLog.create({
-        adminEmail: admin.email,
+    await auditLog({
+        userId: admin.id || admin._id,
         action: logAction,
-        targetType: 'user',
-        targetId: targetUser._id,
-        changes: { action, reason },
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
-        userAgent: req.headers.get('user-agent')
+        resourceType: 'user',
+        resourceId: targetUser._id,
+        metadata: { action, reason },
+        req
     });
 
     return NextResponse.json({ success: true, action: logAction });

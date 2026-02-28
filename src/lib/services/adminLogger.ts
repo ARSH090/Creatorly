@@ -1,38 +1,36 @@
+import { auditLog } from '@/lib/utils/auditLogger';
+
 /**
  * Admin Logger Service
  * Logs admin actions for audit trail and compliance
  */
 
-interface AdminLog {
+interface AdminLogParams {
     adminId: string;
     action: string;
     resource: string;
     details?: any;
-    timestamp: Date;
     ipAddress?: string;
+    timestamp?: Date;
 }
 
 /**
- * Log admin actions to console and optionally to database/external service
+ * Log admin actions to the unified AuditLog system
  */
-export function logAdminAction(log: AdminLog): void {
-    const logEntry = {
-        ...log,
-        timestamp: log.timestamp || new Date(),
-    };
+export async function logAdminAction(params: AdminLogParams): Promise<void> {
+    await auditLog({
+        userId: params.adminId,
+        action: params.action,
+        resourceType: 'system', // Defaulting to system for generic service logs
+        resourceId: params.resource,
+        metadata: params.details,
+        req: params.ipAddress ? { headers: new Map([['x-forwarded-for', params.ipAddress]]) } : undefined
+    });
 
     // Log to console in development
     if (process.env.NODE_ENV !== 'production') {
-        console.log('[ADMIN ACTION]', JSON.stringify(logEntry, null, 2));
+        console.log('[ADMIN ACTION]', JSON.stringify(params, null, 2));
     }
-
-    // In production, you might want to:
-    // - Write to database audit table
-    // - Send to external logging service (DataDog, LogRocket, etc.)
-    // - Write to file system
-
-    // Example: write to DB (implement based on your needs)
-    // await db.adminLogs.insert(logEntry);
 }
 
 /**
@@ -44,13 +42,12 @@ export function createAdminLog(
     resource: string,
     details?: any,
     ipAddress?: string
-): AdminLog {
+) {
     return {
         adminId,
         action,
         resource,
         details,
-        timestamp: new Date(),
         ipAddress,
     };
 }

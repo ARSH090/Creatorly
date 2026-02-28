@@ -1,4 +1,6 @@
 /** @type {import('jest').Config} */
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env.test') });
+console.log('DEBUG: MONGODB_URI from config:', process.env.MONGODB_URI);
 const config = {
     preset: 'ts-jest',
     testEnvironment: 'node',
@@ -35,6 +37,8 @@ const config = {
     verbose: true,
     bail: false,
     maxConcurrency: 5,
+    setupFiles: ['<rootDir>/jest.env.js'],
+    setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
 };
 
 module.exports = config;

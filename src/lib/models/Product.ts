@@ -158,6 +158,11 @@ export interface IProduct extends Document {
 
     isArchived: boolean;
     deletedAt?: Date;
+
+    // Admin moderation fields
+    isFlagged?: boolean;
+    flagReason?: string;
+    adminNotes?: string;
 }
 
 
@@ -298,13 +303,23 @@ const ProductSchema: Schema = new Schema({
     postPurchaseDmEnabled: { type: Boolean, default: false },
     postPurchaseDmText: { type: String, maxlength: 500 },
 
-    sortOrder: { type: Number, default: 0 }
+    sortOrder: { type: Number, default: 0 },
+    isFlagged: { type: Boolean, default: false },
+    flagReason: { type: String, default: '' },
+    adminNotes: { type: String, default: '' },
 
+    // Soft delete flag
+    isDeleted: { type: Boolean, default: false, index: true },
 }, {
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true }
 });
+
+// Soft-delete: auto-filter deleted products from all queries
+ProductSchema.pre('find', function () { this.where({ isDeleted: { $ne: true } }); });
+ProductSchema.pre('findOne', function () { this.where({ isDeleted: { $ne: true } }); });
+ProductSchema.pre('countDocuments', function () { this.where({ isDeleted: { $ne: true } }); });
 
 // Auto-generate productNumber (e.g., PRD-001234)
 ProductSchema.pre('save', async function () {

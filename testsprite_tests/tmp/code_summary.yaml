@@ -1,73 +1,74 @@
 version: "2"
-type: frontend
+type: backend
 tech_stack:
   - TypeScript
-  - Next.js
-  - Lucide React
-  - Framer Motion
-  - Tailwind CSS
+  - Next.js 14 (App Router)
+  - MongoDB (Mongoose)
   - Clerk (Auth)
-  - MongoDB/Mongoose
-  - AWS SDK (S3)
-  - "@dnd-kit (Storefront Editor)"
-routes:
-  - path: /u/[username]
-    file: src/app/u/[username]/page.tsx
-    auth_required: false
-    description: Public storefront displaying creator bio, links, and products
-  - path: /dashboard/storefront
-    file: src/app/(dashboard)/dashboard/storefront/page.tsx
-    auth_required: true
-    description: Creator dashboard for editing storefront theme, layout, and links
-  - path: /onboarding
-    file: src/app/onboarding/page.tsx
-    auth_required: true
-    description: User onboarding flow for new creators
-  - path: /dashboard
-    file: src/app/(dashboard)/dashboard/page.tsx
-    auth_required: true
-    description: Main creator dashboard overview
-  - path: /admin
-    file: src/app/admin/page.tsx
-    auth_required: true
-    description: Platform administrator panel
+  - Razorpay, Stripe, PayPal (Payments)
+  - Resend, BullMQ (Email & Queues)
+  - AWS S3 (Storage)
+  - Socket.io (Real-time)
 features:
-  - name: Public Storefront
-    description: Public profile for creators to showcase their work and sell products
+  - name: Authentication (Clerk)
+    description: User registration, login, and session management via Clerk.
     files:
-      - src/app/u/[username]/page.tsx
-      - src/components/storefront/CreatorBio.tsx
-      - src/components/storefront/ProductGrid.tsx
-    entry_route: /u/[username]
-    user_interactions:
-      - View creator bio and social links
-      - Switch between Grid and List product layouts
-      - Click product cards to view details
-    api_calls:
+      - src/lib/auth/server-auth.ts
+      - src/middleware.ts
+    endpoints:
       - method: GET
-        endpoint: /api/public/[username]
-    auth_required: false
-  - name: Storefront Customization
-    description: Editor for creators to customize their storefront theme and layout
+        path: /api/auth/me
+        description: Fetch current authenticated user profile
+        auth_required: true
+  - name: Product Management
+    description: Creator-facing CRUD for digital products, including file uploads and pricing.
     files:
-      - src/app/(dashboard)/dashboard/storefront/page.tsx
-      - src/lib/models/CreatorProfile.ts
-    entry_route: /dashboard/storefront
-    user_interactions:
-      - Change primary and background colors
-      - Upload background image
-      - Toggle profile photo visibility
-      - Reorder storefront sections with drag-and-drop
-      - Click Save to persist changes
-    api_calls:
+      - src/app/api/products/route.ts
+      - src/lib/models/Product.ts
+    endpoints:
       - method: GET
-        endpoint: /api/creator/profile
-      - method: PATCH
-        endpoint: /api/creator/profile
+        path: /api/products
+        description: List creator's products
+        auth_required: true
       - method: POST
-        endpoint: /api/creator/upload
-    auth_required: true
-known_limitations:
-  - issue: Background image upload requires S3 configuration
-    location: src/app/api/creator/upload/route.ts
-    impact: Uploads will fail if S3 credentials are not set in environment
+        path: /api/products
+        description: Create new digital product
+        auth_required: true
+  - name: Payment Webhooks
+    description: Listeners for Razorpay, Stripe, and PayPal payment success events to trigger fulfillment.
+    files:
+      - src/app/api/webhooks/razorpay/route.ts
+      - src/app/api/webhooks/stripe/route.ts
+      - src/lib/services/digitalDelivery.ts
+    endpoints:
+      - method: POST
+        path: /api/webhooks/razorpay
+        description: Handle Razorpay payment captured events
+        auth_required: false
+  - name: Admin Dashboard
+    description: Platform-wide management of users, stores, payouts, and system settings.
+    files:
+      - src/app/api/admin/users/route.ts
+      - src/app/api/admin/payouts/route.ts
+      - src/app/api/admin/settings/route.ts
+      - src/lib/models/AuditLog.ts
+    endpoints:
+      - method: GET
+        path: /api/admin/analytics
+        description: Platform-wide revenue and growth metrics
+        auth_required: true
+      - method: PATCH
+        path: /api/admin/users/[id]/suspend
+        description: Suspend/Unsuspend user store
+        auth_required: true
+  - name: Digital Delivery
+    description: Secure delivery of files, license keys, and course access after purchase.
+    files:
+      - src/app/api/download/[token]/route.ts
+      - src/lib/models/DownloadToken.ts
+    endpoints:
+      - method: GET
+        path: /api/download/[token]
+        description: Download purchased digital asset
+        auth_required: false
+known_limitations: []

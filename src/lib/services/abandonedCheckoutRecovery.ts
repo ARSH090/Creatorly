@@ -151,21 +151,12 @@ class AbandonedCheckoutRecovery {
             checkoutUrl: `${process.env.NEXT_PUBLIC_APP_URL}/checkout/${product._id}?email=${encodeURIComponent(buyerEmail)}&coupon=${couponCode}`
         });
 
-        // TODO: Replace with actual email service
-        console.log('Sending recovery email:', {
+        const { sendEmail } = await import('./email');
+        await sendEmail({
             to: buyerEmail,
             subject,
-            html: emailHtml.length,
-            from: `${creator.displayName} <noreply@creatorly.com>`
+            html: emailHtml,
         });
-
-        // Placeholder for email sending
-        // await sendEmail({
-        //     to: buyerEmail,
-        //     subject,
-        //     html: emailHtml,
-        //     from: `${creator.displayName} <noreply@creatorly.com>`
-        // });
     }
 
     /**

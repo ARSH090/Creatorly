@@ -3,7 +3,6 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { getCurrentUser } from '@/lib/auth/server-auth';
 import Subscription from '@/lib/models/Subscription';
 import { User } from '@/lib/models/User';
-import { SUBSCRIPTION_PLANS } from '@/lib/constants/tier-limits';
 import Razorpay from 'razorpay';
 
 const razorpay = new Razorpay({
@@ -25,16 +24,17 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { planType } = body; // 'CREATOR_MONTHLY', 'CREATOR_YEARLY', 'PRO_MONTHLY', 'PRO_YEARLY'
+        const { planId } = body;
 
-        if (!planType || !SUBSCRIPTION_PLANS[planType as keyof typeof SUBSCRIPTION_PLANS]) {
+        const { getPlanById } = await import('@/lib/planCache');
+        const plan = await getPlanById(planId);
+
+        if (!plan || !plan.isActive) {
             return NextResponse.json(
-                { error: 'Invalid plan type' },
+                { error: 'Invalid or inactive plan' },
                 { status: 400 }
             );
         }
-
-        const plan = SUBSCRIPTION_PLANS[planType as keyof typeof SUBSCRIPTION_PLANS];
 
         // Check if user already has an active subscription
         const existingSubscription = await Subscription.findOne({
@@ -49,44 +49,59 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Create Razorpay subscription
-        const rzpSubscription = await razorpay.subscriptions.create({
-            plan_id: process.env[`RAZORPAY_PLAN_${planType}`] || 'plan_id_placeholder',
-            customer_notify: 1,
-            total_count: plan.period === 'yearly' ? 1 : 12, // 12 months for monthly, 1 for yearly
-            quantity: 1
-        });
+        if (!plan.razorpayPlanId && plan.price > 0) {
+            return NextResponse.json(
+                { error: 'This plan is not yet linked to a payment gateway. Please contact support.' },
+                { status: 400 }
+            );
+        }
 
-        // Create subscription in DB (status=pending until first payment)
+        // Create Razorpay subscription (if not free)
+        let rzpSubscriptionId = null;
+        let rzpCustomerId = null;
+
+        if (plan.price > 0) {
+            const rzpSubscription = await razorpay.subscriptions.create({
+                plan_id: plan.razorpayPlanId!,
+                customer_notify: 1,
+                total_count: 12, // Defaulting to 12 months for now as per previous logic for monthly
+                quantity: 1
+            });
+            rzpSubscriptionId = rzpSubscription.id;
+            rzpCustomerId = rzpSubscription.customer_id;
+        }
+
+        // Create subscription in DB
         const subscription = await Subscription.create({
             userId: user._id,
-            originalPrice: plan.priceINR,
+            originalPrice: plan.price,
             discountAmount: 0,
-            finalPrice: plan.priceINR,
-            billingPeriod: plan.period,
+            finalPrice: plan.price,
+            billingPeriod: 'monthly', // Defaulting to monthly derived from plan price context
             startDate: new Date(),
-            endDate: new Date(Date.now() + (plan.period === 'monthly' ? 30 : 365) * 24 * 60 * 60 * 1000),
-            status: 'pending',
-            razorpaySubscriptionId: rzpSubscription.id,
-            razorpayCustomerId: rzpSubscription.customer_id,
+            endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+            status: plan.price > 0 ? 'pending' : 'active', // Free is active instantly
+            razorpaySubscriptionId: rzpSubscriptionId,
+            razorpayCustomerId: rzpCustomerId,
             autoRenew: true
         });
 
-        // Update user with subscription reference (tier will be updated on webhook)
+        // Update user with subscription reference
         await User.findByIdAndUpdate(user._id, {
             activeSubscription: subscription._id,
-            razorpaySubscriptionId: rzpSubscription.id
+            razorpaySubscriptionId: rzpSubscriptionId,
+            subscriptionTier: plan.id, // Update tier immediately if free
+            subscriptionStatus: plan.price > 0 ? 'pending' : 'active'
         });
 
         return NextResponse.json({
-            message: 'Subscription created. Complete payment to activate.',
+            message: plan.price > 0 ? 'Subscription created. Complete payment to activate.' : 'Plan activated successfully.',
             subscription: {
                 id: subscription._id,
-                razorpaySubscriptionId: rzpSubscription.id,
-                plan: plan.tier,
-                period: plan.period,
-                amount: plan.priceINR,
-                status: 'pending'
+                razorpaySubscriptionId: rzpSubscriptionId,
+                plan: plan.name,
+                amount: plan.price,
+                status: subscription.status
             },
             razorpayKey: process.env.RAZORPAY_KEY_ID
         });

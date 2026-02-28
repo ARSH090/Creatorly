@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Lead from '@/lib/models/Lead';
-import AdminLog from '@/lib/models/AdminLog';
+import { auditLog } from '@/lib/utils/auditLogger';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { checkAdminPermission } from '@/lib/middleware/adminAuth';
 
@@ -22,13 +22,13 @@ export const POST = withAdminAuth(async (req: NextRequest, session: any) => {
         const result = await Lead.deleteMany({ _id: { $in: leadIds } });
 
         // Log the action
-        await AdminLog.create({
-            adminEmail: session.email || session.user?.email,
+        await auditLog({
+            userId: session.id || session.user?.id,
             action: 'bulk_delete_leads',
-            targetType: 'lead',
-            changes: { leadIds, deletedCount: result.deletedCount },
-            ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
-            userAgent: req.headers.get('user-agent') || 'unknown'
+            resourceType: 'system', // lead is mapped to system in schema enum or add it
+            resourceId: undefined,
+            metadata: { leadIds, deletedCount: result.deletedCount },
+            req
         });
 
         return NextResponse.json({

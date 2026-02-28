@@ -1,23 +1,23 @@
-import AdminLog from '@/lib/models/AdminLog';
+import AuditLog from '@/lib/models/AuditLog';
 import { connectToDatabase } from '@/lib/db/mongodb';
+import mongoose from 'mongoose';
 
-export interface LogActionParams {
-    adminEmail: string;
+export interface AuditLogParams {
+    userId: string | mongoose.Types.ObjectId;
     action: string;
-    targetType: 'user' | 'product' | 'order' | 'payout' | 'coupon' | 'settings' | 'system';
-    targetId?: string;
-    changes?: any;
+    resourceType: 'user' | 'product' | 'order' | 'coupon' | 'domain' | 'system' | 'announcement' | 'ticket' | 'message' | 'store' | 'settlement' | 'withdrawal' | 'setting';
+    resourceId?: string | mongoose.Types.ObjectId;
+    metadata?: any;
     req?: any;
 }
 
 /**
- * Utility to record administrative actions in the Audit Log (using AdminLog model)
+ * Standard audit log utility for both Creator and Admin actions
  */
-export async function recordAdminAction(params: LogActionParams) {
+export async function auditLog(params: AuditLogParams) {
     try {
         await connectToDatabase();
-
-        const { adminEmail, action, targetType, targetId, changes, req } = params;
+        const { userId, action, resourceType, resourceId, metadata, req } = params;
 
         let ipAddress = 'unknown';
         let userAgent = 'unknown';
@@ -27,17 +27,52 @@ export async function recordAdminAction(params: LogActionParams) {
             userAgent = req.headers.get('user-agent') || 'unknown';
         }
 
-        return await AdminLog.create({
-            adminEmail,
+        return await AuditLog.create({
+            adminId: userId, // Mapping userId to adminId for schema compatibility
             action,
-            targetType,
-            targetId,
-            changes,
+            entityType: resourceType,
+            entityId: resourceId,
+            details: metadata,
             ipAddress,
-            userAgent,
-            timestamp: new Date()
+            userAgent
         });
     } catch (error) {
-        console.error('Audit Log Failure:', error);
+        console.error('[AuditLog] Failed to record action:', error);
+    }
+}
+
+/**
+ * Legacy wrapper for Admin-only actions (Refactored to use AuditLog)
+ */
+export interface LogActionParams {
+    adminEmail: string; // Used to find adminId
+    action: string;
+    targetType: any;
+    targetId?: string;
+    changes?: any;
+    req?: any;
+}
+
+export async function recordAdminAction(params: LogActionParams) {
+    try {
+        await connectToDatabase();
+        const User = (await import('@/lib/models/User')).default;
+        const admin = await User.findOne({ email: params.adminEmail });
+
+        if (!admin) {
+            console.warn(`[AuditLog] Admin ${params.adminEmail} not found for logging.`);
+            return;
+        }
+
+        return await auditLog({
+            userId: admin._id,
+            action: params.action,
+            resourceType: params.targetType,
+            resourceId: params.targetId,
+            metadata: params.changes,
+            req: params.req
+        });
+    } catch (error) {
+        console.error('[AuditLog] Legacy wrapper failure:', error);
     }
 }

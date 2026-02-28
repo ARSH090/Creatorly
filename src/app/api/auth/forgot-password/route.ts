@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   // Rate limiting
   const clientIp = getClientIdentifier(req);
   try {
-    await passwordResetLimiter.check(3, clientIp);
+    await passwordResetLimiter.check(clientIp);
   } catch {
     return NextResponse.json(
       { error: 'Too many password reset requests', code: 'RATE_LIMITED' },

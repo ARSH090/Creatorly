@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
-import { AdminLog } from '@/lib/models/AdminLog';
+import { auditLog } from '@/lib/utils/auditLogger';
 import { Order } from '@/lib/models/Order';
 import { Product } from '@/lib/models/Product';
 import Payout from '@/lib/models/Payout';
@@ -66,14 +66,13 @@ async function putHandler(
     await targetUser.save();
 
     // Log action
-    await AdminLog.create({
-        adminEmail: admin.email,
+    await auditLog({
+        userId: admin.id || admin._id,
         action: 'update_user',
-        targetType: 'user',
-        targetId: targetUser._id,
-        changes: body,
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
-        userAgent: req.headers.get('user-agent')
+        resourceType: 'user',
+        resourceId: targetUser._id,
+        metadata: body,
+        req
     });
 
     return NextResponse.json(targetUser);

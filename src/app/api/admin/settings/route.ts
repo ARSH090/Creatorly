@@ -1,45 +1,72 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
+import { connectToDatabase } from '@/lib/db/mongodb';
 import { PlatformSettings } from '@/lib/models/PlatformSettings';
-import { AdminLog } from '@/lib/models/AdminLog';
 import { withAdminAuth } from '@/lib/auth/withAuth';
-import { withErrorHandler } from '@/lib/utils/errorHandler';
+import AuditLog from '@/lib/models/AuditLog';
 
-async function getHandler(req: NextRequest) {
-    await dbConnect();
+// GET /api/admin/settings
+export const GET = withAdminAuth(async () => {
+    try {
+        await connectToDatabase();
+        let settings = await PlatformSettings.findOne().lean();
 
-    let settings = await PlatformSettings.findOne().lean();
-    if (!settings) {
-        settings = await PlatformSettings.create({});
+        if (!settings) {
+            // Initialize if not exists
+            settings = await PlatformSettings.create({
+                supportEmail: 'support@creatorly.in',
+                businessName: 'Creatorly',
+                taxId: 'PENDING',
+                updateLastModifiedBy: 'system'
+            });
+        }
+
+        return NextResponse.json({ settings });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
+});
 
-    return NextResponse.json(settings);
-}
+// PATCH /api/admin/settings
+export const PATCH = withAdminAuth(async (req, user) => {
+    try {
+        const body = await req.json();
+        await connectToDatabase();
 
-async function putHandler(req: NextRequest, user: any) {
-    const body = await req.json();
-    await dbConnect();
+        const previousSettings = await PlatformSettings.findOne();
+        const settings = await PlatformSettings.findOneAndUpdate(
+            {},
+            {
+                ...body,
+                updateLastModifiedBy: user.emailAddresses[0]?.emailAddress || user.id,
+                updateLastModifiedAt: new Date()
+            },
+            { new: true, upsert: true }
+        );
 
-    let settings = await PlatformSettings.findOne();
-    if (!settings) {
-        settings = new PlatformSettings(body);
-    } else {
-        Object.assign(settings, body);
+        // Dynamic Audit Log for 106+ checkpoints - this records which key changed
+        const changes = [];
+        for (const key in body) {
+            if (JSON.stringify(previousSettings?.[key]) !== JSON.stringify(body[key])) {
+                changes.push({
+                    field: key,
+                    old: previousSettings?.[key],
+                    new: body[key]
+                });
+            }
+        }
+
+        if (changes.length > 0) {
+            await AuditLog.create({
+                adminId: user.id,
+                action: 'UPDATE_PLATFORM_SETTINGS',
+                entityType: 'setting',
+                details: { changes },
+                ipAddress: req.headers.get('x-forwarded-for') || 'local'
+            });
+        }
+
+        return NextResponse.json({ success: true, settings });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
-
-    await settings.save();
-
-    await AdminLog.create({
-        adminEmail: user.email,
-        action: 'update_settings',
-        targetType: 'settings',
-        changes: body,
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
-    });
-
-    return NextResponse.json(settings);
-}
-
-export const GET = withAdminAuth(withErrorHandler(getHandler));
-export const PUT = withAdminAuth(withErrorHandler(putHandler));
-
+});

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { Product } from '@/lib/models/Product';
-import { AdminLog } from '@/lib/models/AdminLog';
+import AuditLog from '@/lib/models/AuditLog';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 
@@ -33,22 +33,37 @@ async function putHandler(
     const product = await Product.findById(id);
     if (!product) return new NextResponse('Product not found', { status: 404 });
 
+    const previousStatus = product.status;
+    const previousFlagged = product.isFlagged;
+
     // Update allowed fields
-    if (body.name) product.name = body.name;
+    if (body.title) product.title = body.title;
     if (body.description) product.description = body.description;
-    if (body.price !== undefined) product.price = body.price;
+    if (body.price !== undefined) {
+        if (!product.pricing) product.pricing = { basePrice: 0, currency: 'INR', taxInclusive: false };
+        product.pricing.basePrice = body.price;
+    }
     if (body.status) product.status = body.status;
     if (body.isFeatured !== undefined) product.isFeatured = body.isFeatured;
+    if (body.isFlagged !== undefined) product.isFlagged = body.isFlagged;
+    if (body.flagReason !== undefined) product.flagReason = body.flagReason;
+    if (body.adminNotes !== undefined) product.adminNotes = body.adminNotes;
 
     await product.save();
 
-    await AdminLog.create({
-        adminEmail: admin.email,
-        action: 'update_product',
-        targetType: 'product',
-        targetId: product._id,
-        changes: body,
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    // Comprehensive Audit Log
+    await AuditLog.create({
+        adminId: admin.id,
+        action: body.isFlagged && !previousFlagged ? 'FLAG_PRODUCT' :
+            !body.isFlagged && previousFlagged ? 'UNFLAG_PRODUCT' :
+                body.status !== previousStatus ? 'UPDATE_PRODUCT_STATUS' : 'UPDATE_PRODUCT',
+        entityType: 'product',
+        entityId: product._id,
+        details: {
+            changes: body,
+            reason: body.flagReason || body.adminNotes
+        },
+        ipAddress: req.headers.get('x-forwarded-for') || 'local'
     });
 
     return NextResponse.json(product);
@@ -69,12 +84,12 @@ async function deleteHandler(
     product.deletedAt = new Date();
     await product.save();
 
-    await AdminLog.create({
-        adminEmail: admin.email,
-        action: 'delete_product',
-        targetType: 'product',
-        targetId: product._id,
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    await AuditLog.create({
+        adminId: admin.id,
+        action: 'DELETE_PRODUCT',
+        entityType: 'product',
+        entityId: product._id,
+        ipAddress: req.headers.get('x-forwarded-for') || 'local'
     });
 
     return NextResponse.json({ message: 'Product deleted' });

@@ -27,10 +27,23 @@ async function getPayPalAccessToken() {
 }
 
 /**
- * Creates a PayPal order
+ * Creates a PayPal order with optional payee routing (for P2P)
  */
-export async function createPayPalOrder(amount: number, currency = 'USD') {
+export async function createPayPalOrder(amount: number, currency = 'USD', payeeEmail?: string) {
     const accessToken = await getPayPalAccessToken();
+    const purchaseUnit: any = {
+        amount: {
+            currency_code: currency,
+            value: amount.toString()
+        }
+    };
+
+    if (payeeEmail) {
+        purchaseUnit.payee = {
+            email_address: payeeEmail
+        };
+    }
+
     const response = await fetch(`${PAYPAL_API_BASE}/v2/checkout/orders`, {
         method: 'POST',
         headers: {
@@ -39,14 +52,7 @@ export async function createPayPalOrder(amount: number, currency = 'USD') {
         },
         body: JSON.stringify({
             intent: 'CAPTURE',
-            purchase_units: [
-                {
-                    amount: {
-                        currency_code: currency,
-                        value: amount.toString()
-                    }
-                }
-            ]
+            purchase_units: [purchaseUnit]
         })
     });
 

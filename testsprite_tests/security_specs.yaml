@@ -1,0 +1,40 @@
+# Part 6: Security Test Specs
+
+# Hardening
+- ID: SEC-HAR-001
+  Description: Helmet.js headers present
+  Priority: P1
+  Steps:
+    1. GET /api/products
+    2. Verify X-Content-Type-Options: nosniff
+    3. Verify X-Frame-Options: DENY
+
+- ID: SEC-HAR-002
+  Description: Rate limiting on login
+  Priority: P0
+  Steps:
+    1. POST /api/auth/login 10 times in 1 min
+    2. Expect 429 Too Many Requests
+
+# Injections
+- ID: SEC-INJ-001
+  Description: NoSQL Injection blocked
+  Priority: P0
+  Steps:
+    1. POST /api/auth/login with password {"$gt": ""}
+    2. Expect 401 Unauthorized
+
+- ID: SEC-XSS-001
+  Description: XSS script sanitization in username
+  Priority: P0
+  Steps:
+    1. POST /api/auth/register with username "<script>alert(1)</script>"
+    2. Verify stored username is sanitized or script rejected
+
+# Auth Isolation
+- ID: SEC-ISO-001
+  Description: Cross-creator isolation
+  Priority: P0
+  Steps:
+    1. Creator A attempts to view Creator B's orders
+    2. Expect 403 Forbidden

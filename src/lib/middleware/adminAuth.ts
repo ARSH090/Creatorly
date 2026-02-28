@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth/server-auth';
+import { auditLog } from '@/lib/utils/auditLogger';
 
 export async function adminAuthMiddleware(req: NextRequest) {
   try {
@@ -20,13 +21,12 @@ export async function adminAuthMiddleware(req: NextRequest) {
     }
 
     // Log admin action
-    await logAdminAction({
-      adminId: user._id,
+    await auditLog({
+      userId: user._id,
       action: 'api_access',
-      resource: req.nextUrl.pathname,
-      resourceId: null,
-      ipAddress: req.headers.get('x-forwarded-for') || 'unknown',
-      userAgent: req.headers.get('user-agent') || 'unknown',
+      resourceType: 'system',
+      resourceId: req.nextUrl.pathname,
+      req
     });
 
     return { user, isAdmin: true };
@@ -40,14 +40,6 @@ export async function adminAuthMiddleware(req: NextRequest) {
 }
 
 
-async function logAdminAction(data: any) {
-  try {
-    const { default: AdminLog } = await import('@/lib/models/AdminLog');
-    await AdminLog.create(data);
-  } catch (error) {
-    console.error('Failed to log admin action:', error);
-  }
-}
 
 export function checkAdminPermission(action: string, role?: string) {
   const permissions: Record<string, string[]> = {

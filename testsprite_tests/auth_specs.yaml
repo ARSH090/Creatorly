@@ -1,0 +1,52 @@
+# Part 1: Authentication Test Specs
+
+# Registration
+- ID: AUTH-REG-001
+  Description: User can register with valid email + password
+  Priority: P0
+  Steps:
+    1. POST /api/auth/register with valid payload
+    2. Expect 200 OK
+    3. Verify JWT token in response
+    4. Verify User record in MongoDB
+
+- ID: AUTH-REG-002
+  Description: Username uniqueness check
+  Priority: P0
+  Steps:
+    1. POST /api/auth/register with existing username
+    2. Expect 400 Bad Request
+    3. Verify error message "Username already taken"
+
+- ID: AUTH-REG-003
+  Description: Password complexity requirements
+  Priority: P1
+  Steps:
+    1. POST /api/auth/register with weak password (no special char)
+    2. Expect 400 Bad Request
+    3. Verify validation error
+
+# Login
+- ID: AUTH-LOG-001
+  Description: Valid login returns JWT
+  Priority: P0
+  Steps:
+    1. POST /api/auth/login with valid credentials
+    2. Expect 200 OK
+    3. Verify JWT contains user_id and role
+
+- ID: AUTH-LOG-002
+  Description: Brute force protection
+  Priority: P1
+  Steps:
+    1. POST /api/auth/login 6 times with wrong password
+    2. Expect 429 Too Many Requests
+
+# OAuth
+- ID: AUTH-OAUTH-001
+  Description: Google OAuth redirect and user creation
+  Priority: P1
+  Steps:
+    1. Simulate Google OAuth callback
+    2. Verify user created in DB
+    3. Verify JWT returned

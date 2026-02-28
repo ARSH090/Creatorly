@@ -1,85 +1,72 @@
 import { NextRequest, NextResponse } from 'next/server';
-export const dynamic = 'force-dynamic';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Plan from '@/lib/models/Plan';
+import { User } from '@/lib/models/User';
 import { withAdminAuth } from '@/lib/auth/withAuth';
-import { syncRazorpayPlan } from '@/lib/payments/razorpay';
+import { seedDefaultPlans } from '@/lib/seeds/seedPlans';
+import { invalidatePlanCache } from '@/lib/planCache';
 
-export const GET = withAdminAuth(async (req, user, context) => {
+// ── GET /api/admin/plans ──────────────────────────
+// Returns all plans including inactive ones + sub counts
+export const GET = withAdminAuth(async (req) => {
     try {
         await connectToDatabase();
-        const { searchParams } = new URL(req.url);
-        const tier = searchParams.get('tier');
-        const isActive = searchParams.get('isActive');
 
-        const query: any = {};
-        if (tier) query.tier = tier;
-        if (isActive) query.isActive = isActive === 'true';
+        const plans = await Plan.find({})
+            .sort({ displayOrder: 1 })
+            .lean();
 
-        const plans = await Plan.find(query).sort({ sortOrder: 1, createdAt: -1 });
-        return NextResponse.json({ plans });
+        // Get subscriber count per plan
+        const counts = await User.aggregate([
+            {
+                $match: {
+                    subscriptionStatus: { $in: ['active', 'trialing'] }
+                }
+            },
+            { $group: { _id: '$subscriptionTier', count: { $sum: 1 } } }
+        ]);
+
+        const countsMap = Object.fromEntries(
+            counts.map(c => [c._id, c.count])
+        );
+
+        const result = plans.map((p: any) => ({
+            ...p,
+            activeSubscribers: countsMap[p.id] || 0
+        }));
+
+        return NextResponse.json({ plans: result });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 });
 
-export const POST = withAdminAuth(async (req, user, context) => {
+// ── POST /api/admin/plans/new ─────────────────────
+// Create a new custom plan
+export const POST = withAdminAuth(async (req) => {
     try {
         await connectToDatabase();
         const body = await req.json();
 
-        // Basic required field validation
-        if (!body.name || !body.tier || !body.billingPeriod) {
-            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        if (!body.id || !body.name || body.price === undefined) {
+            return NextResponse.json({ error: 'Missing required fields (id, name, price)' }, { status: 400 });
         }
 
-        // 1. Sync with Razorpay if not free
-        let razorpayMonthlyPlanId = undefined;
-        let razorpayYearlyPlanId = undefined;
-
-        if (body.tier !== 'free') {
-            try {
-                // Create Monthly Plan in Razorpay
-                if (body.monthlyPrice > 0) {
-                    const monthlyRp = await syncRazorpayPlan({
-                        name: body.name,
-                        description: body.description,
-                        amount: body.monthlyPrice,
-                        interval: 'monthly'
-                    });
-                    razorpayMonthlyPlanId = monthlyRp.id;
-                }
-
-                // Create Yearly Plan in Razorpay
-                if (body.yearlyPrice > 0) {
-                    const yearlyRp = await syncRazorpayPlan({
-                        name: body.name,
-                        description: body.description,
-                        amount: body.yearlyPrice,
-                        interval: 'yearly'
-                    });
-                    razorpayYearlyPlanId = yearlyRp.id;
-                }
-            } catch (syncError: any) {
-                console.error('Razorpay sync failed:', syncError);
-                return NextResponse.json({
-                    error: 'Failed to sync with payment gateway',
-                    details: syncError.message
-                }, { status: 502 });
-            }
+        const id = body.id.toLowerCase().replace(/[^a-z0-9-]/g, '');
+        const existing = await Plan.findOne({ id });
+        if (existing) {
+            return NextResponse.json({ error: 'Plan ID already exists' }, { status: 400 });
         }
 
-        // 2. Create in DB with sync IDs
         const plan = await Plan.create({
             ...body,
-            razorpayMonthlyPlanId,
-            razorpayYearlyPlanId,
-            razorpayPlanId: razorpayMonthlyPlanId // Legacy compatibility
+            id
         });
+
+        await invalidatePlanCache();
 
         return NextResponse.json({ success: true, plan }, { status: 201 });
     } catch (error: any) {
-        console.error('Plan creation error:', error);
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 });

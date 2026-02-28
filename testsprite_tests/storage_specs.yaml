@@ -1,0 +1,34 @@
+# Part 5: File Storage Test Specs
+
+# Uploads
+- ID: STO-UP-001
+  Description: Valid file type (PDF/ZIP) uploads to S3
+  Priority: P0
+  Steps:
+    1. POST /api/products with PDF file
+    2. Verify S3 URL saved in DB
+    3. Verify file exists in bucket
+
+- ID: STO-UP-002
+  Description: Reject executable files
+  Priority: P0
+  Steps:
+    1. POST /api/products with .exe file
+    2. Expect 400 Bad Request
+
+- ID: STO-UP-003
+  Description: File size limit (500MB)
+  Priority: P1
+  Steps:
+    1. Attempt to upload 600MB file
+    2. Expect 413 Payload Too Large
+
+# Downloads
+- ID: STO-DL-001
+  Description: Signed URL expiry
+  Priority: P1
+  Steps:
+    1. Generate signed URL
+    2. Wait 24h (mock time)
+    3. Attempt to access URL
+    4. Expect 403 Forbidden

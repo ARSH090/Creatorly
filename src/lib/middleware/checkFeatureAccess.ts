@@ -73,33 +73,17 @@ export async function checkFeatureAccess(
             }).exec();
         }
 
-        // Get tier limits
-        // 1. Check for User-specific overrides or trial limits stored in the user record
-        const userLimits = user.planLimits as any;
+        // 2. Fetch limit from Dynamic Cache
+        const { getLimit } = await import('../planCache');
+        const limit = await getLimit(tier, feature === 'storage' ? 'storageMb' : feature);
 
-        let limits = TIER_LIMITS[tier as keyof typeof TIER_LIMITS] as Record<string, any>;
-
-        // 2. If user has explicit planLimits (from trial setup), use those
-        if (userLimits) {
-            limits = { ...limits, ...userLimits };
-            // Map common keys if they differ (e.g. maxProducts vs products)
-            if (userLimits.maxProducts !== undefined) limits.products = userLimits.maxProducts;
-            if (userLimits.maxStorageMb !== undefined) limits.storage = userLimits.maxStorageMb;
-            if (userLimits.maxTeamMembers !== undefined) limits.teamMembers = userLimits.maxTeamMembers;
-            if (userLimits.maxAiGenerations !== undefined) limits.aiGenerations = userLimits.maxAiGenerations;
-        }
-
-        if (!limits) {
+        if (limit === null) {
             return {
                 allowed: false,
-                errorCode: 'INVALID_TIER',
-                message: 'Invalid subscription tier'
+                errorCode: 'INVALID_LIMIT',
+                message: `Limit for ${feature} not configured in plan ${tier}`
             };
         }
-
-        // Check specific feature limit
-        const limitKey = feature === 'storage' ? 'storageMb' : feature;
-        const limit = limits[limitKey];
 
         // Boolean features (community, customDomain, etc.)
         if (typeof limit === 'boolean') {

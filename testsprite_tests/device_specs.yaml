@@ -1,0 +1,26 @@
+# Part 9: Cross Browser & Device Test Specs
+
+# Responsive Layouts
+- ID: DEV-RES-001
+  Description: Desktop layout (1440px)
+  Priority: P0
+  Steps:
+    1. Set viewport to 1440x900
+    2. Verify full sidebar and cards
+
+- ID: DEV-RES-002
+  Description: Mobile layout (375px)
+  Priority: P0
+  Steps:
+    1. Set viewport to 375x667
+    2. Verify mobile menu and single-stack cards
+
+# Critical Flows
+- ID: DEV-FLOW-001
+  Description: Storefront browsing & checkout on iPhone 14
+  Priority: P0
+  Steps:
+    1. Set User Agent to iPhone 14
+    2. Browse store /u/testuser
+    3. Add to cart & initiate checkout
+    4. Verify UI alignment

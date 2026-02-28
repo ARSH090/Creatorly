@@ -4,9 +4,14 @@ import bcrypt from 'bcryptjs';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
+    // 🔒 SECURITY: Block this debug endpoint in production
+    if (process.env.NODE_ENV === 'production') {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+
     try {
         console.log('=== DEBUG REGISTER START ===');
-        
+
         const body = await req.json();
         console.log('Request body:', { ...body, password: '***' });
 
@@ -85,7 +90,7 @@ export async function POST(req: Request) {
         }
 
         return NextResponse.json(
-            { 
+            {
                 error: 'Failed to create account',
                 details: error.message
             },

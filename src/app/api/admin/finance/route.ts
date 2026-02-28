@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
-import { AdminLog } from '@/lib/models/AdminLog';
 import Payout from '@/lib/models/Payout';
 import User from '@/lib/models/User';
 import { adminAuthMiddleware, checkAdminPermission } from '@/lib/middleware/adminAuth';

@@ -1,0 +1,39 @@
+# Part 8: Performance Test Specs
+
+# Load Times
+- ID: PERF-LOAD-001
+  Description: Landing page Lighthouse Performance score > 90
+  Priority: P1
+  Steps:
+    1. Run Lighthouse on /
+    2. Verify Performance score
+
+- ID: PERF-LOAD-002
+  Description: Dashboard loads under 2s
+  Priority: P0
+  Steps:
+    1. Measure time from /dashboard navigation to fully interactive
+    2. Verify < 2000ms
+
+# API Response
+- ID: PERF-API-001
+  Description: GET API response time < 200ms
+  Priority: P1
+  Steps:
+    1. Measure GET /api/products
+    2. Verify < 200ms
+
+- ID: PERF-API-002
+  Description: POST API response time < 500ms
+  Priority: P1
+  Steps:
+    1. Measure POST /api/products
+    2. Verify < 500ms
+
+# Scalability
+- ID: PERF-SCA-001
+  Description: Handle 1,000 concurrent users
+  Priority: P2
+  Steps:
+    1. Simulate 1,000 VUs via Artillery
+    2. Verify < 1% error rate

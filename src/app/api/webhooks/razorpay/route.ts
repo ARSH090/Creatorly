@@ -13,7 +13,9 @@ import EmailSequence from '@/lib/models/EmailSequence';
 import SequenceEnrollment from '@/lib/models/SequenceEnrollment';
 import { SocialAccount } from '@/lib/models/SocialAccount';
 import { QueueJob } from '@/lib/models/QueueJob';
+import { DigitalDeliveryService } from '@/lib/services/digitalDelivery';
 import { decryptTokenWithVersion } from '@/lib/security/encryption';
+import { rateLimit } from '@/lib/utils/rate-limit';
 
 /** Default free-tier limits used when plan cannot be fetched from DB */
 const DEFAULT_FREE_LIMITS = {
@@ -27,6 +29,13 @@ const DEFAULT_FREE_LIMITS = {
 
 export async function POST(req: NextRequest) {
     try {
+        // Rate Limiting
+        const ip = req.headers.get('x-forwarded-for') || 'unknown';
+        const isAllowed = await rateLimit(ip, 'webhook', 100, 60); // 100 req per min
+        if (!isAllowed) {
+            return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+        }
+
         const body = await req.text();
         const signature = req.headers.get('x-razorpay-signature');
 
@@ -209,7 +218,6 @@ export async function POST(req: NextRequest) {
                                 await QueueJob.create({
                                     type: 'one_off_email',
                                     payload: {
-
                                         email: order.customerEmail,
                                         subject: product.postPurchaseEmailSubject,
                                         content: product.postPurchaseEmailContent,
@@ -220,9 +228,13 @@ export async function POST(req: NextRequest) {
                                 });
                                 console.log(`[RAZORPAY WEBHOOK] Enqueued post-purchase email for order ${order.orderNumber}`);
                             }
+
+                            // 3. Digital Fulfillment (Files, Courses, Licenses)
+                            await DigitalDeliveryService.fulfillOrder(order._id.toString());
+                            console.log(`[RAZORPAY WEBHOOK] Triggered fulfillment for order ${order.orderNumber}`);
                         }
                     } catch (automationErr) {
-                        console.error('[RAZORPAY WEBHOOK] Post-purchase automation failed:', automationErr);
+                        console.error('[RAZORPAY WEBHOOK] Post-purchase automation/fulfillment failed:', automationErr);
                     }
                 }
 

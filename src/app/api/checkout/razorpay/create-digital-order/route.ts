@@ -62,9 +62,28 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        // 4. Create Razorpay Order if price > 0
+        // 4. Determine Payment Routing (P2P or Global)
+        const creator = await User.findById(product.creatorId);
+        const razorpayConfig = creator?.paymentConfigs?.razorpay;
+        const isP2P = creator?.primaryPaymentMethod === 'razorpay' && razorpayConfig?.active && razorpayConfig?.keySecret;
+
         let razorpayOrder = null;
+        let p2pKeyId = null;
+
         if (finalAmount > 0) {
+            let credentials = undefined;
+            if (isP2P) {
+                const { decryptTokenWithVersion } = await import('@/lib/security/encryption');
+                const decryptedSecret = decryptTokenWithVersion(
+                    razorpayConfig.keySecret!,
+                    razorpayConfig.keySecretIV!,
+                    razorpayConfig.keySecretTag!,
+                    'v1'
+                );
+                credentials = { keyId: razorpayConfig.keyId, keySecret: decryptedSecret };
+                p2pKeyId = razorpayConfig.keyId;
+            }
+
             razorpayOrder = await createRazorpayOrder({
                 amount: Math.round(finalAmount * 100), // to paise
                 currency: product.pricing?.currency || 'INR',
@@ -73,9 +92,10 @@ export async function POST(req: NextRequest) {
                     productId: product._id.toString(),
                     customerEmail,
                     creatorId: product.creatorId.toString(),
-                    couponCode: couponCode || ''
+                    couponCode: couponCode || '',
+                    isP2P: isP2P ? 'true' : 'false'
                 }
-            });
+            }, credentials);
         }
 
         return NextResponse.json({
@@ -83,7 +103,7 @@ export async function POST(req: NextRequest) {
             orderId: razorpayOrder?.id, // null for free products
             amount: finalAmount,
             currency: product.pricing?.currency || 'INR',
-            key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+            key: p2pKeyId || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
             product: {
                 title: product.title,
                 thumbnail: product.thumbnailKey

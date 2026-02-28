@@ -7,6 +7,7 @@ const connection = new IORedis(process.env.REDIS_URL || 'redis://localhost:6379'
 
 export const whatsappQueue = new Queue('whatsapp', { connection: connection as any });
 export const instagramQueue = new Queue('instagram-dm', { connection: connection as any });
+export const mailQueue = new Queue('mail', { connection: connection as any });
 
 export interface InstagramDMJobData {
     leadId: string;

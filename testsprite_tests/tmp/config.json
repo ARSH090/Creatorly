@@ -1,15 +1,15 @@
 {
   "status": "commited",
-  "type": "frontend",
+  "type": "backend",
   "scope": "codebase",
   "localEndpoint": "http://localhost:3000",
-  "loginUser": "arsh",
-  "loginPassword": "123456",
+  "backendAuthType": "Bearer token",
+  "backendCredential": "v3ry-s3cr3t-t3st-v4lu3",
   "executionArgs": {
     "projectName": "insta",
     "projectPath": "e:\\insta",
     "testIds": [],
-    "additionalInstruction": "Focus on testing the new storefront customization features: background image upload, profile photo toggle, and product grid/list layout switching. Also verify that the 'Copy Store Link' button works.",
+    "additionalInstruction": "Run all generated specs in the testsprite_tests/ directory. Ensure environment is loaded from .env.test.",
     "serverMode": "development",
     "envs": {
       "API_KEY": "sk-user-zdXzTG0gr3wflCyiKBVyedlLqhEePnbNeIDh8zFyLjo4-tnW_TqbqMBTxng_LQ1rFCBDHJle5Q4LZC2bsrdn92QNJiqjxmO-guMd24wfaJCB3xMbjmkH4ZX5UokLCleCbiM"

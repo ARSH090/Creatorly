@@ -1,72 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
-export const dynamic = 'force-dynamic';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { Subscription } from '@/lib/models/Subscription';
+import { Order } from '@/lib/models/Order';
+import { User } from '@/lib/models/User';
+import { Product } from '@/lib/models/Product';
+import { Payout } from '@/lib/models/Payout';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 
-export const GET = withAdminAuth(async (req, user, context) => {
+// GET /api/admin/analytics
+export const GET = withAdminAuth(async () => {
     try {
         await connectToDatabase();
 
-        // 1. Calculate MRR
-        const activeSubscriptions = await Subscription.find({ status: 'active' });
-        let totalMRR = 0;
-        activeSubscriptions.forEach(sub => {
-            if (sub.billingPeriod === 'monthly') {
-                totalMRR += sub.finalPrice;
-            } else if (sub.billingPeriod === 'yearly') {
-                totalMRR += (sub.finalPrice / 12);
-            }
-        });
+        // 1. Revenue Metrics (Total Sales, Platform Commission)
+        // Assuming Order has 'amount' and platform takes a commission (e.g. 5%)
+        const orders = await Order.find({ status: 'paid' }).select('amount platformFee commission').lean();
+        const totalRevenue = orders.reduce((acc, curr) => acc + (curr.amount || 0), 0);
+        const platformEarnings = orders.reduce((acc, curr) => acc + (curr.platformFee || curr.commission || 0), 0);
 
-        // 2. Churn Rate (last 30 days)
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        // 2. User Growth
+        const totalCreators = await User.countDocuments({ role: 'creator' });
+        const totalUsers = await User.countDocuments();
 
-        const canceledLastMonth = await Subscription.countDocuments({
-            status: 'canceled',
-            updatedAt: { $gte: thirtyDaysAgo }
-        });
+        // 3. Asset Performance
+        const totalProducts = await Product.countDocuments();
+        const flaggedProducts = await Product.countDocuments({ isFlagged: true });
 
-        const totalActiveStartOfMonth = await Subscription.countDocuments({
-            status: 'active',
-            createdAt: { $lte: thirtyDaysAgo }
-        }) + canceledLastMonth;
+        // 4. Payout Stats
+        const totalPayouts = await Payout.aggregate([
+            { $match: { status: 'paid' } },
+            { $group: { _id: null, total: { $sum: '$amount' } } }
+        ]);
 
-        const churnRate = totalActiveStartOfMonth > 0 ? (canceledLastMonth / totalActiveStartOfMonth) * 100 : 0;
+        // 5. Monthly Revenue Chart Data (Last 6 Months)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-        // 3. Subscribers by Tier
-        const tierStats = await Subscription.aggregate([
-            { $match: { status: 'active' } },
-            {
-                $lookup: {
-                    from: 'plans',
-                    localField: 'planId',
-                    foreignField: '_id',
-                    as: 'plan'
-                }
-            },
-            { $unwind: '$plan' },
+        const monthlyStats = await Order.aggregate([
+            { $match: { status: 'paid', createdAt: { $gte: sixMonthsAgo } } },
             {
                 $group: {
-                    _id: '$plan.tier',
-                    count: { $sum: 1 },
-                    revenue: { $sum: '$finalPrice' }
+                    _id: { $month: '$createdAt' },
+                    revenue: { $sum: '$amount' },
+                    count: { $sum: 1 }
                 }
-            }
+            },
+            { $sort: { '_id': 1 } }
         ]);
 
         return NextResponse.json({
-            mrr: totalMRR,
-            churnRate: churnRate.toFixed(2),
-            tierStats,
-            activeCount: activeSubscriptions.length
+            summary: {
+                totalRevenue: totalRevenue / 100, // Assuming stored in paise/cents
+                platformEarnings: platformEarnings / 100,
+                totalCreators,
+                totalUsers,
+                totalProducts,
+                flaggedProducts,
+                totalPaidOut: (totalPayouts[0]?.total || 0)
+            },
+            chartData: monthlyStats.map(stat => ({
+                month: new Date(0, stat._id - 1).toLocaleString('default', { month: 'short' }),
+                revenue: stat.revenue / 100,
+                orders: stat.count
+            }))
         });
     } catch (error: any) {
-        console.error('Analytics API Error:', error);
-        return NextResponse.json({
-            error: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
-        }, { status: 500 });
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 });

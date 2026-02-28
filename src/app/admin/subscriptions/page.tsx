@@ -1,5 +1,4 @@
-﻿// @ts-nocheck
-import { getCurrentUser } from '@/lib/auth/server-auth';
+﻿import { getCurrentUser } from '@/lib/auth/server-auth';
 import { redirect } from 'next/navigation';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import SubscriptionsPageContent from '@/components/admin/subscription/LazySubscriptions';
@@ -13,10 +12,13 @@ export default async function AdminSubscriptionsPage() {
         redirect('/auth/login');
     }
 
+    const adminName = user.displayName || 'Admin';
+    const adminEmail = user.email || '';
+
     return (
         <AdminLayout
-            adminName={user.displayName || 'Admin'}
-            adminEmail={user.email || ''}
+            adminName={adminName}
+            adminEmail={adminEmail}
         >
             <SubscriptionsPageContent />
         </AdminLayout>

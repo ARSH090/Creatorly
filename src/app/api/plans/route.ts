@@ -1,24 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCachedPlans } from '@/lib/cache/plan-cache';
-import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { getAllPlans } from '@/lib/planCache';
 
 /**
  * GET /api/plans
- * Returns active plans — cached for 5 minutes via Next.js unstable_cache.
- * Cache is busted by admin calling revalidateTag('plans') after a Razorpay sync.
+ * Returns active plans from Redis cache (invalidated on admin changes)
  */
-async function handler(req: NextRequest) {
-    const plans = await getCachedPlans();
+export async function GET(req: NextRequest) {
+    try {
+        const plans = await getAllPlans();
 
-    return NextResponse.json(
-        { plans },
-        {
-            headers: {
-                // CDN cache for 4 minutes (slightly less than server TTL to avoid stale)
-                'Cache-Control': 'public, s-maxage=240, stale-while-revalidate=60',
+        return NextResponse.json(
+            { plans },
+            {
+                headers: {
+                    'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+                }
             }
-        }
-    );
+        );
+    } catch (error: any) {
+        console.error('API /api/plans failed:', error);
+        return NextResponse.json({ error: 'Failed to fetch plans' }, { status: 500 });
+    }
 }
-
-export const GET = withErrorHandler(handler);

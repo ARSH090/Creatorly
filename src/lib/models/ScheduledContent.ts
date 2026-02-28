@@ -69,5 +69,7 @@ const ScheduledContentSchema: Schema = new Schema({
 }, { timestamps: true });
 
 
-export default (mongoose.models.ScheduledContent as Model<IScheduledContent>) ||
+export const ScheduledContent = (mongoose.models.ScheduledContent as Model<IScheduledContent>) ||
     mongoose.model<IScheduledContent>('ScheduledContent', ScheduledContentSchema);
+
+export default ScheduledContent;

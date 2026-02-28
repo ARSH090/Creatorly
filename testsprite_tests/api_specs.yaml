@@ -1,0 +1,49 @@
+# Part 3: Backend API Test Specs
+
+# Product APIs
+- ID: API-PROD-001
+  Description: Creator can list their products
+  Priority: P0
+  Steps:
+    1. GET /api/products with valid JWT
+    2. Expect 200 OK
+    3. Verify response is array of creator's products
+
+- ID: API-PROD-002
+  Description: Resource isolation (Owner only)
+  Priority: P0
+  Steps:
+    1. PUT /api/products/:otherCreatorId with own JWT
+    2. Expect 403 Forbidden
+
+# Payment Webhooks
+- ID: API-PAY-001
+  Description: Razorpay webhook signature verification
+  Priority: P0
+  Steps:
+    1. POST /api/webhooks/razorpay with valid signature
+    2. Expect 200 OK
+    3. Verify Order marked as "paid" in DB
+
+- ID: API-PAY-002
+  Description: Webhook Idempotency
+  Priority: P1
+  Steps:
+    1. POST same webhook event twice
+    2. Second request should return 200 but not re-process
+
+# Download APIs
+- ID: API-DL-001
+  Description: Valid token returns file
+  Priority: P0
+  Steps:
+    1. GET /api/download/:validToken
+    2. Expect 200 OK
+    3. Verify file content matches
+
+- ID: API-DL-002
+  Description: Download link expiry (Token limit)
+  Priority: P1
+  Steps:
+    1. Use token 4 times
+    2. 4th request should return 403 Forbidden

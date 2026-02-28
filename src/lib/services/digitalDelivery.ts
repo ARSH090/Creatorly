@@ -1,8 +1,12 @@
 import { Order } from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
 import User from '@/lib/models/User';
-import { getPresignedDownloadUrl } from '@/lib/storage/s3';
+import { DownloadToken } from '@/lib/models/DownloadToken';
+import { LicenseKey } from '@/lib/models/LicenseKey';
 import { connectToDatabase } from '@/lib/db/mongodb';
+import { sendDownloadInstructionsEmail, sendPaymentConfirmationEmail } from './email';
+import { RealtimeService } from './realtime';
+import crypto from 'crypto';
 
 /**
  * Digital Delivery Service
@@ -14,42 +18,124 @@ export class DigitalDeliveryService {
      */
     static async fulfillOrder(orderId: string) {
         await connectToDatabase();
-        const order = await Order.findById(orderId).populate('items.productId');
-        if (!order || order.paymentStatus !== 'paid') return;
 
-        // 1. Process each item in the order
-        for (const item of order.items) {
-            const product = await Product.findById(item.productId);
-            if (!product) continue;
-
-            // Handle based on product type
-            if (product.productType === 'course') {
-                await this.grantCourseAccess(order.customerEmail, product);
-            } else {
-                await this.prepareDigitalDownloads(order, product);
-            }
-
-            // 2. Update stats for the product
-            await Product.findByIdAndUpdate(product._id, {
-                $inc: { totalSales: 1, totalRevenue: item.price }
-            });
+        const order = await Order.findById(orderId);
+        if (!order || order.paymentStatus !== 'paid') {
+            console.warn(`[Delivery] Order ${orderId} not found or not paid.`);
+            return;
         }
 
-        // 3. Send Delivery Email (Placeholder for actual email service)
-        console.log(`[Delivery] Sending assets to ${order.customerEmail} for order ${order.orderNumber}`);
+        // Avoid double fulfillment
+        if (order.deliveryStatus === 'delivered') {
+            console.log(`[Delivery] Order ${order.orderNumber} already delivered.`);
+            return;
+        }
+
+        console.log(`[Delivery] Fulfilling order ${order.orderNumber} for ${order.customerEmail}`);
+
+        try {
+            const deliveryPayload: any = {
+                files: [],
+                licenseKeys: [],
+                courses: []
+            };
+
+            for (const item of order.items) {
+                const product = await Product.findById(item.productId);
+                if (!product) continue;
+
+                // 1. Handle based on product type
+                switch (product.productType) {
+                    case 'course':
+                    case 'membership':
+                        await this.grantCourseAccess(order.customerEmail, product);
+                        deliveryPayload.courses.push({ name: product.title, id: product._id });
+                        break;
+
+                    case 'software':
+                        const key = await this.assignLicenseKey(order, product);
+                        if (key) deliveryPayload.licenseKeys.push({ name: product.title, key });
+                        break;
+
+                    default:
+                        // digital_download, ebook, template, etc.
+                        const tokens = await this.generateDownloadTokens(order, product);
+                        if (tokens.length > 0) {
+                            deliveryPayload.files.push({
+                                name: product.title,
+                                tokens: tokens.map(t => t.token)
+                            });
+                        }
+                        break;
+                }
+
+                // 2. Update product stats
+                await Product.findByIdAndUpdate(product._id, {
+                    $inc: { totalSales: 1, totalRevenue: item.price }
+                });
+            }
+
+            // 3. Mark Order as Delivered
+            order.deliveryStatus = 'delivered';
+            order.deliveredAt = new Date();
+            await order.save();
+
+            // 4. Send Emails
+            // Confirmation to buyer
+            await sendPaymentConfirmationEmail(order.customerEmail, order._id.toString(), order.total / 100, order.items);
+
+            // Asset delivery to buyer
+            if (deliveryPayload.licenseKeys.length > 0) {
+                const { sendLicenseKeyEmail } = await import('./email');
+                await sendLicenseKeyEmail(order.customerEmail, order._id.toString(), deliveryPayload.licenseKeys);
+            }
+
+            if (deliveryPayload.files.length > 0) {
+                await sendDownloadInstructionsEmail(order.customerEmail, order._id.toString(), order.items.map(i => ({ name: i.name, productId: i.productId.toString() })));
+            }
+
+            // Notification to Creator
+            const creator = await User.findById(order.creatorId);
+            if (creator) {
+                const { sendCreatorSaleNotificationEmail } = await import('./email');
+                // Calculate monthly sales (simplified)
+                const startOfMonth = new Date();
+                startOfMonth.setDate(1);
+                startOfMonth.setHours(0, 0, 0, 0);
+
+                const monthlyTotal = await Order.aggregate([
+                    { $match: { creatorId: creator._id, paymentStatus: 'paid', createdAt: { $gte: startOfMonth } } },
+                    { $group: { _id: null, total: { $sum: "$total" } } }
+                ]);
+
+                const productTitle = order.items.map(i => i.name).join(', ');
+                await sendCreatorSaleNotificationEmail(
+                    creator.email,
+                    productTitle,
+                    order.total / 100,
+                    order.customerEmail,
+                    (monthlyTotal[0]?.total || 0) / 100
+                );
+            }
+
+            // 5. Update Creator Dashboard in Real-time
+            await RealtimeService.notifyNewSale(order._id.toString());
+            console.log(`[Delivery] Successfully delivered assets and notified creator for ${order.orderNumber}`);
+
+        } catch (error) {
+            console.error(`[Delivery] Failed to fulfill order ${order.orderNumber}:`, error);
+            order.deliveryStatus = 'failed';
+            await order.save();
+            throw error;
+        }
     }
 
     /**
      * Grant access to a course
      */
     private static async grantCourseAccess(email: string, product: any) {
-        console.log(`[Delivery] Granting course access: ${product.title} to ${email}`);
-
         const buyer = await User.findOne({ email: email.toLowerCase() });
-        if (!buyer) {
-            console.log(`[Delivery] Buyer not found for ${email}`);
-            return;
-        }
+        if (!buyer) return;
 
         const { CourseProgress } = await import('@/lib/models/CourseProgress');
 
@@ -68,28 +154,57 @@ export class DigitalDeliveryService {
                     lastAccessedAt: new Date()
                 }
             },
-            { upsert: true, new: true }
+            { upsert: true }
         );
     }
 
     /**
-     * Prepare download links for ebooks/templates/etc.
+     * Generate secure, time-limited download tokens
      */
-    private static async prepareDigitalDownloads(order: any, product: any) {
-        if (!product.files || product.files.length === 0) return;
+    private static async generateDownloadTokens(order: any, product: any) {
+        if (!product.digitalFileUrl && (!product.files || product.files.length === 0)) return [];
 
-        const downloadLinks = await Promise.all(
-            product.files.map(async (file: any) => {
-                const url = await getPresignedDownloadUrl(file.key, 72 * 3600); // 72 hours
-                return { name: file.name, url };
-            })
+        const tokens = [];
+        const expiry = new Date();
+        expiry.setHours(expiry.getHours() + (product.downloadExpiryHours || 24));
+
+        // Create a token for each file or the main URL
+        const token = await DownloadToken.create({
+            token: require('crypto').randomUUID(),
+            orderId: order._id,
+            productId: product._id,
+            userId: order.userId,
+            downloadCount: 0,
+            maxDownloads: product.downloadLimit || 3,
+            expiresAt: expiry,
+            isActive: true
+        });
+
+        tokens.push(token);
+        return tokens;
+    }
+
+    /**
+     * Assign a license key from the pool
+     */
+    private static async assignLicenseKey(order: any, product: any) {
+        const keyDoc = await LicenseKey.findOneAndUpdate(
+            { productId: product._id, isUsed: false },
+            {
+                isUsed: true,
+                orderId: order._id,
+                buyerEmail: order.customerEmail,
+                assignedAt: new Date()
+            },
+            { new: true }
         );
 
-        // Store these links in the order metadata or a temporary delivery table
-        order.metadata = {
-            ...order.metadata,
-            downloadLinks
-        };
-        await order.save();
+        if (!keyDoc) {
+            console.error(`[Delivery] NO LICENSE KEYS LEFT for product ${product.title}`);
+            // Logic to alert creator could go here
+            return null;
+        }
+
+        return keyDoc.key;
     }
 }

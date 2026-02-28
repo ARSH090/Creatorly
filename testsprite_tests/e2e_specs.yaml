@@ -1,0 +1,39 @@
+# Part 10: End-to-End (E2E) Full Flow Test Specs
+
+# Happy Path
+- ID: E2E-HAP-001
+  Description: Complete Creator Journey (Register to Sale)
+  Priority: P0
+  Steps:
+    1. Creator registers and logs in
+    2. Creator uploads product 'Ebook' ($10)
+    3. Buyer visits creator's storefront
+    4. Buyer completes purchase via Razorpay (Mock)
+    5. Webhook processes payment
+    6. Buyer receives email with download link
+    7. Buyer downloads file
+    8. Verify Creator dashboard shows $10 revenue increase
+
+# Edge Cases
+- ID: E2E-EDG-001
+  Description: Webhook delay (5 mins)
+  Priority: P1
+  Steps:
+    1. Simulate buyer payment
+    2. Wait 5 mins
+    3. Send webhook
+    4. Verify order delivered after delay
+
+- ID: E2E-EDG-002
+  Description: Expired link access
+  Priority: P1
+  Steps:
+    1. Buyer attempts to use expired download link
+    2. Expect 410 Gone with clear error message
+
+- ID: E2E-EDG-003
+  Description: Concurrent purchases
+  Priority: P1
+  Steps:
+    1. Two buyers purchase simultaneously
+    2. Verify two unique download tokens generated

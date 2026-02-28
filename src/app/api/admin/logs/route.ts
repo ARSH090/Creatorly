@@ -1,47 +1,42 @@
 ﻿import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
-import { AdminLog } from '@/lib/models/AdminLog';
+import { connectToDatabase } from '@/lib/db/mongodb';
+import AuditLog from '@/lib/models/AuditLog';
 import { withAdminAuth } from '@/lib/auth/withAuth';
-import { withErrorHandler } from '@/lib/utils/errorHandler';
 
-async function getHandler(req: NextRequest) {
-    await dbConnect();
+// GET /api/admin/logs
+export const GET = withAdminAuth(async (req) => {
+    try {
+        const { searchParams } = new URL(req.url);
+        const limit = parseInt(searchParams.get('limit') || '50');
+        const page = parseInt(searchParams.get('page') || '1');
+        const entityType = searchParams.get('entityType');
+        const action = searchParams.get('action');
 
-    const { searchParams } = new URL(req.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '20');
-    const search = searchParams.get('search') || '';
+        await connectToDatabase();
 
-    const query: any = {};
-    if (search) {
-        query.$or = [
-            { adminEmail: { $regex: search, $options: 'i' } },
-            { action: { $regex: search, $options: 'i' } },
-            { targetType: { $regex: search, $options: 'i' } }
-        ];
-    }
+        const query: any = {};
+        if (entityType) query.entityType = entityType;
+        if (action) query.action = action;
 
-    const skip = (page - 1) * limit;
-
-    const [logs, total] = await Promise.all([
-        AdminLog.find(query)
-            .sort({ timestamp: -1 })
-            .skip(skip)
+        const logs = await AuditLog.find(query)
+            .sort({ createdAt: -1 })
+            .skip((page - 1) * limit)
             .limit(limit)
-            .lean(),
-        AdminLog.countDocuments(query)
-    ]);
+            .populate('adminId', 'displayName email avatar')
+            .lean();
 
-    return NextResponse.json({
-        logs,
-        pagination: {
-            total,
-            page,
-            limit,
-            pages: Math.ceil(total / limit)
-        }
-    });
-}
+        const total = await AuditLog.countDocuments(query);
 
-export const GET = withAdminAuth(withErrorHandler(getHandler));
-
+        return NextResponse.json({
+            logs,
+            pagination: {
+                total,
+                page,
+                limit,
+                pages: Math.ceil(total / limit)
+            }
+        });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+});

@@ -1,0 +1,50 @@
+name: TestSprite QA Audit
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      mongodb:
+        image: mongo:6.0
+        ports:
+          - 27017:27017
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Setup Test Env
+      run: cp .env.test .env.local
+
+    - name: Build and Start Server
+      run: |
+        npm run build
+        npm run start &
+        npx wait-on http://localhost:3000
+
+    - name: Run TestSprite Suite
+      run: npx testsprite run --specs ./testsprite_tests/*.yaml
+      env:
+        TESTSPRITE_API_KEY: ${{ secrets.TESTSPRITE_API_KEY }}
+
+    - name: Upload Test Results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: testsprite-report
+        path: testsprite_results/

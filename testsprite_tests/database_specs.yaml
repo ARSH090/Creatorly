@@ -1,0 +1,42 @@
+# Part 4: Database Test Specs
+
+# Schema Validation
+- ID: DB-SCH-001
+  Description: User document required fields
+  Priority: P0
+  Steps:
+    1. Attempt to create User without email
+    2. Expect validation error
+
+- ID: DB-SCH-002
+  Description: Order status transitions
+  Priority: P1
+  Steps:
+    1. Create Order with status 'pending'
+    2. Update to 'paid'
+    3. Verify transition successful
+
+# Data Integrity
+- ID: DB-INT-001
+  Description: Cascade delete: Creator -> Products
+  Priority: P1
+  Steps:
+    1. Create Creator and 2 Products
+    2. Delete Creator
+    3. Verify Products are also deleted
+
+- ID: DB-INT-002
+  Description: Unique index on email and username
+  Priority: P0
+  Steps:
+    1. Create User with email 'test@test.com'
+    2. Attempt to create another with same email
+    3. Expect MongoError: E11000 duplicate key
+
+# Performance
+- ID: DB-PERF-001
+  Description: Index usage for user lookup
+  Priority: P2
+  Steps:
+    1. EXPLAIN GET /api/users Search by email
+    2. Verify winningPlan uses index

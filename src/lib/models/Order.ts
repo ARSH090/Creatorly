@@ -28,8 +28,9 @@ export interface IOrder extends Document {
     tipAmount?: number;
     total: number;
     currency: string;
-    paymentGateway?: 'razorpay' | 'stripe' | 'paypal';
+    paymentGateway?: 'razorpay' | 'stripe' | 'paypal' | 'upi' | 'bank' | 'other';
     paymentMethod?: string;
+    isP2P?: boolean;
     razorpayOrderId: string;
     razorpayPaymentId?: string;
     razorpaySignature?: string;
@@ -37,10 +38,16 @@ export interface IOrder extends Document {
     paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded';
     paidAt?: Date;
     commissionAmount?: number;
+    platformFee?: number;
+    commission?: number;
     affiliateId?: string;
     couponId?: string;
     subscriptionId?: mongoose.Types.ObjectId | string;
     parentOrderId?: mongoose.Types.ObjectId | string;
+
+    // Phase 8: Delivery Tracking
+    deliveryStatus?: 'pending' | 'delivered' | 'failed';
+    deliveredAt?: Date;
 
     accessToken?: string;
     accessTokenExpiry?: Date;
@@ -107,8 +114,9 @@ const OrderSchema: Schema = new Schema({
     currency: { type: String, default: 'INR' },
 
     // Payment Info
-    paymentGateway: { type: String, enum: ['razorpay', 'stripe', 'paypal'], default: 'razorpay' },
+    paymentGateway: { type: String, enum: ['razorpay', 'stripe', 'paypal', 'upi', 'bank', 'other'], default: 'razorpay' },
     paymentMethod: { type: String }, // e.g. 'upi', 'card', 'netbanking'
+    isP2P: { type: Boolean, default: false },
     razorpayOrderId: { type: String, unique: true, sparse: true }, // Not required initially if another gateway
     razorpayPaymentId: { type: String },
     razorpaySignature: { type: String },
@@ -161,6 +169,16 @@ const OrderSchema: Schema = new Schema({
     metadata: { type: Schema.Types.Mixed, default: {} },
     subscriptionId: { type: Schema.Types.ObjectId, ref: 'Subscription' },
     parentOrderId: { type: Schema.Types.ObjectId, ref: 'Order', index: true },
+
+    // Phase 8: Delivery Tracking
+    deliveryStatus: {
+        type: String,
+        enum: ['pending', 'delivered', 'failed'],
+        default: 'pending',
+        index: true
+    },
+    deliveredAt: { type: Date },
+
     accessToken: { type: String, sparse: true, unique: true },
     accessTokenExpiry: { type: Date },
     deletedAt: { type: Date, index: true }

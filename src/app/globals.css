@@ -97,3 +97,72 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+/* ========================================
+   RESPONSIVE DESIGN SYSTEM
+   ======================================== */
+
+/* Fluid Typography */
+.fluid-hero { font-size: clamp(2rem, 6vw, 4.5rem); }
+.fluid-h1   { font-size: clamp(1.75rem, 5vw, 3.5rem); }
+.fluid-h2   { font-size: clamp(1.4rem, 4vw, 2.5rem); }
+.fluid-h3   { font-size: clamp(1.15rem, 3vw, 1.75rem); }
+.fluid-body { font-size: clamp(0.875rem, 2vw, 1rem); }
+
+/* Touch Targets — minimum 44x44px */
+@media (max-width: 768px) {
+  button:not(.no-min-touch), [role="button"],
+  input[type="submit"], input[type="button"] {
+    min-height: 44px;
+  }
+  .mobile-full-width { width: 100% !important; }
+}
+
+/* Mobile Tables — card layout */
+@media (max-width: 768px) {
+  .responsive-table { border: 0; }
+  .responsive-table thead { display: none; }
+  .responsive-table tr {
+    display: block;
+    margin-bottom: 0.75rem;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    padding: 1rem;
+    background: rgba(255,255,255,0.02);
+  }
+  .responsive-table td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border: none;
+    font-size: 0.875rem;
+  }
+  .responsive-table td::before {
+    content: attr(data-label);
+    font-weight: 700;
+    color: #71717a;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+/* Mobile Modals — full screen */
+@media (max-width: 640px) {
+  .mobile-modal {
+    width: 100vw !important;
+    max-width: 100vw !important;
+    height: 100vh !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+}
+
+/* Safe area for notched phones */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Prevent horizontal overflow */
+html, body { overflow-x: hidden; max-width: 100vw; }

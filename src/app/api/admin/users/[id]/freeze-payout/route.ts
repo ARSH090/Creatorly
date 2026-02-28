@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
-import { AdminLog } from '@/lib/models/AdminLog';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { auditLog } from '@/lib/utils/auditLogger';
 
 async function postHandler(
     req: NextRequest,
@@ -20,12 +20,12 @@ async function postHandler(
     targetUser.payoutHoldReason = 'Admin frozen';
     await targetUser.save();
 
-    await AdminLog.create({
-        adminEmail: user.email,
-        action: 'freeze_payout',
-        targetType: 'user',
-        targetId: targetUser._id,
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+    await auditLog({
+        userId: user.id,
+        action: 'freeze_user_payout',
+        resourceType: 'user',
+        resourceId: targetUser._id,
+        req
     });
 
     return NextResponse.json({ message: 'Payouts frozen' });

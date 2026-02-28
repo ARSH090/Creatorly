@@ -67,6 +67,9 @@ export interface IUser extends Document {
     twoFactorSecret?: string;
     twoFactorBackupCodes?: string[];
     lastLogin?: Date;
+    storeStatus: 'active' | 'suspended' | 'pending';
+    storeSuspensionReason?: string;
+    adminNotes?: string;
     lastLoginIp?: string;
     loginHistory?: Array<{
         ip: string;
@@ -135,6 +138,20 @@ export interface IUser extends Document {
         customDomain: boolean;
         canRemoveBranding: boolean;
     };
+
+    // NEW: Payment Settings (Multi-provider)
+    paymentConfigs?: {
+        upi?: { upiId: string; active: boolean };
+        razorpay?: { keyId: string; keySecret?: string; keySecretIV?: string; keySecretTag?: string; active: boolean };
+        stripe?: { accountId: string; active: boolean };
+        paypal?: { email: string; active: boolean };
+        bank?: {
+            accountNumber?: string; accountNumberIV?: string; accountNumberTag?: string;
+            ifsc: string; holderName: string; bankName: string; active: boolean
+        };
+    };
+    primaryPaymentMethod?: 'upi' | 'razorpay' | 'stripe' | 'paypal' | 'bank';
+
     // Timestamps
     createdAt: Date;
     updatedAt: Date;
@@ -404,7 +421,52 @@ const UserSchema: Schema = new Schema({
         displayName: String,
         status: { type: String, enum: ['connected', 'disconnected', 'error'], default: 'disconnected' },
         connectedAt: Date
-    }
+    },
+
+    // NEW: Payment Settings (Multi-provider)
+    paymentConfigs: {
+        upi: { upiId: String, active: { type: Boolean, default: false } },
+        razorpay: {
+            keyId: String,
+            keySecret: String,
+            keySecretIV: String,
+            keySecretTag: String,
+            active: { type: Boolean, default: false }
+        },
+        stripe: { accountId: String, active: { type: Boolean, default: false } },
+        paypal: { email: String, active: { type: Boolean, default: false } },
+        bank: {
+            accountNumber: String,
+            accountNumberIV: String,
+            accountNumberTag: String,
+            ifsc: String,
+            holderName: String,
+            bankName: String,
+            active: { type: Boolean, default: false }
+        }
+    },
+    primaryPaymentMethod: {
+        type: String,
+        enum: ['upi', 'razorpay', 'stripe', 'paypal', 'bank'],
+        default: 'upi'
+    },
+
+    // Price locked at subscription time (Grandfathering support)
+    lockedPlanPrice: {
+        type: Number,
+        default: null,
+    },
+    lockedPlanPriceAt: {
+        type: Date,
+        default: null,
+    },
+    storeStatus: {
+        type: String,
+        enum: ['active', 'suspended', 'pending'],
+        default: 'active'
+    },
+    storeSuspensionReason: { type: String, default: '' },
+    adminNotes: { type: String, default: '' },
 }, { timestamps: true });
 
 

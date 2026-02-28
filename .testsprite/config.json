@@ -1,0 +1,27 @@
+{
+    "name": "Creatorly-Production-Suite",
+    "projectRoot": ".",
+    "testDir": "./testsprite_tests",
+    "port": 3000,
+    "timeout": 30000,
+    "retries": 1,
+    "reporters": [
+        "default",
+        "html"
+    ],
+    "specs": [
+        "auth_specs.yaml",
+        "frontend_specs.yaml",
+        "api_specs.yaml",
+        "database_specs.yaml",
+        "storage_specs.yaml",
+        "security_specs.yaml",
+        "email_specs.yaml",
+        "performance_specs.yaml",
+        "device_specs.yaml",
+        "e2e_specs.yaml"
+    ],
+    "env": {
+        "PATH": ".env.test"
+    }
+}

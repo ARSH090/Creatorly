@@ -1,81 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/db/mongodb';
+import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { DownloadToken } from '@/lib/models/DownloadToken';
-import { Product } from '@/lib/models/Product';
-import { validateDownloadToken, incrementDownloadCount } from '@/lib/services/downloadToken';
-import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import Product from '@/lib/models/Product';
+import { getPresignedDownloadUrl } from '@/lib/storage/s3';
 
-const s3Client = new S3Client({
-    region: process.env.AWS_REGION || 'us-east-1',
-    credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!
-    }
-});
-
-/**
- * GET /api/download/:token
- * Secure download endpoint with token validation
- * 1. Validates token and checks expiry/download limits
- * 2. Increments download count
- * 3. Generates S3 signed URL (1-hour expiry)
- * 4. Redirects to S3 URL
- */
-export async function GET(req: NextRequest, context: any) {
+export async function GET(
+    req: NextRequest,
+    { params }: { params: { token: string } }
+) {
     try {
-        await connectToDatabase();
+        await dbConnect();
+        const { token } = params;
 
-        const params = await context.params;
-        const tokenString = params.token;
+        // 1. Find and validate token
+        const tokenDoc = await DownloadToken.findOne({ token, isActive: true });
 
-        // 1. Validate token
-        const validation = await validateDownloadToken(tokenString);
-
-        if (!validation.valid) {
-            return NextResponse.json({ error: validation.error }, { status: 403 });
+        if (!tokenDoc) {
+            return NextResponse.json({ error: 'Invalid or expired download link' }, { status: 404 });
         }
 
-        const token = validation.token!;
+        // 2. Check Expiry
+        if (new Date() > tokenDoc.expiresAt) {
+            tokenDoc.isActive = false;
+            await tokenDoc.save();
+            return NextResponse.json({ error: 'Download link has expired' }, { status: 410 });
+        }
 
-        // 2. Get product and file details
-        const product = await Product.findById(token.productId);
+        // 3. Check Download Count
+        if (tokenDoc.downloadCount >= tokenDoc.maxDownloads) {
+            tokenDoc.isActive = false;
+            await tokenDoc.save();
+            return NextResponse.json({ error: 'Download limit reached' }, { status: 403 });
+        }
 
+        // 4. Get Product & File
+        const product = await Product.findById(tokenDoc.productId);
         if (!product) {
             return NextResponse.json({ error: 'Product not found' }, { status: 404 });
         }
 
-        // Get the file URL (assume first file if multiple)
-        const fileUrl = product.files?.[0]?.url || product.digitalFileUrl;
+        // 5. Generate S3 signed URL (valid for 15 minutes for the actual transfer)
+        // Note: Assumes product.digitalFileUrl or product.files[0].key
+        const fileKey = product.previewFileKey || product.thumbnailKey || (product.files && product.files[0]?.key);
 
-        if (!fileUrl) {
-            return NextResponse.json({ error: 'No file available for download' }, { status: 404 });
+        if (!fileKey) {
+            return NextResponse.json({ error: 'No file associated with this product' }, { status: 404 });
         }
 
-        // 3. Increment download count
-        await incrementDownloadCount(tokenString);
+        const signedUrl = await getPresignedDownloadUrl(fileKey, 900); // 15 mins
 
-        // 4. Generate S3 signed URL (if S3 file)
-        if (fileUrl.includes('s3.amazonaws.com') || fileUrl.includes('.s3.')) {
-            // Extract S3 key from URL
-            const urlParts = new URL(fileUrl);
-            const fileKey = urlParts.pathname.substring(1); // Remove leading slash
+        // 6. Update Stats
+        tokenDoc.downloadCount += 1;
+        tokenDoc.lastDownloadedAt = new Date();
+        tokenDoc.lastUsedIp = req.headers.get('x-forwarded-for') || 'unknown';
 
-            const command = new GetObjectCommand({
-                Bucket: process.env.AWS_S3_BUCKET!,
-                Key: fileKey
-            });
-
-            const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 }); // 1 hour
-
-            // Redirect to signed URL
-            return NextResponse.redirect(signedUrl);
+        if (tokenDoc.downloadCount >= tokenDoc.maxDownloads) {
+            tokenDoc.isActive = false;
         }
+        await tokenDoc.save();
 
-        // 5. For non-S3 files, redirect directly
-        return NextResponse.redirect(fileUrl);
+        // 7. Redirect to S3
+        return NextResponse.redirect(signedUrl);
+
     } catch (error: any) {
-        console.error('Download error:', error);
-        return NextResponse.json({ error: 'Download failed', details: error.message }, { status: 500 });
+        console.error('[DOWNLOAD API ERROR]:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }

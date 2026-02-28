@@ -1,0 +1,43 @@
+# Part 2: Frontend UI Test Specs
+
+# Landing Page
+- ID: UI-LAND-001
+  Description: Landing page loads under 3s and renders CTAs
+  Priority: P0
+  Steps:
+    1. Visit /
+    2. Measure load time
+    3. Verify "Get Started" and "Sign In" are visible and clickable
+
+- ID: UI-LAND-002
+  Description: Mobile responsiveness check
+  Priority: P1
+  Steps:
+    1. Visit / at 375px width
+    2. Verify menu collapses to hamburger
+    3. Verify images scale correctly
+
+# Creator Dashboard
+- ID: UI-DASH-001
+  Description: Dashboard access restricted
+  Priority: P0
+  Steps:
+    1. Visit /dashboard without login
+    2. Expect redirect to /login
+
+- ID: UI-DASH-002
+  Description: Real-time sale notification
+  Priority: P1
+  Steps:
+    1. Login as Creator
+    2. Simulate a purchase event via socket
+    3. Verify notification toast appears
+
+# Product Form
+- ID: UI-PROD-001
+  Description: Product creation with file upload
+  Priority: P0
+  Steps:
+    1. Navigate to /dashboard/products/new
+    2. Fill form and upload PDF
+    3. Submit and verify success message

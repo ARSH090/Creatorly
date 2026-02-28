@@ -334,7 +334,7 @@ Details: ${JSON.stringify(details)}
   console.warn(alertMessage);
 
   sendEmail({
-    to: process.env.SECURITY_ALERT_EMAIL || 'admin-security@creatorly.com',
+    to: process.env.SECURITY_ALERT_EMAIL || 'admin-security@creatorly.in',
     subject: `🚨 Admin Security Alert: ${eventType}`,
     html: `
       <div style="font-family: sans-serif; padding: 20px; border: 2px solid #eb5757; border-radius: 8px;">

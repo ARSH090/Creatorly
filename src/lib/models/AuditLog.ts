@@ -3,7 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export interface IAuditLog extends Document {
     adminId: mongoose.Types.ObjectId;
     action: string;
-    entityType: 'user' | 'product' | 'order' | 'coupon' | 'domain' | 'system';
+    entityType: 'user' | 'product' | 'order' | 'coupon' | 'domain' | 'system' | 'announcement' | 'ticket' | 'message' | 'store' | 'settlement' | 'withdrawal' | 'setting';
     entityId?: mongoose.Types.ObjectId | string;
     details?: any;
     ipAddress?: string;
@@ -25,7 +25,7 @@ const AuditLogSchema: Schema = new Schema({
     },
     entityType: {
         type: String,
-        enum: ['user', 'product', 'order', 'coupon', 'domain', 'system'],
+        enum: ['user', 'product', 'order', 'coupon', 'domain', 'system', 'announcement', 'ticket', 'message', 'store', 'settlement', 'withdrawal', 'setting', 'lead', 'finance'],
         required: true,
         index: true
     },

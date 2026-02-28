@@ -295,6 +295,115 @@ export async function sendDownloadInstructionsEmail(
   });
 }
 
+export async function sendLicenseKeyEmail(
+  email: string,
+  orderId: string,
+  items: Array<{ name: string; key: string }>
+) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Inter', sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
+          .header { font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 8px; text-align: center; }
+          .key-card { background: #111; border: 1px solid #222; border-radius: 16px; padding: 24px; margin-bottom: 24px; }
+          .key-label { font-size: 10px; font-weight: 900; color: #444; text-transform: uppercase; margin-bottom: 8px; }
+          .key-value { font-family: monospace; font-size: 18px; color: #6366f1; background: #000; padding: 12px; border-radius: 8px; border: 1px dashed #333; word-break: break-all; }
+          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.2em; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">YOUR LICENSE KEYS</div>
+          <p style="text-align: center; color: #888; margin-bottom: 30px;">Keep these keys safe. You'll need them to activate your software.</p>
+          
+          ${items.map(item => `
+            <div class="key-card">
+              <div class="key-label">${item.name}</div>
+              <div class="key-value">${item.key}</div>
+            </div>
+          `).join('')}
+
+          <div class="footer">
+            &copy; 2026 CREATORLY • SECURE KEY DELIVERY
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `Your License Keys: Order #${orderId.slice(-6)}`,
+    html,
+  });
+}
+
+export async function sendCreatorSaleNotificationEmail(
+  email: string,
+  productName: string,
+  amount: number,
+  buyerEmail: string,
+  monthlySales: number
+) {
+  const html = `
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Inter', sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
+          .header { font-size: 32px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 16px; text-align: center; color: #10b981; }
+          .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 30px 0; }
+          .stat-card { background: #111; padding: 20px; border-radius: 16px; border: 1px solid #222; }
+          .stat-label { font-size: 10px; font-weight: 900; color: #444; text-transform: uppercase; }
+          .stat-value { font-size: 20px; font-weight: 700; color: #fff; margin-top: 4px; }
+          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.2em; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">🎉 NEW SALE!</div>
+          <p style="text-align: center; color: #888;">You just made a sale on Creatorly.</p>
+          
+          <div class="stat-grid">
+            <div class="stat-card">
+              <div class="stat-label">Product</div>
+              <div class="stat-value">${productName}</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Amount</div>
+              <div class="stat-value">₹${amount.toLocaleString()}</div>
+            </div>
+          </div>
+
+          <div style="background: #111; padding: 20px; border-radius: 16px; border: 1px solid #222; margin-bottom: 24px;">
+            <div class="stat-label">Buyer</div>
+            <div class="stat-value" style="font-size: 16px;">${buyerEmail}</div>
+          </div>
+
+          <div style="text-align: center; padding: 20px; background: rgba(16, 185, 129, 0.1); border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.2);">
+            <div class="stat-label" style="color: #10b981;">Total Sales This Month</div>
+            <div class="stat-value" style="font-size: 24px; color: #10b981;">₹${monthlySales.toLocaleString()}</div>
+          </div>
+
+          <div class="footer">
+            &copy; 2026 CREATORLY • GROWTH MODE ACTIVATED
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+
+  return sendEmail({
+    to: email,
+    subject: `🎉 Sale Notification: ${productName}`,
+    html,
+  });
+}
+
 export async function sendNewsletterWelcomeEmail(email: string, creatorName: string) {
   const html = `
     <!DOCTYPE html>

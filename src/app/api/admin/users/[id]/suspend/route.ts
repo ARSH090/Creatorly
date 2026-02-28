@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
-import { AdminLog } from '@/lib/models/AdminLog';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { auditLog } from '@/lib/utils/auditLogger';
 import { clerkClient } from '@clerk/nextjs/server';
 
 /**
@@ -43,13 +43,13 @@ async function postHandler(
         console.warn(`[Admin] User ${targetUser._id} has no clerkId — cannot revoke Clerk session`);
     }
 
-    await AdminLog.create({
-        adminEmail: user.email,
+    await auditLog({
+        userId: user.id,
         action: 'suspend_user',
-        targetType: 'user',
-        targetId: targetUser._id,
-        details: { clerkBanned: !!targetUser.clerkId },
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+        resourceType: 'user',
+        resourceId: targetUser._id,
+        metadata: { clerkBanned: !!targetUser.clerkId },
+        req
     });
 
     return NextResponse.json({ message: 'User suspended and session revoked' });

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { Product } from '@/lib/models/Product';
-import { AdminLog } from '@/lib/models/AdminLog';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { auditLog } from '@/lib/utils/auditLogger';
 
 async function postHandler(
     req: NextRequest,
@@ -19,13 +19,13 @@ async function postHandler(
     product.isFeatured = !product.isFeatured;
     await product.save();
 
-    await AdminLog.create({
-        adminEmail: user.email,
+    await auditLog({
+        userId: user.id || user._id,
         action: 'toggle_feature_product',
-        targetType: 'product',
-        targetId: product._id,
-        changes: { isFeatured: product.isFeatured },
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+        resourceType: 'product',
+        resourceId: product._id,
+        metadata: { isFeatured: product.isFeatured },
+        req
     });
 
     return NextResponse.json({

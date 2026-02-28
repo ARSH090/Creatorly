@@ -1,0 +1,33 @@
+# Part 7: Email Delivery Test Specs
+
+# Triggers
+- ID: EML-TRIG-001
+  Description: Welcome email after registration
+  Priority: P1
+  Steps:
+    1. Register new user
+    2. Verify email sent to Resend/Mock
+    3. Expect welcome content
+
+- ID: EML-TRIG-002
+  Description: Order confirmation to buyer
+  Priority: P0
+  Steps:
+    1. Simulate successful payment webhook
+    2. Verify buyer receives email with download link
+
+- ID: EML-TRIG-003
+  Description: Sale notification to creator
+  Priority: P1
+  Steps:
+    1. Simulate successful payment webhook
+    2. Verify creator receives sale notification
+
+# Content
+- ID: EML-CON-001
+  Description: Download link validity
+  Priority: P0
+  Steps:
+    1. Extract link from confirmation email
+    2. Visit link
+    3. Expect successful file download

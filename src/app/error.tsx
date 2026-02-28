@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect } from 'react';
-import { AlertCircle, RefreshCcw, Home } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, RefreshCcw, Home } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Error({
@@ -12,53 +13,48 @@ export default function Error({
     reset: () => void;
 }) {
     useEffect(() => {
-        // Log the error to an error reporting service
-        console.error('Route Error:', error);
+        console.error(error);
     }, [error]);
 
     return (
-        <div className="min-h-[70vh] flex items-center justify-center p-6 antialiased">
-            <div className="max-w-md w-full text-center space-y-8">
-                <div className="inline-flex items-center justify-center w-20 h-20 rounded-[2rem] bg-indigo-50 text-indigo-600">
-                    <AlertCircle className="w-10 h-10" />
+        <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center">
+            <div className="relative group mb-12">
+                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-full blur opacity-25 group-hover:opacity-100 transition duration-1000 group-hover:duration-200"></div>
+                <div className="relative bg-zinc-900 ring-1 ring-white/10 rounded-full p-8">
+                    <AlertTriangle className="w-16 h-16 text-indigo-500" strokeWidth={1} />
                 </div>
-
-                <div className="space-y-4">
-                    <h1 className="text-2xl font-black text-gray-900 tracking-tight uppercase italic underline decoration-indigo-500 decoration-4 underline-offset-8">
-                        Component Error
-                    </h1>
-                    <p className="text-gray-500 font-medium leading-relaxed px-4">
-                        A small part of the page failed to load. You can try resetting this section or go back home.
-                    </p>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-4 px-4">
-                    <button
-                        onClick={() => reset()}
-                        className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 active:scale-95"
-                    >
-                        <RefreshCcw className="w-4 h-4" />
-                        RETRY
-                    </button>
-
-                    <Link
-                        href="/"
-                        className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-4 bg-white text-gray-900 border-2 border-gray-100 font-bold rounded-2xl hover:bg-gray-50 transition-all active:scale-95"
-                    >
-                        <Home className="w-4 h-4" />
-                        HOME
-                    </Link>
-                </div>
-
-                {process.env.NODE_ENV === 'development' && (
-                    <div className="mt-8 text-left p-4 bg-zinc-50 rounded-2xl border border-zinc-100 overflow-auto max-h-48 shadow-inner">
-                        <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest mb-2 px-1">Developer Insights</p>
-                        <pre className="text-[10px] text-zinc-600 font-mono leading-tight">
-                            {error.message}
-                        </pre>
-                    </div>
-                )}
             </div>
+
+            <h1 className="text-5xl font-black text-white italic uppercase tracking-tighter mb-4">
+                Archive Signal Lost
+            </h1>
+            <p className="max-w-md text-zinc-500 font-bold uppercase text-[10px] tracking-[0.3em] leading-relaxed mb-12">
+                The relay encountered an atmospheric anomaly. Deployment parameters have been logged for forensic analysis.
+            </p>
+
+            <div className="flex flex-col sm:flex-row gap-4">
+                <Button
+                    onClick={() => reset()}
+                    className="bg-white text-black h-14 px-8 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:scale-105"
+                >
+                    <RefreshCcw size={14} className="mr-2" />
+                    Reboot Relay
+                </Button>
+                <Button
+                    variant="outline"
+                    asChild
+                    className="bg-zinc-900 border-white/10 text-white h-14 px-8 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all hover:bg-white/5"
+                >
+                    <Link href="/admin">
+                        <Home size={14} className="mr-2" />
+                        Return to HQ
+                    </Link>
+                </Button>
+            </div>
+
+            <p className="mt-12 text-[9px] font-mono text-zinc-700 uppercase tracking-widest">
+                Forensic Hash: {error.digest || 'Anomalous Event'}
+            </p>
         </div>
     );
 }

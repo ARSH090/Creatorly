@@ -1,230 +1,151 @@
-import mongoose, { Schema, Document, Model } from 'mongoose';
-import { PlanTier, BillingPeriod } from './plan.types';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IPlan extends Document {
+    id: string;
     name: string;
-    description?: string;
-    tier: PlanTier;
-    billingPeriod: BillingPeriod[];
-
-    // Pricing
-    monthlyPrice: number;
-    yearlyPrice: number;
-
-    // Limits
-    maxUsers: number;
-    maxStorageMb: number;
-    maxAutoDms: number;
-    maxApiCalls: number;
-    rateLimitPerMin: number;
-
-    // Feature Flags
-    hasAnalytics: boolean;
-    hasPrioritySupport: boolean;
-    hasCustomDomain: boolean;
-    hasTeamCollaboration: boolean;
-    hasWebhooks: boolean;
-
-    trialLimits?: {
-        maxProducts: number;
-        transactionFeePercent: number;
-        hasAutoDM: boolean;
-    };
-    displayFeatures?: string[];
-
-    features: Array<{
-        name: string;
-        included: boolean;
-        value?: string;
-    }>;
-
-    // Metadata
+    description: string;
+    badge: string;
     isActive: boolean;
-    isVisible: boolean;
-    sortOrder: number;
-    razorpayPlanId?: string; // Current Primary
-    razorpayMonthlyPlanId?: string;
-    razorpayYearlyPlanId?: string;
-    razorpayPlanHistory: Array<{
-        razorpayPlanId: string;
-        cycle: 'monthly' | 'yearly';
-        price: number; // in paise
-        createdAt: Date;
-        changedBy?: string; // admin email
-    }>;
+    isHighlighted: boolean;
+    displayOrder: number;
+    price: number; // In paise
+    previousPrice: number | null;
+    priceChangedAt: Date | null;
+    currency: string;
+    razorpayPlanId: string | null;
+    limits: {
+        products: number;
+        stores: number;
+        emailSubscribers: number;
+        emailCampaigns: number;
+        autoDMAutomations: number;
+        scheduledPosts: number;
+        aiGenerations: number;
+        analyticsRetentionDays: number;
+        transactionFeePercent: number;
+        customDomain: boolean;
+        affiliateSystem: boolean;
+        advancedAnalytics: boolean;
+        autoDMHub: boolean;
+        schedulify: boolean;
+        emailMarketing: boolean;
+        aiTools: boolean;
+        prioritySupport: boolean;
+        whiteLabel: boolean;
+    };
+    features: string[];
     createdAt: Date;
-
     updatedAt: Date;
 }
 
-
-const PlanSchema: Schema = new Schema({
-    name: { type: String, required: true, unique: true, trim: true },
-    description: { type: String },
-    tier: {
+const PlanSchema = new mongoose.Schema({
+    // ── IDENTITY ──────────────────────────────────
+    id: {
         type: String,
-        enum: Object.values(PlanTier),
         required: true,
-        index: true
+        unique: true,
+        lowercase: true,
+        index: true,
+        // 'free' | 'pro' | 'elite' | any custom id
     },
-    billingPeriod: [{
+    name: {
         type: String,
-        enum: Object.values(BillingPeriod),
-        required: true
-    }],
-
-    monthlyPrice: {
-        type: Number,
         required: true,
-        min: 0
     },
-    yearlyPrice: {
-        type: Number,
-        required: true,
-        min: 0
+    description: {
+        type: String,
+        default: '',
     },
-
-    // Strict Limits (Free tier cannot be modified to prevent abuse)
-    maxUsers: {
-        type: Number,
-        required: true,
-        validate: {
-            validator: function (this: any, val: number): boolean {
-                return this.tier === PlanTier.FREE ? val <= 1 : val >= 1;
-            },
-            message: 'Free tier supports max 1 user.'
-        }
+    badge: {
+        type: String,
+        default: '',
+        // e.g. "Most Popular" | "Best Value" | ""
     },
-    maxStorageMb: {
-        type: Number,
-        required: true,
-        validate: {
-            validator: function (this: any, val: number): boolean {
-                return this.tier === PlanTier.FREE ? val <= 100 : val >= 1024;
-            },
-            message: 'Free tier supports max 100MB storage.'
-        }
+    isActive: {
+        type: Boolean,
+        default: true,
+        index: true,
     },
-    maxAutoDms: {
-        type: Number,
-        required: true,
-        validate: {
-            validator: function (this: any, val: number): boolean {
-                return this.tier === PlanTier.FREE ? val <= 100 : val >= 500;
-            },
-            message: 'Free tier supports max 100 Auto DMs.'
-        }
-    },
-    maxApiCalls: {
-        type: Number,
-        required: true,
-        validate: {
-            validator: function (this: any, val: number): boolean {
-                return this.tier === PlanTier.FREE ? val <= 1000 : val >= 10000;
-            },
-            message: 'Free tier supports max 1000 API calls.'
-        }
-    },
-    rateLimitPerMin: { type: Number, required: true, default: 10 },
-
-    // Feature Flags
-    hasAnalytics: {
+    isHighlighted: {
         type: Boolean,
         default: false,
-        validate: {
-            validator: function (this: any, val: boolean): boolean {
-                return this.tier === PlanTier.FREE ? val === false : true;
-            },
-            message: 'Free tier cannot have analytics.'
-        }
+        // true = indigo border on pricing card
     },
-    hasPrioritySupport: {
-        type: Boolean,
-        default: false,
-        validate: {
-            validator: function (this: any, val: boolean): boolean {
-                return this.tier === PlanTier.FREE ? val === false : true;
-            },
-            message: 'Free tier cannot have priority support.'
-        }
-    },
-    hasCustomDomain: {
-        type: Boolean,
-        default: false,
-        validate: {
-            validator: function (this: any, val: boolean): boolean {
-                return this.tier === PlanTier.FREE ? val === false : true;
-            },
-            message: 'Free tier cannot have custom domains.'
-        }
-    },
-    hasTeamCollaboration: {
-        type: Boolean,
-        default: false,
-        validate: {
-            validator: function (this: any, val: boolean): boolean {
-                return this.tier === PlanTier.FREE ? val === false : true;
-            },
-            message: 'Free tier cannot have team collaboration.'
-        }
-    },
-    hasWebhooks: {
-        type: Boolean,
-        default: false,
-        validate: {
-            validator: function (this: any, val: boolean): boolean {
-                return this.tier === PlanTier.FREE ? val === false : true;
-            },
-            message: 'Free tier cannot have webhooks.'
-        }
+    displayOrder: {
+        type: Number,
+        default: 0,
+        // 0 = Free, 1 = Pro, 2 = Elite
     },
 
-    trialLimits: {
-        maxProducts: { type: Number, default: 5 },
-        transactionFeePercent: { type: Number, default: 3 },
-        hasAutoDM: { type: Boolean, default: false }
+    // ── PRICING ───────────────────────────────────
+    price: {
+        type: Number,
+        required: true,
+        min: 0,
+        // Stored in PAISE: ₹999 = 99900
+        // ₹0 for free plan
     },
-    displayFeatures: [{ type: String }],
+    previousPrice: {
+        type: Number,
+        default: null,
+        // Stored when price changes
+        // Used to show "was ₹X, now ₹Y"
+    },
+    priceChangedAt: {
+        type: Date,
+        default: null,
+    },
+    currency: {
+        type: String,
+        default: 'INR',
+    },
+    razorpayPlanId: {
+        type: String,
+        default: null,
+        // Set by admin after creating in Razorpay Dashboard
+    },
 
-    features: [{
-        name: { type: String, required: true },
-        included: { type: Boolean, default: true },
-        value: { type: String }
-    }],
+    // ── FEATURE LIMITS ────────────────────────────
+    limits: {
+        // Numeric: -1 = unlimited
+        products: { type: Number, default: 5 },
+        stores: { type: Number, default: 1 },
+        emailSubscribers: { type: Number, default: 100 },
+        emailCampaigns: { type: Number, default: 2 },
+        autoDMAutomations: { type: Number, default: 0 },
+        scheduledPosts: { type: Number, default: 5 },
+        aiGenerations: { type: Number, default: 10 },
+        analyticsRetentionDays: { type: Number, default: 7 },
+        transactionFeePercent: {
+            type: Number,
+            default: 5,
+            min: 0,
+            max: 100,
+        },
 
-    isActive: { type: Boolean, default: true, index: true },
-    isVisible: { type: Boolean, default: true, index: true },
-    sortOrder: { type: Number, default: 0 },
-    razorpayPlanId: { type: String, sparse: true },
-    razorpayMonthlyPlanId: { type: String, sparse: true },
-    razorpayYearlyPlanId: { type: String, sparse: true },
-    razorpayPlanHistory: [{
-        razorpayPlanId: { type: String, required: true },
-        cycle: { type: String, enum: ['monthly', 'yearly'], required: true },
-        price: { type: Number, required: true },
-        createdAt: { type: Date, default: Date.now },
-        changedBy: { type: String }
-    }]
+        // Boolean features
+        customDomain: { type: Boolean, default: false },
+        affiliateSystem: { type: Boolean, default: false },
+        advancedAnalytics: { type: Boolean, default: false },
+        autoDMHub: { type: Boolean, default: false },
+        schedulify: { type: Boolean, default: false },
+        emailMarketing: { type: Boolean, default: false },
+        aiTools: { type: Boolean, default: false },
+        prioritySupport: { type: Boolean, default: false },
+        whiteLabel: { type: Boolean, default: false },
+    },
+
+    // ── DISPLAY ───────────────────────────────────
+    features: [{ type: String }],
+    // Human-readable list shown on pricing cards
+    // Admin edits this directly
+    // e.g. ["50 products", "Custom domain", "2% fee"]
+
 }, { timestamps: true });
 
+PlanSchema.index({ isActive: 1, displayOrder: 1 });
 
+export const Plan = mongoose.models.Plan ||
+    mongoose.model<IPlan>('Plan', PlanSchema);
 
-// Prevent logical errors with manual pre-save hook for complex constraints
-PlanSchema.pre('save', async function (this: IPlan) {
-    if (this.tier === PlanTier.FREE) {
-        this.monthlyPrice = 0;
-        this.yearlyPrice = 0;
-        this.maxUsers = 1;
-        this.maxStorageMb = 100;
-        this.maxAutoDms = 100;
-        this.maxApiCalls = 1000;
-        this.hasAnalytics = false;
-        this.hasPrioritySupport = false;
-        this.hasCustomDomain = false;
-        this.hasTeamCollaboration = false;
-        this.hasWebhooks = false;
-    }
-});
-
-export const Plan = mongoose.models.Plan || mongoose.model<IPlan>('Plan', PlanSchema);
 export default Plan;

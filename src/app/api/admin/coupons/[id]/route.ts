@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { Coupon } from '@/lib/models/Coupon';
-import { AdminLog } from '@/lib/models/AdminLog';
+import { auditLog } from '@/lib/utils/auditLogger';
 import { withAdminAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 
@@ -16,12 +16,12 @@ async function deleteHandler(
     const coupon = await Coupon.findByIdAndDelete(id);
     if (!coupon) return new NextResponse('Coupon not found', { status: 404 });
 
-    await AdminLog.create({
-        adminEmail: admin.email,
+    await auditLog({
+        userId: admin.id || admin._id,
         action: 'delete_coupon',
-        targetType: 'coupon',
-        targetId: coupon._id,
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+        resourceType: 'coupon',
+        resourceId: coupon._id,
+        req
     });
 
     return NextResponse.json({ message: 'Coupon deleted' });
@@ -39,13 +39,13 @@ async function putHandler(
     const coupon = await Coupon.findByIdAndUpdate(id, body, { new: true });
     if (!coupon) return new NextResponse('Coupon not found', { status: 404 });
 
-    await AdminLog.create({
-        adminEmail: admin.email,
+    await auditLog({
+        userId: admin.id || admin._id,
         action: 'update_coupon',
-        targetType: 'coupon',
-        targetId: coupon._id,
-        changes: body,
-        ipAddress: req.headers.get('x-forwarded-for') || 'unknown'
+        resourceType: 'coupon',
+        resourceId: coupon._id,
+        metadata: body,
+        req
     });
 
     return NextResponse.json(coupon);

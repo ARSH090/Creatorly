@@ -102,7 +102,8 @@ export default clerkMiddleware(async (auth, req) => {
     const { sessionClaims } = authObj;
     if (pathname.startsWith('/admin') && pathname !== '/admin/login') {
         const role = (sessionClaims?.metadata as any)?.role;
-        if (role && role !== 'admin' && role !== 'super-admin') {
+        const isAdmin = role === 'admin' || role === 'super-admin';
+        if (!isAdmin) {
             return NextResponse.redirect(new URL('/dashboard', req.url));
         }
     }

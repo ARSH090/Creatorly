@@ -11,6 +11,20 @@ export const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET || '',
 });
 
+/**
+ * Returns a Razorpay instance. If credentials are provided, it returns a custom instance (for P2P).
+ * Otherwise, it returns the global platform instance.
+ */
+export const getRazorpayInstance = (credentials?: { keyId: string; keySecret: string }) => {
+    if (credentials?.keyId && credentials?.keySecret) {
+        return new Razorpay({
+            key_id: credentials.keyId,
+            key_secret: credentials.keySecret,
+        });
+    }
+    return razorpay;
+};
+
 export interface IRazorpayOrderOptions {
     amount: number; // in paise
     currency: string;
@@ -18,9 +32,10 @@ export interface IRazorpayOrderOptions {
     notes?: Record<string, string>;
 }
 
-export const createRazorpayOrder = async (options: IRazorpayOrderOptions) => {
+export const createRazorpayOrder = async (options: IRazorpayOrderOptions, credentials?: { keyId: string; keySecret: string }) => {
     try {
-        const order = await razorpay.orders.create(options);
+        const instance = getRazorpayInstance(credentials);
+        const order = await instance.orders.create(options);
         return order;
     } catch (error) {
         console.error('Error creating Razorpay order:', error);
