@@ -217,12 +217,10 @@ AICreditSchema.methods.addCredits = async function (amount: number, type: Credit
 };
 
 // Use a separate variable for the model to ensure it's typed correctly
-const AICreditModel = (mongoose.models.AICredit as IAICreditModel) ||
+export const AICredit: IAICreditModel = (mongoose.models.AICredit as IAICreditModel) ||
     mongoose.model<IAICredit, IAICreditModel>('AICredit', AICreditSchema);
-
-export { AICreditModel as AICredit };
 
 export const AICreditTransaction = (mongoose.models.AICreditTransaction as Model<IAICreditTransaction>) ||
     mongoose.model<IAICreditTransaction>('AICreditTransaction', AICreditTransactionSchema);
 
-export default AICreditModel;
+export default AICredit;
