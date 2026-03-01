@@ -17,11 +17,17 @@ export async function GET(req: NextRequest) {
     const token = searchParams.get('hub.verify_token');
     const challenge = searchParams.get('hub.challenge');
 
-    if (mode === 'subscribe' && token === process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN) {
+    const expectedToken = (process.env.INSTAGRAM_WEBHOOK_VERIFY_TOKEN || '').trim();
+
+    console.log('Webhook verification attempt:', { mode, token, challenge, expectedToken: expectedToken ? '***set***' : 'MISSING' });
+
+    if (mode === 'subscribe' && token === expectedToken && expectedToken !== '') {
         console.log('Webhook verified successfully');
-        return new NextResponse(challenge, { status: 200 });
+        return new Response(challenge!, { status: 200 });
     }
-    return new NextResponse('Forbidden', { status: 403 });
+
+    console.warn('Webhook verification failed — mode:', mode, '| tokenMatch:', token === expectedToken);
+    return new Response('Forbidden', { status: 403 });
 }
 
 // POST — Receives ALL events for ALL creators
