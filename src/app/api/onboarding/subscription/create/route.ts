@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Plan } from '@/lib/models/Plan';
-import Razorpay from 'razorpay';
-
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID!,
-    key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+import { razorpay } from '@/lib/payments/razorpay';
 
 /**
  * POST /api/onboarding/subscription/create

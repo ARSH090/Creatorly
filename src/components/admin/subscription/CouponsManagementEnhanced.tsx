@@ -227,7 +227,7 @@ export default function CouponsManagementEnhanced() {
                                         <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-4 italic">Mod Type</label>
                                         <Select
                                             value={formData.discountType}
-                                            onValueChange={(val) => setFormData({ ...formData, discountType: val })}
+                                            onValueChange={(val: any) => setFormData({ ...formData, discountType: val })}
                                         >
                                             <SelectTrigger className="bg-zinc-900 border-white/5 rounded-2xl h-14 px-6">
                                                 <SelectValue />
@@ -258,14 +258,14 @@ export default function CouponsManagementEnhanced() {
                                             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Single Signal Only</span>
                                             <Switch
                                                 checked={formData.cannotCombineWithOtherCoupons}
-                                                onCheckedChange={(val) => setFormData({ ...formData, cannotCombineWithOtherCoupons: val })}
+                                                onCheckedChange={(val: boolean) => setFormData({ ...formData, cannotCombineWithOtherCoupons: val })}
                                             />
                                         </div>
                                         <div className="flex items-center justify-between">
                                             <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Exclude Promo Tiers</span>
                                             <Switch
                                                 checked={formData.excludeDiscountedItems}
-                                                onCheckedChange={(val) => setFormData({ ...formData, excludeDiscountedItems: val })}
+                                                onCheckedChange={(val: boolean) => setFormData({ ...formData, excludeDiscountedItems: val })}
                                             />
                                         </div>
                                     </div>

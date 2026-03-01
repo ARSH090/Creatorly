@@ -183,7 +183,7 @@ export default function AdminSupportPage() {
                                                 <td className="py-8 px-10">
                                                     <div className="flex flex-col">
                                                         <span className="font-black text-sm text-white uppercase italic tracking-tighter truncate max-w-[200px]">{t.subject}</span>
-                                                        <Badge variant="ghost" className={cn(
+                                                        <Badge variant="outline" className={cn(
                                                             "uppercase text-[8px] font-black tracking-widest mt-2 px-2 py-0.5 rounded-md w-fit border",
                                                             t.priority === 'high' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
                                                         )}>

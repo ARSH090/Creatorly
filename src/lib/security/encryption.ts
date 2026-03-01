@@ -101,3 +101,35 @@ export function decryptTokenGCM(encryptedData: string, ivHex: string, tagHex: st
 
     return decrypted;
 }
+
+// ─── Simple string based AES-256-GCM wrappers for Instagram Tokens ────────
+const ENCRYPTION_KEY_STRING = process.env.ENCRYPTION_KEY || process.env.TOKEN_ENCRYPTION_KEY_CURRENT || '00000000000000000000000000000000'; // Fallback for type safety, must be 32 chars
+const INSTA_ALGORITHM = 'aes-256-gcm';
+
+export function encryptToken(token: string): string {
+    const iv = crypto.randomBytes(16);
+    // Pad or truncate to ensure exactly 32 bytes for aes-256
+    const keyBuffer = Buffer.alloc(32);
+    keyBuffer.write(ENCRYPTION_KEY_STRING, 'utf-8');
+
+    const cipher = crypto.createCipheriv(INSTA_ALGORITHM, keyBuffer, iv);
+    const encrypted = Buffer.concat([cipher.update(token, 'utf8'), cipher.final()]);
+    const authTag = cipher.getAuthTag();
+    return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted.toString('hex')}`;
+}
+
+export function decryptStringToken(encryptedToken: string): string {
+    const [ivHex, authTagHex, encryptedHex] = encryptedToken.split(':');
+    const iv = Buffer.from(ivHex, 'hex');
+    const authTag = Buffer.from(authTagHex, 'hex');
+    const encrypted = Buffer.from(encryptedHex, 'hex');
+
+    const keyBuffer = Buffer.alloc(32);
+    keyBuffer.write(ENCRYPTION_KEY_STRING, 'utf-8');
+
+    const decipher = crypto.createDecipheriv(INSTA_ALGORITHM, keyBuffer, iv);
+    decipher.setAuthTag(authTag);
+    const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+    return decrypted.toString('utf8');
+}
+

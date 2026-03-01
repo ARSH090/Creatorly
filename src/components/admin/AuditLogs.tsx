@@ -41,6 +41,7 @@ interface AuditLog {
     userAgent?: string;
     status?: 'success' | 'failure' | 'warning';
     details?: any;
+    metadata?: any;
 }
 
 interface AuditLogsProps {

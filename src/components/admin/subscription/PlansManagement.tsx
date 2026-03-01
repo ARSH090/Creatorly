@@ -232,7 +232,7 @@ export default function PlansManagement() {
                                     <label className="text-[10px] font-black text-zinc-500 uppercase tracking-widest ml-4">Spectrum Tier</label>
                                     <Select
                                         value={formData.tier}
-                                        onValueChange={(val) => setFormData({ ...formData, tier: val })}
+                                        onValueChange={(val: any) => setFormData({ ...formData, tier: val })}
                                     >
                                         <SelectTrigger className="bg-zinc-900 border-white/5 rounded-2xl h-14 px-6">
                                             <SelectValue placeholder="SELECT_SPECTRUM" />
@@ -276,7 +276,7 @@ export default function PlansManagement() {
                                                 <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest group-hover:text-white transition-colors">{tool.label}</span>
                                                 <Switch
                                                     checked={formData[tool.id]}
-                                                    onCheckedChange={(val) => setFormData({ ...formData, [tool.id]: val })}
+                                                    onCheckedChange={(val: any) => setFormData({ ...formData, [tool.id]: val })}
                                                     className="data-[state=checked]:bg-indigo-500"
                                                 />
                                             </div>

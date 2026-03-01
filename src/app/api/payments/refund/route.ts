@@ -5,7 +5,7 @@ import RefundModel from '@/lib/models/Refund';
 
 import { withAuth } from '@/lib/auth/withAuth';
 import { z } from 'zod';
-import Razorpay from 'razorpay';
+import { razorpay } from '@/lib/payments/razorpay';
 
 const refundSchema = z.object({
     orderId: z.string().min(1, 'Order ID is required'),
@@ -18,11 +18,6 @@ const refundSchema = z.object({
         'other',
     ]),
     notes: z.string().optional(),
-});
-
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID!,
-    key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
 export const POST = withAuth(async (request, user) => {

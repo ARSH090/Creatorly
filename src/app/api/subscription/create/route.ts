@@ -3,12 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { getCurrentUser } from '@/lib/auth/server-auth';
 import Subscription from '@/lib/models/Subscription';
 import { User } from '@/lib/models/User';
-import Razorpay from 'razorpay';
-
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID!,
-    key_secret: process.env.RAZORPAY_SECRET!
-});
+import { razorpay } from '@/lib/payments/razorpay';
 
 /**
  * POST /api/subscription/create

@@ -130,6 +130,18 @@ export interface IUser extends Document {
         connectedAt?: Date;
     };
 
+    // Instagram AutoDM Configuration
+    instagramConnection?: {
+        instagramUserId?: string;
+        username?: string;
+        accessToken?: string;    // AES-256 encrypted
+        tokenExpiresAt?: Date;   // 60 days from issue
+        isConnected: boolean;
+        connectedAt?: Date;
+        followersCount: number;
+        profilePicUrl?: string;
+    };
+
     planLimits?: {
         maxProducts: number;
         maxStorageMb: number;
@@ -421,6 +433,18 @@ const UserSchema: Schema = new Schema({
         displayName: String,
         status: { type: String, enum: ['connected', 'disconnected', 'error'], default: 'disconnected' },
         connectedAt: Date
+    },
+
+    // Instagram AutoDM Configuration
+    instagramConnection: {
+        instagramUserId: { type: String, default: null, index: true },
+        username: { type: String, default: null },
+        accessToken: { type: String, default: null },
+        tokenExpiresAt: { type: Date, default: null },
+        isConnected: { type: Boolean, default: false },
+        connectedAt: { type: Date, default: null },
+        followersCount: { type: Number, default: 0 },
+        profilePicUrl: { type: String, default: null },
     },
 
     // NEW: Payment Settings (Multi-provider)

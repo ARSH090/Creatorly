@@ -1,12 +1,7 @@
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Subscription from '@/lib/models/Subscription';
 import User from '@/lib/models/User';
-import Razorpay from 'razorpay';
-
-const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID!,
-    key_secret: process.env.RAZORPAY_KEY_SECRET!,
-});
+import { razorpay } from '@/lib/payments/razorpay';
 
 /**
  * Reconciles local subscription state with Razorpay

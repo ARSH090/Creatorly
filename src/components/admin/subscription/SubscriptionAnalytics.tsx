@@ -145,7 +145,7 @@ export default function SubscriptionAnalytics() {
                                     dataKey="_id"
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fill: '#52525b', fontSize: 10, fontWeight: 900, textTransform: 'uppercase' }}
+                                    tick={{ fill: '#52525b', fontSize: 10, fontWeight: 900 }}
                                 />
                                 <YAxis
                                     axisLine={false}

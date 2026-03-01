@@ -5,7 +5,7 @@
 import { AutoDMFlow, IAutoDMFlow, IFlowStep } from '@/lib/models/AutoDMFlow';
 import { DMLog } from '@/lib/models/DMLog';
 import { InstagramService } from '@/lib/services/instagram';
-import { personaliseMessage } from '@/lib/services/autoDMService';
+
 import { connectToDatabase } from '@/lib/db/mongodb';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -96,7 +96,15 @@ async function executeStep(
         case 'message':
         case 'question':
         case 'email_collect': {
-            const text = personaliseMessage(step.content, ctx.vars);
+            // Replace simple variables
+            let text = step.content || '';
+            const vars = ctx.vars || {};
+            if (text) {
+                Object.keys(vars).forEach(key => {
+                    const regex = new RegExp(`{{${key}}}`, 'gi');
+                    text = text.replace(regex, vars[key]);
+                });
+            }
             const result = await InstagramService.sendDirectMessage({
                 recipientId: ctx.recipientIgId,
                 message: text,
