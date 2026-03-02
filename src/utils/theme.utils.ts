@@ -84,6 +84,7 @@ export function getThemeBorderRadiusClass(borderRadius: string): string {
 const GOOGLE_FONTS_FAMILIES = [
     'Inter', 'Roboto', 'Outfit', 'Poppins', 'DM Sans',
     'Nunito', 'Raleway', 'Montserrat', 'Playfair Display', 'Space Grotesk',
+    'Sora', 'Plus Jakarta Sans', 'Syne',
 ];
 
 /**

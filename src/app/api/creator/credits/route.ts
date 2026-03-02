@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { AICredit, AICreditTransaction, CreditTransactionType } from '@/lib/models/AICredit';
+import { AICredit, AICreditTransaction, CreditTransactionType, IAICreditModel } from '@/lib/models/AICredit';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 
@@ -11,7 +11,7 @@ import { withErrorHandler } from '@/lib/utils/errorHandler';
 async function getHandler(req: NextRequest, user: any, context: any) {
     await connectToDatabase();
 
-    const credit = await AICredit.getOrCreate(user._id);
+    const credit = await (AICredit as IAICreditModel).getOrCreate(user._id);
 
     // Get recent transactions
     const transactions = await AICreditTransaction.find({ creatorId: user._id })
@@ -49,7 +49,7 @@ async function postHandler(req: NextRequest, user: any, context: any) {
         throw new Error('action and amount are required');
     }
 
-    const credit = await AICredit.getOrCreate(user._id);
+    const credit = await (AICredit as IAICreditModel).getOrCreate(user._id);
 
     if (action === 'use') {
         // Use/deduct credits
@@ -96,7 +96,7 @@ async function putHandler(req: NextRequest, user: any, context: any) {
     const body = await req.json();
     const { autoReload, autoReloadThreshold, autoReloadAmount, packageType } = body;
 
-    const credit = await AICredit.getOrCreate(user._id);
+    const credit = await (AICredit as IAICreditModel).getOrCreate(user._id);
 
     if (autoReload !== undefined) credit.autoReload = autoReload;
     if (autoReloadThreshold !== undefined) credit.autoReloadThreshold = autoReloadThreshold;

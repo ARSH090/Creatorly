@@ -13,6 +13,8 @@ import type {
     NewsletterSettings, StatsSettings, GallerySettings, TextSettings,
     DividerSettings, SpacerSettings, EmbedSettings, AnnouncementSettings,
     MusicSettings, BookingSettings, MapSettings, BeforeAfterSettings,
+    FeaturedProductSettings, CategoriesSettings, SocialFeedSettings,
+    ProgressBarSettings, PricingTableSettings, ImageBlockSettings,
 } from '@/types/storefront-blocks.types';
 
 // ── Lazy-load widgets for code-splitting ─────────────────────────────────────
@@ -37,6 +39,13 @@ const EmbedWidget = dynamic(() => import('./widgets/EmbedWidget'));
 // Named exports require custom loader
 const DividerWidget = dynamic(() => import('./widgets/DividerWidget').then(m => ({ default: m.DividerWidget })));
 const SpacerWidget = dynamic(() => import('./widgets/DividerWidget').then(m => ({ default: m.SpacerWidget })));
+
+const FeaturedProductWidget = dynamic(() => import('./widgets/FeaturedProductWidget'));
+const CategoriesWidget = dynamic(() => import('./widgets/CategoriesWidget'));
+const SingleImageWidget = dynamic(() => import('./widgets/SingleImageWidget'));
+const SocialFeedWidget = dynamic(() => import('./widgets/SocialFeedWidget'));
+const ProgressBarWidget = dynamic(() => import('./widgets/ProgressBarWidget'));
+const PricingTableWidget = dynamic(() => import('./widgets/PricingTableWidget'));
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -148,6 +157,24 @@ export function BlockRenderer({
 
         case 'before_after':
             return <BeforeAfterWidget settings={as<BeforeAfterSettings>(settings)} theme={t} />;
+
+        case 'featured_product':
+            return <FeaturedProductWidget settings={as<FeaturedProductSettings>(settings)} theme={t} products={products || []} />;
+
+        case 'categories':
+            return <CategoriesWidget settings={as<CategoriesSettings>(settings)} theme={t} />;
+
+        case 'image':
+            return <SingleImageWidget settings={as<ImageBlockSettings>(settings)} theme={t} />;
+
+        case 'social_feed':
+            return <SocialFeedWidget settings={as<SocialFeedSettings>(settings)} theme={t} />;
+
+        case 'progress_bar':
+            return <ProgressBarWidget settings={as<ProgressBarSettings>(settings)} theme={t} />;
+
+        case 'pricing_table':
+            return <PricingTableWidget settings={as<PricingTableSettings>(settings)} theme={t} />;
 
         default:
             return (

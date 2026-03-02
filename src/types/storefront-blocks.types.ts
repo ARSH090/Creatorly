@@ -25,7 +25,13 @@ export type BlockType =
     | 'music'
     | 'booking'
     | 'map'
-    | 'before_after';
+    | 'before_after'
+    | 'featured_product'
+    | 'categories'
+    | 'social_feed'
+    | 'progress_bar'
+    | 'pricing_table'
+    | 'image';
 
 export type BlockWidth = 'full' | 'half' | 'third';
 
@@ -278,6 +284,58 @@ export interface BeforeAfterSettings {
     title?: string;
 }
 
+export interface FeaturedProductSettings {
+    productId?: string;
+    layout?: 'horizontal' | 'vertical';
+    showDescription?: boolean;
+    buttonText?: string;
+    badgeText?: string;
+}
+
+export interface CategoriesSettings {
+    categoryIds?: string[];
+    layout?: 'grid' | 'pills' | 'carousel';
+    showCount?: boolean;
+    title?: string;
+}
+
+export interface SocialFeedSettings {
+    username?: string;
+    platform?: 'instagram' | 'twitter' | 'tiktok';
+    limit?: number;
+    layout?: 'grid' | 'carousel';
+}
+
+export interface ProgressBarSettings {
+    label?: string;
+    percentage?: number;
+    color?: string;
+    showPercentage?: boolean;
+    style?: 'default' | 'slim' | 'thick';
+}
+
+export interface PricingTableSettings {
+    title?: string;
+    plans: Array<{
+        id: string;
+        name: string;
+        price: string;
+        features: string[];
+        isFeatured?: boolean;
+        buttonText?: string;
+        url?: string;
+    }>;
+}
+
+export interface ImageBlockSettings {
+    url?: string;
+    link?: string;
+    alt?: string;
+    caption?: string;
+    aspectRatio?: 'auto' | 'square' | '16:9' | '4:3';
+    borderRadius?: number;
+}
+
 // ─── Union of all settings ─────────────────────────────────────────────────────
 
 export type BlockSettings =
@@ -300,7 +358,13 @@ export type BlockSettings =
     | MusicSettings
     | BookingSettings
     | MapSettings
-    | BeforeAfterSettings;
+    | 'before_after'
+    | FeaturedProductSettings
+    | CategoriesSettings
+    | SocialFeedSettings
+    | ProgressBarSettings
+    | PricingTableSettings
+    | ImageBlockSettings;
 
 // ─── Core Block ───────────────────────────────────────────────────────────────
 
@@ -474,6 +538,12 @@ export const BLOCK_LIBRARY: BlockMeta[] = [
     { type: 'booking', label: 'Booking', icon: '📅', description: 'Inline calendar booking', category: 'commerce' },
     { type: 'map', label: 'Map', icon: '📍', description: 'Google Maps embed', category: 'content' },
     { type: 'before_after', label: 'Before / After', icon: '↔️', description: 'Comparison slider', category: 'media' },
+    { type: 'featured_product', label: 'Featured Product', icon: '💎', description: 'Highlight a single product', category: 'commerce' },
+    { type: 'categories', label: 'Categories', icon: '🏷️', description: 'List of product categories', category: 'commerce' },
+    { type: 'social_feed', label: 'Social Feed', icon: '📸', description: 'Live Instagram/Twitter feed', category: 'social' },
+    { type: 'progress_bar', label: 'Progress Bar', icon: '📈', description: 'Milestones or fundraising', category: 'content' },
+    { type: 'pricing_table', label: 'Pricing Table', icon: '💰', description: 'Compare plans or offers', category: 'commerce' },
+    { type: 'image', label: 'Image', icon: '🖼️', description: 'Single high-res image', category: 'media' },
 ];
 
 // ─── Default settings per block type ───────────────────────────────────────────
@@ -500,6 +570,12 @@ export function defaultSettings(type: BlockType): BlockSettings {
         case 'booking': return { title: 'Book a Session', description: 'Choose a time that works for you.', buttonText: 'Book Now', showInline: true } as BookingSettings;
         case 'map': return { showDirectionsButton: true, title: 'Find Us' } as MapSettings;
         case 'before_after': return { beforeLabel: 'Before', afterLabel: 'After' } as BeforeAfterSettings;
+        case 'featured_product': return { layout: 'vertical', buttonText: 'Buy Now', showDescription: true } as FeaturedProductSettings;
+        case 'categories': return { layout: 'pills', showCount: true, title: 'Browse by Category' } as CategoriesSettings;
+        case 'social_feed': return { platform: 'instagram', limit: 6, layout: 'grid' } as SocialFeedSettings;
+        case 'progress_bar': return { label: 'Goal Progress', percentage: 70, style: 'default', showPercentage: true } as ProgressBarSettings;
+        case 'pricing_table': return { plans: [] } as PricingTableSettings;
+        case 'image': return { aspectRatio: 'auto' } as ImageBlockSettings;
         default: return {} as BlockSettings;
     }
 }
