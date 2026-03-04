@@ -4,15 +4,24 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { ShoppingBag, ArrowRight, Star } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCheckoutStore } from '@/lib/store/useCheckoutStore';
 import type { FeaturedProductSettings } from '@/types/storefront-blocks.types';
 
 interface Props {
     settings: FeaturedProductSettings;
     theme: Record<string, string>;
     products: any[];
+    creator: {
+        id: string;
+        username: string;
+        displayName: string;
+    };
 }
 
-export default function FeaturedProductWidget({ settings, theme, products }: Props) {
+export default function FeaturedProductWidget({ settings, theme, products, creator }: Props) {
+    const { addToCart } = useCheckoutStore();
+    const router = useRouter();
     const product = products.find(p => p.id === settings.productId) || products[0];
 
     if (!product && !settings.productId) {
@@ -26,13 +35,31 @@ export default function FeaturedProductWidget({ settings, theme, products }: Pro
 
     // Fallback for preview if no products match
     const displayProduct = product || {
+        id: 'preview',
         name: 'Premium Digital Product',
         price: '499',
         description: 'Create amazing results with our signature framework. Essential for every creator.',
         image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop',
+        type: 'digital'
     };
 
     const isHorizontal = settings.layout === 'horizontal';
+
+    const handleBuyNow = () => {
+        if (!displayProduct.id || displayProduct.id === 'preview') return;
+
+        addToCart({
+            id: displayProduct.id,
+            name: displayProduct.name,
+            price: Number(displayProduct.price),
+            image: displayProduct.image || '',
+            quantity: 1,
+            type: displayProduct.type || 'digital',
+            creator: creator.username,
+        });
+
+        router.push('/cart');
+    };
 
     return (
         <motion.div
@@ -99,6 +126,7 @@ export default function FeaturedProductWidget({ settings, theme, products }: Pro
                     </div>
 
                     <button
+                        onClick={handleBuyNow}
                         className="flex items-center gap-2 px-6 py-3 rounded-full font-bold text-sm transition-all hover:scale-105 active:scale-95 shadow-xl shadow-indigo-500/20"
                         style={{
                             backgroundColor: theme.primaryColor,

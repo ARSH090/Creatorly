@@ -158,8 +158,6 @@ export function BlockRenderer({
         case 'before_after':
             return <BeforeAfterWidget settings={as<BeforeAfterSettings>(settings)} theme={t} />;
 
-        case 'featured_product':
-            return <FeaturedProductWidget settings={as<FeaturedProductSettings>(settings)} theme={t} products={products || []} />;
 
         case 'categories':
             return <CategoriesWidget settings={as<CategoriesSettings>(settings)} theme={t} />;

@@ -12,6 +12,8 @@ export const ProductSchema = z.object({
     tagline: z.string().max(160).optional(),
     image: z.string().optional(),
     isPublic: z.boolean().optional(),
+    isPublished: z.boolean().optional(), // Alias for isPublic
+    isActive: z.boolean().optional(),    // Alias for isPublic
     isFeatured: z.boolean().optional(),
     isFeaturedInCollections: z.boolean().optional(),
 
@@ -71,6 +73,19 @@ export const ProductSchema = z.object({
     isArchived: z.boolean().default(false),
     hasVariants: z.boolean().optional(),
     variants: z.array(z.any()).optional(),
+
+    // New fields
+    previewImages: z.array(z.string()).optional(),
+    previewVideo: z.string().optional(),
+    isFree: z.boolean().default(false),
+    seo: z.object({
+        title: z.string().default(''),
+        description: z.string().default(''),
+        keywords: z.array(z.string()).default([])
+    }).optional(),
+    limitedStock: z.boolean().default(false),
+    stockCount: z.number().int().default(-1),
+    hiddenByPlanLimit: z.boolean().default(false),
 });
 
 // Newsletter Subscription
@@ -104,4 +119,21 @@ export const CheckoutSchema = z.object({
         phone: z.string().optional()
     }),
     couponCode: z.string().optional().nullable()
+});
+
+// Coupon Validation
+export const CouponSchema = z.object({
+    code: z.string().min(3).max(20).toUpperCase(),
+    discountType: z.enum(['percentage', 'fixed', 'free', 'bogo']),
+    discountValue: z.number().min(0),
+    appliesTo: z.enum(['all', 'specific', 'type', 'minimum']).default('all'),
+    applicableProducts: z.array(z.string()).optional(),
+    minOrderAmount: z.number().min(0).default(0),
+    usageLimit: z.number().int().min(0).default(0),
+    usageLimitPerUser: z.number().int().min(0).default(0),
+    validFrom: z.date().or(z.string().transform(val => new Date(val))).default(() => new Date()),
+    validUntil: z.date().or(z.string().transform(val => new Date(val))).optional(),
+    isActive: z.boolean().default(true),
+    internalNote: z.string().optional(),
+    showHintOnStorefront: z.boolean().default(false),
 });

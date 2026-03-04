@@ -18,14 +18,16 @@ export interface ICoupon extends Document {
     applicableCreators?: mongoose.Types.ObjectId[];
     applicableProductType?: string;
     minOrderAmount: number;
-    minimumPurchaseAmount?: number; // Alias for minOrderAmount
+    minimumOrderAmount?: number; // Alias for minOrderAmount
+    minimumPurchaseAmount?: number; // Legacy alias
 
-    usageLimit?: number;
-    maxUses?: number; // Alias for usageLimit
-    usedCount: number;
-    usagePerUser: number;
-    usageLimitPerUser?: number; // Alias
-    perCustomerLimit?: number; // Alias for usagePerUser
+    usageLimit: number; // 0 = unlimited
+    maxUses?: number; // Alias
+    usageCount: number; // how many times used so far
+    usedCount?: number; // Alias
+    usageLimitPerUser: number; // 0 = unlimited per user
+    usagePerUser?: number; // Alias
+    perCustomerLimit?: number; // Alias
     firstTimeOnly: boolean;
 
     validFrom: Date;
@@ -45,6 +47,7 @@ export interface ICoupon extends Document {
 
     razorpayOfferId?: string;
     totalRevenueDriven: number;
+    revenueGenerated?: number; // Alias
     createdAt: Date;
     updatedAt: Date;
 }
@@ -69,12 +72,13 @@ const CouponSchema = new Schema<ICoupon>({
     minOrderAmount: { type: Number, default: 0 },
     minimumPurchaseAmount: Number,
 
-    usageLimit: { type: Number, default: null },
-    maxUses: Number,
-    usedCount: { type: Number, default: 0 },
-    usagePerUser: { type: Number, default: 0 }, // 0 means unlimited
-    usageLimitPerUser: Number,
-    perCustomerLimit: Number,
+    usageLimit: { type: Number, default: 0 },
+    maxUses: { type: Number, default: 0 }, // Alias
+    usageCount: { type: Number, default: 0 },
+    usedCount: { type: Number, default: 0 }, // Alias
+    usageLimitPerUser: { type: Number, default: 0 },
+    usagePerUser: { type: Number, default: 0 }, // Alias
+    perCustomerLimit: { type: Number, default: 1 }, // Alias
     firstTimeOnly: { type: Boolean, default: false },
 
     validFrom: { type: Date, default: Date.now },
@@ -93,7 +97,8 @@ const CouponSchema = new Schema<ICoupon>({
     bulkBatchId: String,
 
     razorpayOfferId: String,
-    totalRevenueDriven: { type: Number, default: 0 }
+    totalRevenueDriven: { type: Number, default: 0 },
+    revenueGenerated: { type: Number, default: 0 } // Alias
 }, { timestamps: true });
 
 CouponSchema.index({ creatorId: 1, code: 1 }, { unique: true });

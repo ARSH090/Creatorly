@@ -42,13 +42,18 @@ export function withErrorHandler<T = any>(
             }
 
             // Otherwise wrap in standardized format
-            return NextResponse.json<APIResponse<T>>({
-                success: true,
-                data: result,
-                meta: {
-                    timestamp: new Date().toISOString()
-                }
-            });
+            // If it already looks like a standardized response, don't wrap it again
+            const formattedResult = (result && typeof result === 'object' && 'success' in result)
+                ? (result as any)
+                : {
+                    success: true,
+                    data: result,
+                    meta: {
+                        timestamp: new Date().toISOString()
+                    }
+                };
+
+            return NextResponse.json(formattedResult);
         } catch (error: any) {
             const { log } = await import('@/utils/logger');
             const Sentry = await import('@sentry/nextjs');

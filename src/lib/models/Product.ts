@@ -23,6 +23,9 @@ export interface IProduct extends Document {
 
     // Media
     coverImageUrl?: string;
+    previewImages?: string[];
+    previewVideo?: string;
+    isFree?: boolean;
 
     // Legacy / Backward Comp.
     name?: string; // mapped to title
@@ -62,14 +65,11 @@ export interface IProduct extends Document {
         answer: string;
     }>;
 
-    // Project Integration
-    autoCreateProject?: boolean;
-    projectTemplate?: {
-        tasks: Array<{
-            title: string;
-            description?: string;
-            priority?: 'Low' | 'Medium' | 'High' | 'Urgent';
-        }>;
+    // SEO:
+    seo: {
+        title: string;
+        description: string;
+        keywords: string[];
     };
 
     // Timestamps
@@ -163,6 +163,9 @@ export interface IProduct extends Document {
     isFlagged?: boolean;
     flagReason?: string;
     adminNotes?: string;
+    hiddenByPlanLimit?: boolean;
+    stockCount?: number;
+    limitedStock?: boolean;
 }
 
 
@@ -209,6 +212,9 @@ const ProductSchema: Schema = new Schema({
     tags: [{ type: String }],
 
     coverImageUrl: String,
+    previewImages: [String],
+    previewVideo: String,
+    isFree: { type: Boolean, default: false },
     image: String,
     thumbnail: String,
     files: [{
@@ -265,6 +271,16 @@ const ProductSchema: Schema = new Schema({
     deliveryMethod: { type: String, default: 'both' },
     thankYouMessage: String,
     thankYouRedirect: String,
+
+    seo: {
+        title: { type: String, default: '' },
+        description: { type: String, default: '' },
+        keywords: { type: [String], default: [] }
+    },
+
+    limitedStock: { type: Boolean, default: false },
+    stockCount: { type: Number, default: -1 }, // -1 = unlimited
+    hiddenByPlanLimit: { type: Boolean, default: false },
 
     sections: [{
         title: String,

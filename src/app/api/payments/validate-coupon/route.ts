@@ -48,7 +48,9 @@ export async function POST(req: NextRequest) {
         }
 
         // Check usage limit
-        if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+        const usageLimit = (coupon as any).usageLimit || (coupon as any).maxUses;
+        const usageCount = (coupon as any).usageCount || (coupon as any).usedCount || 0;
+        if (usageLimit && usageCount >= usageLimit) {
             return NextResponse.json({
                 success: false,
                 error: 'Coupon usage limit reached'
@@ -56,16 +58,18 @@ export async function POST(req: NextRequest) {
         }
 
         // Check per-user limit
-        if (coupon.perCustomerLimit && userId) {
+        const userLimit = (coupon as any).usageLimitPerUser || (coupon as any).perCustomerLimit || (coupon as any).usagePerUser;
+        if (userLimit && userId) {
             // Note: usage tracking per user is not fully implemented in validation yet
             // but we'll use the correct field name
         }
 
         // Check minimum purchase
-        if (coupon.minimumPurchaseAmount && amount && amount < coupon.minimumPurchaseAmount) {
+        const minAmount = (coupon as any).minOrderAmount || (coupon as any).minimumPurchaseAmount;
+        if (minAmount && amount && amount < minAmount) {
             return NextResponse.json({
                 success: false,
-                error: `Minimum purchase amount is ₹${coupon.minimumPurchaseAmount}`
+                error: `Minimum purchase amount is ₹${minAmount}`
             }, { status: 400 });
         }
 

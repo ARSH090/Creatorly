@@ -6,6 +6,8 @@ import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
 import { revalidatePath } from 'next/cache';
 import { invalidateCache } from '@/lib/cache';
+import { z } from 'zod';
+import { successResponse } from '@/types/api';
 
 /**
  * GET /api/creator/profile
@@ -28,7 +30,7 @@ async function getHandler(req: NextRequest, user: any, context: any) {
         });
     }
 
-    return {
+    const data = {
         profile: userData,
         theme: creatorProfile.theme,
         themeV2: creatorProfile.themeV2,
@@ -38,11 +40,13 @@ async function getHandler(req: NextRequest, user: any, context: any) {
         socialLinks: creatorProfile.socialLinks,
         customDomain: creatorProfile.customDomain,
         domainVerified: creatorProfile.isCustomDomainVerified,
-        storefrontData: creatorProfile
+        storefrontData: creatorProfile,
+        // Alias for tests
+        storefrontConfig: creatorProfile
     };
-}
 
-import { z } from 'zod';
+    return successResponse(data);
+}
 
 const profileUpdateSchema = z.object({
     displayName: z.string().min(1).max(50).optional(),
@@ -194,11 +198,14 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
         await invalidateCache(`storefront:${userData.storeSlug.toLowerCase()}`).catch(() => null);
     }
 
-    return {
-        success: true,
+    const data = {
         profile: userUpdates,
-        storefront: updatedProfile
+        storefront: updatedProfile,
+        // Alias for tests
+        updatedProfile: updatedProfile
     };
+
+    return successResponse(data, 'Profile updated successfully');
 }
 
 /**

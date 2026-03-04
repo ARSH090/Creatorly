@@ -301,9 +301,22 @@ export interface CategoriesSettings {
 
 export interface SocialFeedSettings {
     username?: string;
-    platform?: 'instagram' | 'twitter' | 'tiktok';
+    platform?: 'instagram' | 'twitter' | 'tiktok' | 'youtube' | 'pinterest' | 'linkedin' | 'spotify' | 'substack';
     limit?: number;
-    layout?: 'grid' | 'carousel';
+    layout?: 'grid' | 'carousel' | 'list' | 'masonry';
+    urls?: string[];
+    columns?: 1 | 2 | 3;
+    showCaption?: boolean;
+    showPlatformIcon?: boolean;
+    borderRadius?: string;
+    gap?: 'sm' | 'md' | 'lg';
+    title?: string;
+    showFollowButton?: boolean;
+    followButtonText?: string;
+    followUrl?: string;
+    aspectRatio?: '1/1' | '16/9' | '9/16' | 'auto';
+    showLikes?: boolean;
+    cardStyle?: 'clean' | 'shadow' | 'bordered' | 'glassmorphic';
 }
 
 export interface ProgressBarSettings {
@@ -411,6 +424,26 @@ export interface StorefrontThemeV2 {
     darkMode: boolean;
     allowVisitorToggle?: boolean;
     customCss?: string;
+    cursor?: {
+        type: 'default' | 'dot' | 'ring' | 'blob' | 'emoji' | 'crosshair' | 'none';
+        color: string;
+        size: number;
+        emoji?: string;
+        trailEffect: boolean;
+        trailColor?: string;
+        trailLength: number;
+        magneticButtons: boolean;
+    };
+    backgroundAnimation?: {
+        type: 'none' | 'particles' | 'floating_shapes' | 'gradient_wave' | 'falling_emojis' | 'fireflies' | 'matrix_rain' | 'bubbles' | 'confetti' | 'snow' | 'stars';
+        color: string;
+        secondaryColor?: string;
+        speed: 'slow' | 'normal' | 'fast';
+        density: 'low' | 'medium' | 'high';
+        emoji?: string;
+        opacity: number;
+        interactive: boolean;
+    };
 }
 
 export const THEME_PRESETS: Record<ThemePresetName, Partial<StorefrontThemeV2>> = {

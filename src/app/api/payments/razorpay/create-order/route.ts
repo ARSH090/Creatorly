@@ -184,8 +184,9 @@ export async function POST(req: NextRequest) {
                     (!coupon.validUntil || now <= new Date(coupon.validUntil));
 
                 // Check usage limits
-                const hasUsageLeft =
-                    !coupon.usageLimit || coupon.usedCount < coupon.usageLimit;
+                const usageLimit = (coupon as any).usageLimit || (coupon as any).maxUses;
+                const usageCount = (coupon as any).usageCount || (coupon as any).usedCount || 0;
+                const hasUsageLeft = !usageLimit || usageCount < usageLimit;
 
                 if (isValid && hasUsageLeft) {
                     // Calculate discount

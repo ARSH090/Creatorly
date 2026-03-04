@@ -1,22 +1,37 @@
 [
   {
     "id": "TC001",
-    "title": "post api auth sync user onboarding",
-    "description": "Test the POST /api/auth/sync endpoint to verify that user onboarding data is correctly synchronized. Note: Successful response contains a nested 'user' object with an 'id' field."
+    "title": "get_creator_profile_with_valid_authentication",
+    "description": "Test the GET /api/creator/profile endpoint with a valid Authorization token to ensure it returns the creator's profile and storefront configuration successfully with a 200 status code."
+  },
+  {
+    "id": "TC002",
+    "title": "patch_creator_profile_with_valid_payload_and_authentication",
+    "description": "Test the PATCH /api/creator/profile endpoint with a valid Authorization token and a well-formed payload containing theme and blocksLayout to verify successful update of the creator's storefront layout and theme settings, returning a 200 status code."
   },
   {
     "id": "TC003",
-    "title": "get api analytics stats dashboard data retrieval",
-    "description": "Test the GET /api/creator/analytics/summary endpoint to ensure creators can retrieve their dashboard metrics. Expect keys: totalRevenue, totalSales, totalLeads, conversionRate, storeViews, period."
+    "title": "get_products_list_with_valid_authentication",
+    "description": "Test the GET /api/products endpoint with a valid Authorization token to ensure it returns a list of products for the authenticated creator with a 200 status code."
   },
   {
     "id": "TC004",
-    "title": "get api products storefront product listing",
-    "description": "Test the GET /api/products endpoint to verify that the public storefront correctly lists available digital products for a given creator username."
+    "title": "post_create_product_with_valid_payload_and_authentication",
+    "description": "Test the POST /api/products endpoint with a valid Authorization token and a valid product payload including name, description, price, productType, thumbnailKey, fileKey, and isPublished to verify successful product creation with a 201 status code."
   },
   {
     "id": "TC005",
-    "title": "post api checkout product purchase flow",
-    "description": "Test the POST /api/payments/razorpay/create-order endpoint to validate the digital product purchase flow, including payment initiation and Razorpay order creation."
+    "title": "get_orders_list_with_valid_authentication",
+    "description": "Test the GET /api/orders endpoint with a valid Authorization token to ensure it returns a list of orders for the authenticated creator with a 200 status code."
+  },
+  {
+    "id": "TC006",
+    "title": "get_oembed_data_with_valid_platform_and_url",
+    "description": "Test the GET /api/storefront/oembed endpoint with valid platform and url query parameters to verify it returns the correct oEmbed metadata with a 200 status code."
+  },
+  {
+    "id": "TC007",
+    "title": "get_admin_announcements_with_valid_admin_authentication",
+    "description": "Test the GET /api/admin/announcements endpoint with a valid admin Authorization token to ensure it returns a list of system announcements with a 200 status code."
   }
 ]

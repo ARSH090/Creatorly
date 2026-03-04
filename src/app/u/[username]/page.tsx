@@ -22,10 +22,11 @@ import TestimonialsSection from '@/components/storefront/TestimonialsSection';
 import FAQSection from '@/components/storefront/FAQSection';
 import { applyThemeToCSSVars, getGoogleFontsUrl } from '@/utils/theme.utils';
 import type { StorefrontTheme, ServiceButton, PublicLink } from '@/types/storefront.types';
-import { shouldDowngrade } from '@/lib/utils/tier-utils';
 import { TIER_LIMITS } from '@/lib/constants/tier-limits';
 import type { StorefrontBlock, StorefrontThemeV2 } from '@/types/storefront-blocks.types';
+import { shouldDowngrade } from '@/lib/utils/tier-utils';
 import StorefrontRenderer from '@/components/storefront/StorefrontRenderer';
+import EditStorefrontButton from '@/components/storefront/EditStorefrontButton';
 
 // ─── ISR: revalidate every 60 seconds ─────────────────────────────────────────
 export const revalidate = 60;
@@ -244,6 +245,12 @@ export default async function CreatorStorefront({
         );
     }
 
+    const isOwner = !!currentUser && (
+        (currentUser as any)._id?.toString() === creator._id?.toString() ||
+        (currentUser as any).clerkId === creator.clerkId ||
+        (currentUser as any).username === creator.username
+    );
+
     // Serialise products
     const plainProducts = products.map((p: any) => ({
         id: p._id.toString(),
@@ -343,6 +350,7 @@ export default async function CreatorStorefront({
                     creatorId={creator._id.toString()}
                     creatorUsername={creator.username}
                 />
+                <EditStorefrontButton creatorUsername={creator.username} />
             </>
         );
     }
@@ -458,7 +466,7 @@ export default async function CreatorStorefront({
                 className="min-h-screen selection:bg-indigo-500/30 overflow-x-hidden"
                 style={applyThemeToCSSVars(theme)}
             >
-                <StoreHeader creator={plainCreator} />
+                <StoreHeader creator={plainCreator} isOwner={isOwner} />
 
                 <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-32 pb-12 space-y-16 relative">
                     {layout.map((section) => {
@@ -533,6 +541,7 @@ export default async function CreatorStorefront({
 
                     <ChatWidget creatorId={creator._id.toString()} />
                 </main>
+                <EditStorefrontButton creatorUsername={creator.username} />
             </div>
         </>
     );

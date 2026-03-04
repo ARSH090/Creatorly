@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Order } from '@/lib/models/Order';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
+import { successResponse, errorResponse } from '@/types/api';
 
 async function handler(req: NextRequest, user: any) {
     try {
@@ -38,18 +39,23 @@ async function handler(req: NextRequest, user: any) {
 
         const totalContext = await Order.countDocuments(query);
 
-        return NextResponse.json({
-            orders,
+        const ordersWithAlias = orders.map((order: any) => ({
+            ...order,
+            orderId: order._id,
+        }));
+
+        return NextResponse.json(successResponse({
+            orders: ordersWithAlias,
             pagination: {
                 total: totalContext,
                 page,
                 limit,
                 pages: Math.ceil(totalContext / limit)
             }
-        });
-    } catch (error) {
+        }));
+    } catch (error: any) {
         console.error('Orders API Error:', error);
-        return NextResponse.json({ error: 'Failed to fetch orders' }, { status: 500 });
+        return NextResponse.json(errorResponse('Failed to fetch orders', error.message), { status: 500 });
     }
 }
 

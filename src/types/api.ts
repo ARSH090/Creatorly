@@ -13,6 +13,7 @@ export interface ApiResponse<T = any> {
 }
 
 export interface ApiError {
+    success: boolean;
     error: string;
     details?: any;
     code?: string;
@@ -39,6 +40,7 @@ export function errorResponse(
     code?: string
 ): ApiError {
     return {
+        success: false,
         error,
         details,
         code,

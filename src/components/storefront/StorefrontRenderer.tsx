@@ -11,6 +11,8 @@ import React, { useEffect } from 'react';
 import type { StorefrontBlock, StorefrontThemeV2 } from '@/types/storefront-blocks.types';
 import { BlockRenderer, themeToRecord } from './BlockRenderer';
 import ChatWidget from './ChatWidget';
+import { CustomCursor } from './theme/CustomCursor';
+import { BackgroundAnimation } from './theme/BackgroundAnimation';
 
 interface StorefrontRendererProps {
     blocks: StorefrontBlock[];
@@ -129,6 +131,14 @@ export default function StorefrontRenderer({
                     creatorUsername={creatorUsername}
                 />
             ))}
+
+            {/* Special Effects */}
+            {theme.backgroundAnimation && theme.backgroundAnimation.type !== 'none' && (
+                <BackgroundAnimation animation={theme.backgroundAnimation as any} />
+            )}
+            {theme.cursor && theme.cursor.type !== 'default' && (
+                <CustomCursor cursor={theme.cursor as any} />
+            )}
 
             {/* Custom CSS */}
             {theme.customCss && (

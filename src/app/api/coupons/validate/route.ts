@@ -54,7 +54,9 @@ export async function POST(request: NextRequest) {
         }
 
         // Check usage limits
-        if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+        const maxUses = (coupon as any).usageLimit || (coupon as any).maxUses;
+        const usedCount = (coupon as any).usageCount || (coupon as any).usedCount || 0;
+        if (maxUses && usedCount >= maxUses) {
             return NextResponse.json(
                 { error: 'Coupon usage limit reached' },
                 { status: 400 }
@@ -62,10 +64,11 @@ export async function POST(request: NextRequest) {
         }
 
         // Check minimum purchase amount
-        if (coupon.minimumPurchaseAmount && cartTotal < coupon.minimumPurchaseAmount) {
+        const minPurchase = (coupon as any).minOrderAmount || (coupon as any).minimumPurchaseAmount;
+        if (minPurchase && cartTotal < minPurchase) {
             return NextResponse.json(
                 {
-                    error: `Minimum purchase amount is ₹${(coupon.minimumPurchaseAmount).toFixed(2)}`,
+                    error: `Minimum purchase amount is ₹${(minPurchase).toFixed(2)}`,
                 },
                 { status: 400 }
             );

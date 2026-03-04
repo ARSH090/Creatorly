@@ -48,12 +48,15 @@ export async function validateCoupon(
         }
 
         // Check usage limit
-        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+        const usageLimit = (coupon as any).usageLimit || (coupon as any).maxUses;
+        const usageCount = (coupon as any).usageCount || (coupon as any).usedCount || 0;
+        if (usageLimit && usageCount >= usageLimit) {
             return { valid: false, discount: 0, error: 'Coupon usage limit reached' };
         }
 
         // Check per-user usage (if email provided)
-        if (customerEmail && coupon.usagePerUser > 0) {
+        const usagePerUser = (coupon as any).usageLimitPerUser || (coupon as any).usagePerUser || (coupon as any).perCustomerLimit;
+        if (customerEmail && usagePerUser > 0) {
             const { Order } = await import('@/lib/models/Order');
             const userUsageCount = await Order.countDocuments({
                 customerEmail,
@@ -61,7 +64,7 @@ export async function validateCoupon(
                 paymentStatus: 'paid'
             });
 
-            if (userUsageCount >= coupon.usagePerUser) {
+            if (userUsageCount >= usagePerUser) {
                 return {
                     valid: false,
                     discount: 0,
@@ -166,7 +169,7 @@ export async function incrementCouponUsage(couponId: string): Promise<void> {
     try {
         await connectToDatabase();
         await Coupon.findByIdAndUpdate(couponId, {
-            $inc: { usedCount: 1 }
+            $inc: { usageCount: 1, usedCount: 1 }
         });
     } catch (error) {
         console.error('Failed to increment coupon usage:', error);

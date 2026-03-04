@@ -2,73 +2,70 @@ version: "2"
 type: backend
 tech_stack:
   - TypeScript
-  - Next.js 14 (App Router)
-  - MongoDB (Mongoose)
-  - Clerk (Auth)
-  - Razorpay, Stripe, PayPal (Payments)
-  - Resend, BullMQ (Email & Queues)
-  - AWS S3 (Storage)
-  - Socket.io (Real-time)
+  - Next.js
+  - MongoDB
+  - Mongoose
+  - Clerk
+  - Razorpay
 features:
-  - name: Authentication (Clerk)
-    description: User registration, login, and session management via Clerk.
+  - name: Creator Profile & Storefront API
+    description: CRUD operations for creator profiles, storefront layouts, and theme settings.
     files:
-      - src/lib/auth/server-auth.ts
-      - src/middleware.ts
+      - src/app/api/creator/profile/route.ts
+      - src/lib/models/CreatorProfile.ts
     endpoints:
       - method: GET
-        path: /api/auth/me
-        description: Fetch current authenticated user profile
+        path: /api/creator/profile
+        description: Get the current creator's profile and storefront configuration.
         auth_required: true
-  - name: Product Management
-    description: Creator-facing CRUD for digital products, including file uploads and pricing.
+      - method: PATCH
+        path: /api/creator/profile
+        description: Update storefront layout and theme settings.
+        auth_required: true
+  - name: Product Management API
+    description: APIs for managing creator products.
     files:
       - src/app/api/products/route.ts
       - src/lib/models/Product.ts
     endpoints:
       - method: GET
         path: /api/products
-        description: List creator's products
+        description: List products for the authenticated creator.
         auth_required: true
       - method: POST
         path: /api/products
-        description: Create new digital product
+        description: Create a new product.
         auth_required: true
-  - name: Payment Webhooks
-    description: Listeners for Razorpay, Stripe, and PayPal payment success events to trigger fulfillment.
+  - name: Order Management API
+    description: APIs for processing and managing orders.
     files:
-      - src/app/api/webhooks/razorpay/route.ts
-      - src/app/api/webhooks/stripe/route.ts
-      - src/lib/services/digitalDelivery.ts
-    endpoints:
-      - method: POST
-        path: /api/webhooks/razorpay
-        description: Handle Razorpay payment captured events
-        auth_required: false
-  - name: Admin Dashboard
-    description: Platform-wide management of users, stores, payouts, and system settings.
-    files:
-      - src/app/api/admin/users/route.ts
-      - src/app/api/admin/payouts/route.ts
-      - src/app/api/admin/settings/route.ts
-      - src/lib/models/AuditLog.ts
+      - src/app/api/orders/route.ts
+      - src/lib/models/Order.ts
     endpoints:
       - method: GET
-        path: /api/admin/analytics
-        description: Platform-wide revenue and growth metrics
+        path: /api/orders
+        description: List orders for the authenticated creator.
         auth_required: true
-      - method: PATCH
-        path: /api/admin/users/[id]/suspend
-        description: Suspend/Unsuspend user store
-        auth_required: true
-  - name: Digital Delivery
-    description: Secure delivery of files, license keys, and course access after purchase.
+  - name: Social Feed & oEmbed API
+    description: Proxy service for fetching social media embed data.
     files:
-      - src/app/api/download/[token]/route.ts
-      - src/lib/models/DownloadToken.ts
+      - src/app/api/storefront/oembed/route.ts
     endpoints:
       - method: GET
-        path: /api/download/[token]
-        description: Download purchased digital asset
+        path: /api/storefront/oembed
+        description: Fetch oEmbed data for a given platform and URL.
         auth_required: false
-known_limitations: []
+  - name: Admin Management API
+    description: System-wide administrative operations.
+    files:
+      - src/app/api/admin/announcements/route.ts
+      - src/app/api/admin/coupons/route.ts
+    endpoints:
+      - method: GET
+        path: /api/admin/announcements
+        description: List system announcements.
+        auth_required: true
+known_limitations:
+  - issue: Minimal input validation on some storefront settings
+    location: src/app/api/creator/profile/route.ts
+    impact: Potentially allows malformed JSON in blocksLayout

@@ -8,13 +8,14 @@ import {
     MessageCircle, Camera, Play, Mail, Calendar, Send,
     Twitter, Linkedin, Music2, ExternalLink, Globe,
     Star, Tag, Clock, ToggleLeft, ToggleRight, GripVertical,
-    Monitor
+    Monitor, Sparkles
 } from 'lucide-react';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import StoreThemeSelector from '@/components/storefront/StoreThemeSelector';
 import { toast } from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -93,6 +94,7 @@ const newLink = (order: number) => ({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function StorefrontBuilder() {
+    const router = useRouter();
     const { user, email, displayName, photoURL } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<'design' | 'links' | 'layout'>('design');
@@ -244,6 +246,14 @@ export default function StorefrontBuilder() {
                         <Monitor className="w-4 h-4 text-indigo-400" /> Storefront Editor
                     </h2>
                     <div className="flex gap-2">
+                        <button
+                            onClick={() => router.push('/dashboard/storefront/editor')}
+                            className="flex items-center gap-2 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-3 py-2 rounded-xl hover:bg-indigo-500 hover:text-white transition-all text-[10px] uppercase font-black tracking-widest"
+                            title="Switch to Advance Editor"
+                        >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Advance Editor</span>
+                        </button>
                         <button
                             onClick={() => setShowMobilePreview(!showMobilePreview)}
                             className="md:hidden p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"

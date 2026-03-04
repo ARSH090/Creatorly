@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ShoppingBag, Search, Menu, X, User } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import NextImage from 'next/image';
+import { User, ShoppingBag, Edit3 } from 'lucide-react';
 
 interface StoreHeaderProps {
     creator: {
@@ -13,13 +13,22 @@ interface StoreHeaderProps {
         logo?: string;
         theme: any;
     };
+    isOwner?: boolean;
 }
 
-export default function StoreHeader({ creator }: StoreHeaderProps) {
-    const { user } = useUser();
+export default function StoreHeader({ creator, isOwner: serverIsOwner }: StoreHeaderProps) {
+    const { user, isLoaded } = useUser();
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const { theme } = creator;
+
+    const isClientOwner = isLoaded && user && (
+        user.username === creator.username ||
+        (user.unsafeMetadata as any)?.username === creator.username ||
+        user.id === (creator as any).clerkId
+    );
+
+    const isOwner = serverIsOwner || isClientOwner;
 
     useEffect(() => {
         setIsMounted(true);
@@ -61,7 +70,17 @@ export default function StoreHeader({ creator }: StoreHeaderProps) {
                         <ShoppingBag className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
 
-                    <div className="h-6 w-px bg-white/10 mx-1 sm:mx-2" />
+                    {isMounted && isOwner && (
+                        <Link
+                            href="/dashboard/storefront/editor"
+                            className="flex items-center gap-2 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-2 rounded-xl font-bold text-[10px] uppercase tracking-wider hover:bg-indigo-500 hover:text-white transition-all shadow-[0_0_15px_rgba(99,102,241,0.2)]"
+                        >
+                            <Edit3 className="w-3 h-3" />
+                            <span className="hidden sm:inline">Advance Editor</span>
+                        </Link>
+                    )}
+
+                    <div className="h-6 w-px bg-white/10 mx-1 sm:mx-2 hidden sm:block" />
 
                     {isMounted && (
                         user ? (

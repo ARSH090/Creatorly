@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
     DndContext, closestCenter, KeyboardSensor, PointerSensor,
     useSensor, useSensors, DragEndEvent, DragOverlay, DragStartEvent,
@@ -14,7 +15,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     GripVertical, Plus, Eye, EyeOff, Trash2, Copy, Settings2,
     Save, Monitor, Tablet, Smartphone, Undo2, Redo2, ExternalLink,
-    Palette, Layers, X, ChevronRight, Loader2, Check,
+    Palette, Layers, X, ChevronRight, ChevronLeft, Loader2, Check,
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import {
@@ -44,8 +45,40 @@ import PricingTableSettings from '@/components/storefront/editor/PricingTableSet
 import SingleImageSettings from '@/components/storefront/editor/SingleImageSettings';
 import GenericSettings from '@/components/storefront/editor/GenericSettings';
 import { BlockRenderer } from '@/components/storefront/BlockRenderer';
+import { CustomCursor } from '@/components/storefront/theme/CustomCursor';
+import { BackgroundAnimation } from '@/components/storefront/theme/BackgroundAnimation';
 
 type ViewMode = 'desktop' | 'tablet' | 'mobile';
+
+function applyTheme(theme: StorefrontThemeV2): React.CSSProperties {
+    const style: React.CSSProperties = {
+        '--color-primary': theme.primaryColor,
+        '--color-secondary': theme.secondaryColor,
+        '--color-accent': theme.accentColor,
+        '--color-bg': theme.backgroundColor,
+        '--color-card': theme.cardColor,
+        '--color-text': theme.textColor,
+        '--color-muted': theme.mutedColor,
+        '--font-family': `'${theme.fontFamily}', system-ui, sans-serif`,
+        '--border-radius': `${theme.borderRadius}px`,
+        fontFamily: `'${theme.fontFamily}', system-ui, sans-serif`,
+        backgroundColor: theme.bgType === 'color' ? theme.backgroundColor : undefined,
+        color: theme.textColor,
+    } as any;
+
+    if (theme.bgType === 'gradient' && theme.bgValue) {
+        style.background = theme.bgValue;
+    }
+
+    if (theme.bgType === 'image' && theme.bgValue) {
+        style.backgroundImage = `url(${theme.bgValue})`;
+        style.backgroundSize = 'cover';
+        style.backgroundPosition = 'center';
+        style.backgroundAttachment = 'fixed';
+    }
+
+    return style;
+}
 
 // ─── Sortable Block Card ──────────────────────────────────────────────────────
 function SortableBlockCard({
@@ -221,13 +254,13 @@ export default function StorefrontEditor() {
         });
     }, [pushHistory, scheduleAutoSave, theme]);
 
-    const saveLayout = async (b = blocks, t = theme, silent = false) => {
+    const saveLayout = async (b = blocks, t = theme, silent = false, isLive = isPublished) => {
         if (!silent) setIsSaving(true);
         try {
             await fetch('/api/creator/profile', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ blocksLayout: b, themeV2: t, isPublished }),
+                body: JSON.stringify({ blocksLayout: b, themeV2: t, isPublished: isLive }),
             });
             setLastSaved(new Date());
             if (!silent) toast.success('Saved!');
@@ -478,7 +511,130 @@ export default function StorefrontEditor() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Special Effects */}
+                            <div className="pt-6 border-t border-white/5 space-y-6">
+                                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">Special Effects</p>
+
+                                {/* Cursor Settings */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Custom Cursor</span>
+                                        <select
+                                            value={theme.cursor?.type || 'default'}
+                                            onChange={e => applyThemePatch({ cursor: { ...(theme.cursor || { color: theme.primaryColor, size: 20, trailEffect: false, trailLength: 5, magneticButtons: false }), type: e.target.value as any } })}
+                                            className="bg-zinc-950 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white focus:ring-0 outline-none"
+                                        >
+                                            <option value="default">Default</option>
+                                            <option value="dot">Dot</option>
+                                            <option value="ring">Ring</option>
+                                            <option value="blob">Glow Blob</option>
+                                            <option value="crosshair">Crosshair</option>
+                                            <option value="emoji">Emoji</option>
+                                            <option value="none">Hidden</option>
+                                        </select>
+                                    </div>
+
+                                    {theme.cursor?.type && theme.cursor.type !== 'default' && theme.cursor.type !== 'none' && (
+                                        <div className="space-y-3 pl-2 border-l border-white/5 ml-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[9px] text-zinc-500">Color</span>
+                                                <input
+                                                    type="color"
+                                                    value={theme.cursor?.color || theme.primaryColor}
+                                                    onChange={e => applyThemePatch({ cursor: { ...theme.cursor!, color: e.target.value } })}
+                                                    className="w-6 h-6 rounded cursor-pointer border-none bg-transparent"
+                                                />
+                                            </div>
+                                            {theme.cursor?.type === 'emoji' && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[9px] text-zinc-500">Emoji</span>
+                                                    <input
+                                                        type="text"
+                                                        value={theme.cursor?.emoji || '✨'}
+                                                        onChange={e => applyThemePatch({ cursor: { ...theme.cursor!, emoji: e.target.value } })}
+                                                        className="w-12 bg-zinc-950 border border-white/10 rounded px-1 py-0.5 text-[10px] text-center"
+                                                        maxLength={2}
+                                                    />
+                                                </div>
+                                            )}
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-[9px] text-zinc-500 flex-1">Trail</span>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={theme.cursor?.trailEffect || false}
+                                                    onChange={e => applyThemePatch({ cursor: { ...theme.cursor!, trailEffect: e.target.checked } })}
+                                                    className="w-3 h-3 rounded"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Background Animation Settings */}
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">BG Animation</span>
+                                        <select
+                                            value={theme.backgroundAnimation?.type || 'none'}
+                                            onChange={e => applyThemePatch({ backgroundAnimation: { ...(theme.backgroundAnimation || { color: theme.primaryColor, speed: 'normal', density: 'medium', opacity: 20, interactive: true }), type: e.target.value as any } })}
+                                            className="bg-zinc-950 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white focus:ring-0 outline-none"
+                                        >
+                                            <option value="none">None</option>
+                                            <option value="particles">Connected Particles</option>
+                                            <option value="floating_shapes">Floating Shapes</option>
+                                            <option value="fireflies">Magic Fireflies</option>
+                                            <option value="stars">Night Sky Stars</option>
+                                            <option value="falling_emojis">Falling Emojis</option>
+                                        </select>
+                                    </div>
+
+                                    {theme.backgroundAnimation?.type && theme.backgroundAnimation.type !== 'none' && (
+                                        <div className="space-y-3 pl-2 border-l border-white/5 ml-1">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[9px] text-zinc-500">Opacity — {theme.backgroundAnimation?.opacity}%</span>
+                                                <input
+                                                    type="range" min={5} max={100} step={5}
+                                                    value={theme.backgroundAnimation?.opacity || 20}
+                                                    onChange={e => applyThemePatch({ backgroundAnimation: { ...theme.backgroundAnimation!, opacity: Number(e.target.value) } })}
+                                                    className="w-24 accent-indigo-500"
+                                                />
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[9px] text-zinc-500">Speed</span>
+                                                <div className="flex gap-1">
+                                                    {(['slow', 'normal', 'fast'] as const).map(s => (
+                                                        <button
+                                                            key={s}
+                                                            onClick={() => applyThemePatch({ backgroundAnimation: { ...theme.backgroundAnimation!, speed: s } })}
+                                                            className={`px-2 py-1 rounded text-[8px] uppercase font-bold transition-all ${theme.backgroundAnimation?.speed === s ? 'bg-indigo-500 text-white' : 'bg-white/5 text-zinc-500'}`}
+                                                        >
+                                                            {s}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {theme.backgroundAnimation?.type === 'falling_emojis' && (
+                                                <div className="flex items-center justify-between">
+                                                    <span className="text-[9px] text-zinc-500">Emoji</span>
+                                                    <input
+                                                        type="text"
+                                                        value={theme.backgroundAnimation?.emoji || '✨'}
+                                                        onChange={e => applyThemePatch({ backgroundAnimation: { ...theme.backgroundAnimation!, emoji: e.target.value } })}
+                                                        className="w-12 bg-zinc-950 border border-white/10 rounded px-1 py-0.5 text-[10px] text-center"
+                                                        maxLength={2}
+                                                    />
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
+
+
+
+
                     )}
                 </div>
             </aside>
@@ -486,37 +642,86 @@ export default function StorefrontEditor() {
             {/* PREVIEW AREA */}
             <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="h-12 bg-[#0A0A0A] border-b border-white/5 flex items-center justify-between px-4">
-                    <div className="flex items-center gap-1 bg-black/40 rounded-xl p-1">
-                        {([
-                            { m: 'desktop' as ViewMode, i: Monitor },
-                            { m: 'tablet' as ViewMode, i: Tablet },
-                            { m: 'mobile' as ViewMode, i: Smartphone },
-                        ]).map(v => (
-                            <button key={v.m} onClick={() => setViewMode(v.m)} className={`p-1.5 rounded-lg ${viewMode === v.m ? 'bg-white/10 text-white' : 'text-zinc-600'}`}>
-                                <v.i size={14} />
-                            </button>
-                        ))}
+                    <div className="flex items-center gap-2 sm:gap-4">
+                        <Link
+                            href="/dashboard/storefront"
+                            className="flex items-center gap-1 text-zinc-400 hover:text-white transition-all text-[10px] font-black uppercase tracking-widest bg-white/5 px-2 py-1.5 rounded-lg hover:bg-white/10 border border-white/5"
+                            title="Back to Legacy Editor"
+                        >
+                            <ChevronLeft size={14} />
+                            <span className="hidden sm:inline">Legacy Editor</span>
+                        </Link>
+                        <div className="flex items-center gap-1 bg-black/40 rounded-xl p-1 hidden sm:flex">
+                            {([
+                                { m: 'desktop' as ViewMode, i: Monitor },
+                                { m: 'tablet' as ViewMode, i: Tablet },
+                                { m: 'mobile' as ViewMode, i: Smartphone },
+                            ]).map(v => (
+                                <button key={v.m} onClick={() => setViewMode(v.m)} className={`p-1.5 rounded-lg ${viewMode === v.m ? 'bg-white/10 text-white' : 'text-zinc-600'}`}>
+                                    <v.i size={14} />
+                                </button>
+                            ))}
+                        </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-black/40 rounded-xl border border-white/5">
-                            <div className={`w-2 h-2 rounded-full ${isPublished ? 'bg-emerald-500' : 'bg-zinc-700'}`} />
+                        <div className="flex gap-1 hidden sm:flex">
+                            <button onClick={undo} disabled={!history.length} className={`p-1.5 rounded-lg transition-all ${history.length ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-zinc-700 cursor-not-allowed'}`}>
+                                <Undo2 size={16} />
+                            </button>
+                            <button onClick={redo} disabled={!future.length} className={`p-1.5 rounded-lg transition-all ${future.length ? 'text-zinc-400 hover:text-white hover:bg-white/10' : 'text-zinc-700 cursor-not-allowed'}`}>
+                                <Redo2 size={16} />
+                            </button>
+                        </div>
+
+                        {lastSaved && (
+                            <span className="text-[10px] text-zinc-500 hidden md:block tracking-widest uppercase">
+                                Saved {lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                        )}
+
+                        <button
+                            onClick={() => saveLayout()}
+                            disabled={isSaving}
+                            className="flex items-center gap-2 px-4 py-1.5 bg-white/5 hover:bg-white/10 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                        >
+                            {isSaving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />}
+                            Save
+                        </button>
+
+                        <div className="h-4 w-px bg-white/10 hidden sm:block" />
+
+                        <div className="items-center gap-2 px-3 py-1.5 bg-black/40 rounded-xl border border-white/5 hidden xl:flex">
+                            <div className={`w-2 h-2 rounded-full ${isPublished ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-zinc-700'}`} />
                             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{isPublished ? 'Live' : 'Draft'}</span>
                         </div>
-                        <button onClick={() => { setIsPublished(!isPublished); saveLayout(); }} className="px-4 py-1.5 bg-indigo-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">
+                        <button
+                            onClick={async () => {
+                                const nextState = !isPublished;
+                                setIsPublished(nextState);
+                                await saveLayout(blocks, theme, false, nextState);
+                            }}
+                            className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isPublished ? 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700 border border-white/5' : 'bg-indigo-500 text-white hover:bg-indigo-600 border border-indigo-400/20 shadow-[0_0_15px_rgba(99,102,241,0.3)]'}`}
+                        >
                             {isPublished ? 'Unpublish' : 'Publish'}
                         </button>
+
+                        {username && isPublished && (
+                            <Link href={`/u/${username}`} target="_blank" className="p-1.5 flex items-center justify-center text-zinc-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-lg transition-all border border-white/5 group">
+                                <ExternalLink size={14} className="group-hover:scale-110 transition-transform" />
+                            </Link>
+                        )}
                     </div>
                 </div>
 
                 <div className="flex-1 overflow-auto bg-[#050505] flex justify-center py-8 p-4">
-                    <div className="transition-all duration-300 relative" style={{ width: previewWidth, maxWidth: '100%' }}>
-                        <div className="space-y-4" style={{
-                            '--color-primary': theme.primaryColor,
-                            '--color-text': theme.textColor,
-                            '--color-bg': theme.backgroundColor,
-                            fontFamily: theme.fontFamily,
-                            borderRadius: `${theme.borderRadius}px`
-                        } as any}>
+                    <div className="transition-all duration-300 relative shadow-2xl rounded-[32px] sm:rounded-[40px] border-[8px] border-zinc-900 overflow-hidden" style={{ width: previewWidth, maxWidth: '100%', minHeight: '800px', ...applyTheme(theme) }}>
+                        {theme.backgroundAnimation && theme.backgroundAnimation.type !== 'none' && (
+                            <BackgroundAnimation animation={theme.backgroundAnimation as any} />
+                        )}
+                        {theme.cursor && theme.cursor.type !== 'default' && (
+                            <CustomCursor cursor={theme.cursor as any} />
+                        )}
+                        <div className="space-y-4 relative z-10 w-full max-w-2xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
                             {blocks.map(block => (
                                 <div key={block.id} className={`relative rounded-2xl border-2 transition-all ${selectedId === block.id ? 'border-indigo-500' : 'border-transparent'}`} onClick={() => setSelectedId(block.id)}>
                                     <BlockRenderer block={block} theme={theme} products={[]} creatorUsername={username} />
