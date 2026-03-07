@@ -2,7 +2,7 @@
     "crons": [
         {
             "path": "/api/cron/check-followers",
-            "schedule": "*/2 * * * *"
+            "schedule": "0 0 * * *"
         },
         {
             "path": "/api/cron/refresh-instagram-tokens",
