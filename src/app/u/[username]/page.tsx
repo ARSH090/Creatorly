@@ -54,10 +54,11 @@ export async function generateMetadata({
 }): Promise<Metadata> {
     await connectToDatabase();
     const { username } = await params;
+    const usernameRegex = new RegExp(`^${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 
     const [creator, profile] = await Promise.all([
-        User.findOne({ $or: [{ username }, { storeSlug: username }] }).lean() as Promise<any>,
-        User.findOne({ $or: [{ username }, { storeSlug: username }] })
+        User.findOne({ $or: [{ username: usernameRegex }, { storeSlug: usernameRegex }] }).lean() as Promise<any>,
+        User.findOne({ $or: [{ username: usernameRegex }, { storeSlug: usernameRegex }] })
             .select('_id').lean()
             .then((c: any) => c ? CreatorProfile.findOne({ creatorId: c._id }).lean() : null) as Promise<any>,
     ]);
@@ -121,10 +122,11 @@ export default async function CreatorStorefront({
     const { ref } = await searchParams;
 
     await connectToDatabase();
+    const usernameRegex = new RegExp(`^${username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
 
     const [creator, profile] = await Promise.all([
-        User.findOne({ $or: [{ username }, { storeSlug: username }] }).select('displayName username avatar bio status isSuspended createdAt').lean(),
-        User.findOne({ $or: [{ username }, { storeSlug: username }] })
+        User.findOne({ $or: [{ username: usernameRegex }, { storeSlug: usernameRegex }] }).select('displayName username avatar bio status isSuspended createdAt').lean(),
+        User.findOne({ $or: [{ username: usernameRegex }, { storeSlug: usernameRegex }] })
             .select('_id').lean()
             .then((c: any) => c ? CreatorProfile.findOne({ creatorId: c._id }).select('theme themeV2 layout blocksLayout links serviceButtons description testimonials faqs storefrontSeo passwordProtection showProfilePhoto').lean() : null)
     ]);

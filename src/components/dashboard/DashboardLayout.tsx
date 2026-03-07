@@ -332,7 +332,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </AnimatePresence>
 
                 {/* Main Content Area */}
-                <main className="flex-1 overflow-y-auto bg-[#030303] relative">
+                <main className="flex-1 overflow-y-auto bg-[#030303] relative pb-20 lg:pb-0">
                     {/* Global background noise */}
                     <div className="fixed inset-0 pointer-events-none z-0 opacity-[0.02]" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
                     <div className="relative z-10 p-4 sm:p-6 lg:p-8">
@@ -340,6 +340,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                 </main>
             </div>
+
+            {/* Mobile Bottom Navigation */}
+            <nav className="fixed bottom-0 left-0 right-0 z-50 lg:hidden bg-[#0A0A0A]/95 backdrop-blur-xl border-t border-white/[0.05] safe-bottom">
+                <div className="flex items-center justify-around h-16 px-2">
+                    {[
+                        { icon: LayoutDashboard, label: 'Home', href: '/dashboard' },
+                        { icon: Package, label: 'Products', href: '/dashboard/projects' },
+                        { icon: ShoppingCart, label: 'Orders', href: '/dashboard/orders' },
+                        { icon: TrendingUp, label: 'AutoDM', href: '/dashboard/automation' },
+                        { icon: Settings, label: 'Settings', href: '/dashboard/profile' },
+                    ].map((tab) => {
+                        const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/');
+                        return (
+                            <Link
+                                key={tab.label}
+                                href={tab.href}
+                                className={`flex flex-col items-center justify-center gap-1 px-2 py-1.5 rounded-xl transition-all min-w-[56px] ${isActive
+                                        ? 'text-white'
+                                        : 'text-zinc-600 hover:text-zinc-400'
+                                    }`}
+                            >
+                                <tab.icon className={`w-5 h-5 ${isActive ? 'text-indigo-400' : ''}`} />
+                                <span className="text-[9px] font-bold uppercase tracking-wide">{tab.label}</span>
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="mobile-active-tab"
+                                        className="absolute -top-px left-1/4 right-1/4 h-0.5 bg-indigo-500 rounded-full"
+                                    />
+                                )}
+                            </Link>
+                        );
+                    })}
+                </div>
+            </nav>
         </div>
     );
 }
