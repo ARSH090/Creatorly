@@ -28,14 +28,13 @@ export async function GET(req: NextRequest) {
         const oneDayRangeEnd = new Date(oneDayOut);
         oneDayRangeEnd.setHours(23, 59, 59, 999);
 
+        // $or MUST be at top level — NOT inside a field condition
         const trialsToRemind = await Subscription.find({
             status: 'trialing',
-            trialEndsAt: {
-                $or: [
-                    { $gte: threeDaysRangeStart, $lte: threeDaysRangeEnd },
-                    { $gte: oneDayRangeStart, $lte: oneDayRangeEnd }
-                ]
-            }
+            $or: [
+                { trialEndsAt: { $gte: threeDaysRangeStart, $lte: threeDaysRangeEnd } },
+                { trialEndsAt: { $gte: oneDayRangeStart, $lte: oneDayRangeEnd } },
+            ],
         });
 
         let sentCount = 0;
@@ -43,16 +42,16 @@ export async function GET(req: NextRequest) {
             const user = await User.findById(sub.userId).lean();
             if (!user?.email) continue;
 
-            const daysLeft = Math.ceil((sub.trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            const daysLeft = Math.ceil(((sub as any).trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
             await sendTrialReminderEmail(user.email, {
                 daysLeft,
-                name: user.displayName || user.username || 'there'
+                name: (user as any).displayName || (user as any).username || 'there'
             });
             sentCount++;
         }
 
-        return NextResponse.json({ success: true, sent: sentCount });
+        return NextResponse.json({ success: true, processed: sentCount });
 
     } catch (error: any) {
         console.error('[Cron] Trial reminder error:', error);

@@ -3,6 +3,11 @@ import { TIER_LIMITS, FEATURE_GATE_ERRORS } from '../constants/tier-limits';
 import { getCurrentUser } from '../auth/server-auth';
 import { User } from '../models/User';
 import { shouldDowngrade } from '../utils/tier-utils';
+import Product from '../models/Product';
+import Subscriber from '../models/Subscriber';
+import Booking from '../models/Booking';
+import { AutoDMRule } from '../models/AutoDMRule';
+import Team from '../models/Team';
 
 export type FeatureType =
     | 'products'
@@ -100,15 +105,25 @@ export async function checkFeatureAccess(
 
         // Numeric limits
         if (typeof limit === 'number') {
-            let usage = currentCount ?? 0;
+            let usage = currentCount;
 
-            // Special handling for monotonic counters
-            if (feature === 'ordersLifetime') {
-                usage = user.freeTierOrdersCount || 0;
-            } else if (feature === 'leads') {
-                usage = user.freeTierLeadsCount || 0;
-            } else if (feature === 'storage') {
-                usage = user.storageUsageMb || 0;
+            // Fetch real-time usage if not provided
+            if (usage === undefined) {
+                if (feature === 'products') {
+                    usage = await Product.countDocuments({ creatorId: userId, deletedAt: null });
+                } else if (feature === 'leads') {
+                    usage = await Subscriber.countDocuments({ creatorId: userId, status: 'active' });
+                } else if (feature === 'bookings') {
+                    usage = await Booking.countDocuments({ creatorId: userId, status: { $ne: 'cancelled' } });
+                } else if (feature === 'teamMembers') {
+                    usage = await Team.countDocuments({ creatorId: userId });
+                } else if (feature === 'ordersLifetime') {
+                    usage = user.freeTierOrdersCount || 0;
+                } else if (feature === 'storage') {
+                    usage = user.storageUsageMb || 0;
+                } else {
+                    usage = 0;
+                }
             }
 
             if (limit === Infinity || usage < limit) {
@@ -203,18 +218,22 @@ export async function getTierStatus(userId: string) {
 
     const limits = TIER_LIMITS[tier];
 
-    // TODO: Fetch actual product/lead counts from DB
-    // For now, using placeholder logic
+    // Fetch actual counts from DB
+    const [productCount, leadCount, bookingCount] = await Promise.all([
+        Product.countDocuments({ creatorId: userId, deletedAt: null }),
+        Subscriber.countDocuments({ creatorId: userId, status: 'active' }),
+        Booking.countDocuments({ creatorId: userId, status: { $ne: 'cancelled' } })
+    ]);
 
     return {
         tier,
         status: user.subscriptionStatus,
         subscription_end_at: user.subscriptionEndAt,
         limits: {
-            products: { used: 0, limit: limits.products },
-            leadMagnets: { used: 0, limit: limits.leadMagnets },
-            bookings: { used: 0, limit: limits.bookings },
-            leads: { used: user.freeTierLeadsCount || 0, limit: limits.leads },
+            products: { used: productCount, limit: limits.products },
+            leadMagnets: { used: 0, limit: limits.leadMagnets }, // TODO: Add LeadMagnet model count
+            bookings: { used: bookingCount, limit: limits.bookings },
+            leads: { used: leadCount, limit: limits.leads },
             orders: {
                 lifetime_used: user.freeTierOrdersCount || 0,
                 limit: limits.ordersLifetime
@@ -225,3 +244,4 @@ export async function getTierStatus(userId: string) {
         upgrade_url: '/pricing'
     };
 }
+

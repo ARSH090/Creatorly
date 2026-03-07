@@ -31,7 +31,7 @@ export class BillingService {
 
         // Notify at 100% or 80% (with basic check to avoid duplicate flooding in real app we'd track lastNotifyPercentage)
         if (percentage >= 100) {
-            await sendUsageWarningEmail(email, resource, 100);
+            await sendUsageWarningEmail(email, { feature: resource, used: current, limit });
             const { NotificationService } = await import('@/lib/services/notification');
             const User = (await import('@/lib/models/User')).default;
             const user = await User.findOne({ email });
@@ -46,7 +46,7 @@ export class BillingService {
             }
         } else if (percentage >= 80) {
             // In a production system, we would store 'lastUsageNotification' in User model to only send once per tier
-            await sendUsageWarningEmail(email, resource, 80);
+            await sendUsageWarningEmail(email, { feature: resource, used: current, limit });
         }
     }
 }

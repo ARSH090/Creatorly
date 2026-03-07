@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getMongoUser } from './get-user';
+import { IUser } from '../models/User';
+import { ApiHandler } from '../types/api-types';
 
 /**
  * Higher-order function to protect API routes with Clerk authentication
  * Syncs user to MongoDB if needed.
  */
 export function withAuth(
-    handler: (...args: any[]) => Promise<Response>
+    handler: ApiHandler
 ) {
     return async (req: NextRequest, context?: any) => {
         try {
@@ -20,7 +22,7 @@ export function withAuth(
             }
 
             // Pass MongoDB user to handler
-            return handler(req, user, context);
+            return handler(req, user as IUser, context);
         } catch (error) {
             console.error("Auth middleware error:", error);
             return NextResponse.json(
@@ -35,7 +37,7 @@ export function withAuth(
  * Admin-only route protection
  */
 export function withAdminAuth(
-    handler: (...args: any[]) => Promise<Response>
+    handler: ApiHandler
 ) {
     return withAuth(async (req, user, context) => {
         // Bypass for test user
@@ -55,7 +57,7 @@ export function withAdminAuth(
  * Creator-only route protection
  */
 export function withCreatorAuth(
-    handler: (...args: any[]) => Promise<Response>
+    handler: ApiHandler
 ) {
     return withAuth(async (req, user, context) => {
         // Bypass for test user
@@ -70,3 +72,4 @@ export function withCreatorAuth(
         return handler(req, user, context);
     });
 }
+

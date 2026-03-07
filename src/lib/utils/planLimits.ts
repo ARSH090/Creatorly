@@ -75,9 +75,20 @@ export function getPlanLimits(plan: PlanType | string) {
 }
 
 /**
- * Check if a feature is available for a given plan
+ * Get the effective tier from a user object, preferring subscriptionTier
  */
-export function hasFeature(plan: PlanType | string, feature: LimitType): boolean {
+export function getEffectiveTier(user: any): string {
+    return user?.subscriptionTier || user?.plan || 'free';
+}
+
+/**
+ * Check if a feature is available for a given plan.
+ * Accepts a plan string OR a user object (will extract tier automatically).
+ */
+export function hasFeature(planOrUser: PlanType | string | Record<string, any>, feature: LimitType): boolean {
+    const plan = typeof planOrUser === 'object' && planOrUser !== null
+        ? getEffectiveTier(planOrUser)
+        : planOrUser;
     const limits = getPlanLimits(plan);
     return !!limits[feature];
 }
@@ -88,7 +99,7 @@ export function hasFeature(plan: PlanType | string, feature: LimitType): boolean
  */
 export function checkPlanLimit(limitType: LimitType) {
     return async (user: any, currentCount: number): Promise<{ allowed: boolean; error?: any }> => {
-        const plan = (user.plan || 'free') as PlanType;
+        const plan = getEffectiveTier(user) as PlanType;
         const limits = getPlanLimits(plan);
         const limit = limits[limitType];
 

@@ -2,6 +2,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 
 export interface IUser extends Document {
     clerkId?: string; // Clerk User ID
+    /** @deprecated Use clerkId for authentication. Moving to legacy migration logic. */
     firebaseUid?: string; // Firebase UID (Deprecated)
     username: string;
     email: string;
@@ -200,6 +201,7 @@ const UserSchema: Schema = new Schema({
     displayName: {
         type: String,
         required: true,
+        alias: 'fullName',
     },
     bio: String,
     avatar: String,
@@ -228,6 +230,7 @@ const UserSchema: Schema = new Schema({
         enum: ['user', 'creator', 'admin', 'super-admin', 'affiliate'],
         default: 'user',
         index: true,
+        alias: 'userType',
     },
     plan: {
         type: String,

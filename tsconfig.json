@@ -42,6 +42,8 @@
     "node_modules",
     "scripts",
     "__tests__",
-    "check-firebase.ts"
+    "check-firebase.ts",
+    "testsprite",
+    "testsprite.config.ts"
   ]
 }

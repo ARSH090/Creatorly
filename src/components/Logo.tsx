@@ -18,24 +18,14 @@ export const Logo: React.FC<LogoProps> = ({
 }) => {
     return (
         <div className={`flex items-center gap-3 group ${className}`}>
-            <div className={`relative ${iconClassName} flex items-center justify-center transition-all duration-500 group-hover:rotate-[360deg] group-hover:scale-110`}>
-                <Image
-                    src="/logo.png"
-                    alt="Creatorly"
-                    width={120}
-                    height={120}
-                    className="object-contain drop-shadow-[0_0_15px_rgba(124,58,237,0.3)]"
-                    priority
-                />
-            </div>
-
             {showText && (
                 <div className="flex flex-col">
-                    <span className="text-2xl font-black tracking-tighter text-brand-gradient leading-none">
-                        CREATORLY
+                    <span className="text-2xl font-black italic tracking-tighter leading-none">
+                        <span className="text-white">CREATOR</span>
+                        <span className="text-indigo-400">LY</span>
                     </span>
                     {showTagline && (
-                        <span className="text-[10px] font-medium text-zinc-500 tracking-[0.2em] uppercase mt-1 leading-none">
+                        <span className="text-[10px] font-medium text-zinc-500 tracking-[0.2em] uppercase mt-1 leading-none italic">
                             Monetize Your Creativity
                         </span>
                     )}

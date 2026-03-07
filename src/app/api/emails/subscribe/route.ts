@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         );
 
         // 3. Trigger Welcome Email
-        await sendNewsletterWelcomeEmail(email, creatorName);
+        await sendNewsletterWelcomeEmail(email, { creatorName });
 
         // 4. Enroll in 'signup' email sequence if exists
         const { enrollInSequence } = await import('@/lib/services/marketing');

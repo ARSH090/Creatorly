@@ -7,22 +7,14 @@
   "backendCredential": "v3ry-s3cr3t-t3st-v4lu3",
   "executionArgs": {
     "projectName": "insta",
-    "projectPath": "e:\\\\insta",
-    "testIds": [
-      "TC001",
-      "TC002",
-      "TC003",
-      "TC004",
-      "TC005",
-      "TC006",
-      "TC007"
-    ],
-    "additionalInstruction": "All API requests MUST include the header 'x-test-secret: f3b9e4a3d2c1b0a9f8e7d6c5b4a3f2e1'. I have standardized the API responses and added aliases 'storefrontConfig' and 'updatedProfile' to match the test assumptions. please re-verify.",
+    "projectPath": "e:\\insta",
+    "testIds": [],
+    "additionalInstruction": "",
     "serverMode": "development",
     "envs": {
       "API_KEY": "sk-user-zdXzTG0gr3wflCyiKBVyedlLqhEePnbNeIDh8zFyLjo4-tnW_TqbqMBTxng_LQ1rFCBDHJle5Q4LZC2bsrdn92QNJiqjxmO-guMd24wfaJCB3xMbjmkH4ZX5UokLCleCbiM"
     }
   },
-  "serverPort": 53636,
-  "proxy": "http://c62cce3e-f252-4f4a-afae-20cc50d5a01f:85ymU01NtACYcFj8Y4LLgLyaBpCaIg9b@tun.testsprite.com:8080"
+  "serverPort": 53688,
+  "proxy": "http://e8329ff1-34e4-4fab-b900-4b57e14212a4:mkIqKjSFfVB3uQ5OerbfzWC5icHQrfHZ@tun.testsprite.com:8080"
 }

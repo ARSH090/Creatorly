@@ -40,8 +40,10 @@ export async function GET(
         }
 
         // 5. Generate S3 signed URL (valid for 15 minutes for the actual transfer)
-        // Note: Assumes product.digitalFileUrl or product.files[0].key
-        const fileKey = product.previewFileKey || product.thumbnailKey || (product.files && product.files[0]?.key);
+        // Prioritize actual product files over preview/thumbnails
+        let fileKey = (product.files && product.files.length > 0)
+            ? (product.files.find((f: any) => f.isMain)?.key || product.files[0].key)
+            : product.digitalFileUrl || product.previewFileKey;
 
         if (!fileKey) {
             return NextResponse.json({ error: 'No file associated with this product' }, { status: 404 });

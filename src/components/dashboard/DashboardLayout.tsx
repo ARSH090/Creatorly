@@ -5,7 +5,7 @@ import {
     LayoutDashboard, Package, ShoppingCart, TrendingUp,
     Users, Wallet, Settings, Bell, LogOut, ChevronRight,
     Sparkles, Plus, Share2, Menu, X, User, CreditCard, Folder, LifeBuoy,
-    Mail, Globe, Zap, CalendarDays, FolderKanban, Link as LinkIcon, Monitor
+    Mail, Globe, Zap, CalendarDays, FolderKanban, Link as LinkIcon, Monitor, ShieldCheck
 } from "lucide-react";
 import { useUser, useClerk, useAuth } from "@clerk/nextjs";
 import Link from 'next/link';
@@ -67,8 +67,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {
             name: 'Schedulify',
             icon: CalendarDays,
-            href: '/dashboard/schedulify',
-            badge: 'NEW'
+            href: '/dashboard/schedulify'
         },
         { name: 'Orders', icon: ShoppingCart, href: '/dashboard/orders' },
         {
@@ -80,6 +79,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         { name: 'Analytics', icon: TrendingUp, href: '/dashboard/analytics', featureCode: 'analytics' },
         { name: 'Marketing', icon: Mail, href: '/dashboard/email', featureCode: 'marketing' },
         { name: 'Team', icon: Users, href: '/dashboard/team', featureCode: 'teamMembers' },
+        { name: 'Control Hub', icon: ShieldCheck, href: '/dashboard/qa' },
         { name: 'Settings', icon: Settings, href: '/dashboard/settings' },
         { name: 'Support', icon: LifeBuoy, href: '/dashboard/support' },
     ];
@@ -209,8 +209,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                         {navigation.map((item) => {
                             const isActive = pathname === item.href;
                             const isLocked = item.featureCode && stats?.subscription && (
-                                (item.featureCode === 'customDomain' && !stats.subscription.tier?.includes('business')) ||
-                                (item.featureCode === 'teamMembers' && stats.subscription.tier === 'free')
+                                (item.featureCode === 'customDomain' && stats.subscription.tier !== 'business') ||
+                                (item.featureCode === 'teamMembers' && stats.subscription.tier === 'free') ||
+                                (item.featureCode === 'analytics' && stats.subscription.tier === 'free') ||
+                                (item.featureCode === 'marketing' && stats.subscription.tier === 'free') ||
+                                (item.featureCode === 'automation' && stats.subscription.tier === 'free')
                             );
 
                             return (

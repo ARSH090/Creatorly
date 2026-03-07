@@ -1,60 +1,62 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as dotenv from 'dotenv';
 
-/**
- * See https://playwright.dev/docs/test-configuration.
- */
+dotenv.config({ path: '.env.local' });
+
+const SESSION_FILE = 'tests/auth/session.json';
+
 export default defineConfig({
-  testDir: './__tests__/e2e',
-  /* Run tests in files in parallel */
-  fullyParallel: true,
-  /* Fail the build on CI if you accidentally left test.only in the source code. */
-  forbidOnly: !!process.env.CI,
-  /* Retry on CI only */
-  retries: process.env.CI ? 2 : 0,
-  /* Opt out of parallel tests on CI. */
-  workers: process.env.CI ? 1 : undefined,
-  /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  reporter: 'html',
-  /* Shared settings for all the projects below. See https://playwright.dev/docs/test-use */
-  use: {
-    /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: 'http://localhost:3000',
+  testDir: './tests/e2e',
+  fullyParallel: false,
+  forbidOnly: false,
+  retries: 1,
+  workers: 1,
+  timeout: 45000,
 
-    /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: 'on-first-retry',
+  reporter: [
+    ['html', { outputFolder: 'tests/report', open: 'never' }],
+    ['json', { outputFile: 'tests/report/results.json' }],
+    ['list'],
+  ],
+
+  use: {
+    baseURL: 'http://localhost:3000',
+    headless: true,
     screenshot: 'only-on-failure',
+    video: 'retain-on-failure',
+    trace: 'retain-on-failure',
+    actionTimeout: 15000,
+    navigationTimeout: 30000,
   },
 
-  /* Configure projects for major browsers */
   projects: [
     {
-      name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      name: 'setup',
+      testMatch: '**/auth.setup.ts',
+      use: { storageState: undefined },
     },
     {
-      name: 'firefox',
-      use: { ...devices['Desktop Firefox'] },
+      name: 'dashboard',
+      dependencies: ['setup'],
+      testIgnore: ['**/auth.setup.ts', '**/auth.debug.ts', '**/auth.manual.ts', '**/09-public*'],
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: SESSION_FILE,
+      },
     },
     {
-      name: 'webkit',
-      use: { ...devices['Desktop Safari'] },
-    },
-
-    /* Test against mobile viewports. */
-    {
-      name: 'Mobile Chrome',
-      use: { ...devices['Pixel 5'] },
-    },
-    {
-      name: 'Mobile Safari',
-      use: { ...devices['iPhone 12'] },
+      name: 'public',
+      testMatch: '**/09-public*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: undefined,
+      },
     },
   ],
 
-  /* Run your local dev server before starting the tests */
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
   },
 });

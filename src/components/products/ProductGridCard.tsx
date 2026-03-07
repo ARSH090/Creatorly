@@ -126,12 +126,15 @@ export default function ProductGridCard({ product, index, onArchive }: ProductGr
             </div>
 
             {/* Quick Action Overlay */}
-            <div className="absolute top-20 right-5 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0 duration-500">
+            <div className="absolute top-20 right-5 flex flex-col gap-2 opacity-0 md:group-hover:opacity-100 transition-all translate-x-4 md:group-hover:translate-x-0 duration-500 group-active:opacity-100 group-active:translate-x-0">
                 <button className="bg-black/80 backdrop-blur-2xl p-3.5 rounded-2xl border border-white/10 text-zinc-400 hover:text-white hover:bg-zinc-800 transition-all shadow-2xl">
                     <Eye className="w-4 h-4" />
                 </button>
                 <button
-                    onClick={() => onArchive(product._id)}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onArchive(product._id);
+                    }}
                     className="bg-black/80 backdrop-blur-2xl p-3.5 rounded-2xl border border-white/10 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all shadow-2xl"
                 >
                     <Archive className="w-4 h-4" />

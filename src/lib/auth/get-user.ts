@@ -48,10 +48,10 @@ export const getMongoUser = cache(async (): Promise<IUser | null> => {
 
         // 3. If found by email, link clerkId and sync handle if missing
         if (user) {
-            const unsafeMetadata = (clerkUser.unsafeMetadata as any) || {};
+            const unsafeMetadata = clerkUser.unsafeMetadata as Record<string, any>;
             user.clerkId = userId;
-            if (!user.username && unsafeMetadata.username) {
-                user.username = unsafeMetadata.username;
+            if (!user.username && unsafeMetadata?.username) {
+                user.username = unsafeMetadata.username as string;
             }
             await user.save();
             return user;

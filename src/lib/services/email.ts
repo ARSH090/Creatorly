@@ -1,482 +1,141 @@
-import { Resend } from 'resend';
-
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+import { sendEmail as sendGenericEmail } from '../email/client';
+import { welcomeEmail } from '../email/templates/welcome';
+import { purchaseConfirmationEmail } from '../email/templates/purchase-confirmation';
+import { saleNotificationEmail } from '../email/templates/sale-notification';
+import { trialWarningEmail } from '../email/templates/trial-warning';
+import { trialExpiredEmail } from '../email/templates/trial-expired';
 
 export interface EmailOptions {
-  to: string;
+  to: string | string[];
   subject: string;
   html: string;
 }
 
+/**
+ * Re-export the generic sendEmail for backward compatibility
+ */
 export async function sendEmail(options: EmailOptions) {
-  try {
-    if (!resend) {
-      console.warn('Email service not configured (RESEND_API_KEY not set)');
-      return { success: false, error: 'Email service not configured' };
-    }
-
-    const result = await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || 'noreply@creatorly.app',
-      to: options.to,
-      subject: options.subject,
-      html: options.html,
-    });
-
-    return { success: true, data: result };
-  } catch (error) {
-    console.error('Email send error:', error);
-    return { success: false, error };
-  }
+  return sendGenericEmail(options);
 }
 
-export async function sendVerificationEmail(email: string, token: string) {
-  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/auth/verify-email?token=${token}`;
-
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; background-color: #f5f5f5; }
-          .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
-          .header { color: #333; margin-bottom: 20px; }
-          .button { background-color: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 20px 0; }
-          .footer { color: #666; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1 class="header">Verify Your Email</h1>
-          <p>Welcome to Creatorly! Please verify your email address to get started.</p>
-          <a href="${verificationUrl}" class="button">Verify Email</a>
-          <p>Or copy this link: <br/> ${verificationUrl}</p>
-          <p>This link expires in 24 hours.</p>
-          <div class="footer">
-            <p>If you didn't create this account, please ignore this email.</p>
-            <p>&copy; 2026 Creatorly. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  return sendEmail({
-    to: email,
-    subject: 'Verify Your Creatorly Email',
-    html,
-  });
-}
-
-export async function sendPasswordResetEmail(email: string, token: string) {
-  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/auth/reset-password?token=${token}`;
-
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { font-family: Arial, sans-serif; background-color: #f5f5f5; }
-          .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
-          .header { color: #333; margin-bottom: 20px; }
-          .button { background-color: #0066cc; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block; margin: 20px 0; }
-          .footer { color: #666; font-size: 12px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
-          .warning { background-color: #fff3cd; padding: 10px; border-radius: 4px; margin: 20px 0; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <h1 class="header">Reset Your Password</h1>
-          <p>We received a request to reset your password. Click the button below to create a new password.</p>
-          <a href="${resetUrl}" class="button">Reset Password</a>
-          <p>Or copy this link: <br/> ${resetUrl}</p>
-          <div class="warning">
-            <strong>Security Notice:</strong> This link expires in 1 hour. If you didn't request this, please ignore this email.
-          </div>
-          <div class="footer">
-            <p>&copy; 2026 Creatorly. All rights reserved.</p>
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  return sendEmail({
-    to: email,
-    subject: 'Reset Your Creatorly Password',
-    html,
-  });
-}
-
+/**
+ * Send a welcome email using the new template
+ */
 export async function sendWelcomeEmail(email: string, displayName: string = 'there') {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { font-family: 'Inter', -apple-system, sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin:20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
-          .header { font-size: 28px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-style: italic; margin-bottom: 16px; text-align: center; }
-          .subheader { color: #888; font-size: 16px; text-align: center; margin-bottom: 40px; }
-          .card { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); border-radius: 16px; padding: 30px; margin-bottom: 24px; text-align: center; }
-          .button { display: block; background: #fff; color: #000; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 0.1em; margin-top: 30px; }
-          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.2em; }
-          .feature { background: #111; border-radius: 12px; padding: 16px; margin: 12px 0; text-align: left; }
-          .feature-title { font-weight: 700; color: #6366f1; margin-bottom: 4px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="card">
-            <div style="font-size: 64px; margin-bottom: 16px;">🚀</div>
-            <div class="header" style="color: #fff;">WELCOME TO CREATORLY</div>
-            <p style="font-size: 16px; opacity: 0.9; margin: 0;">Your creator journey starts now, ${displayName}!</p>
-          </div>
-          
-          <p class="subheader">You've just joined the next-generation platform for creators.</p>
-          
-          <div class="feature">
-            <div class="feature-title">📦 Sell Digital Products</div>
-            <p style="color: #888; font-size: 14px; margin: 4px 0 0;">Launch courses, ebooks, templates, and more</p>
-          </div>
-          
-          <div class="feature">
-            <div class="feature-title">🎯 Build Your Community</div>
-            <p style="color: #888; font-size: 14px; margin: 4px 0 0;">Engage your biggest fans with exclusive content</p>
-          </div>
-          
-          <div class="feature">
-            <div class="feature-title">💰 Get Paid Instantly</div>
-            <p style="color: #888; font-size: 14px; margin: 4px 0 0;">Secure payments with low platform fees</p>
-          </div>
-
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/dashboard" class="button">SET UP MY STORE</a>
-
-          <p style="font-size: 12px; color: #666; text-align: center; margin-top: 30px;">
-            Need help getting started? Reply to this email anytime.
-          </p>
-
-          <div class="footer">
-            &copy; 2026 CREATORLY • BUILT BY CREATORS, FOR CREATORS
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  return sendEmail({
-    to: email,
-    subject: 'Welcome to Creatorly – Let\'s Build Something Amazing!',
-    html,
-  });
+  const { subject, html } = welcomeEmail({ name: displayName, username: 'creator' });
+  return sendGenericEmail({ to: email, subject, html });
 }
 
+/**
+ * Send payment confirmation to buyer
+ */
 export async function sendPaymentConfirmationEmail(
   email: string,
   orderId: string,
   amount: number,
-  items: Array<{ name: string; quantity: number; price: number }>
+  items: Array<{ name: string; quantity: number; price: number }>,
+  downloadUrl?: string
 ) {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { font-family: 'Inter', -apple-system, sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
-          .logo { text-align: center; margin-bottom: 30px; }
-          .header { font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-style: italic; margin-bottom: 8px; text-align: center; }
-          .subheader { color: #888; font-size: 14px; text-align: center; margin-bottom: 40px; }
-          .order-card { background: #111; border: 1px solid #222; border-radius: 16px; padding: 24px; margin-bottom: 24px; }
-          .item { display: flex; justify-content: space-between; margin-bottom: 12px; font-size: 14px; }
-          .item-name { font-weight: 700; color: #fff; }
-          .item-price { color: #888; font-family: monospace; }
-          .divider { border-top: 1px solid #222; margin: 20px 0; }
-          .total { display: flex; justify-content: space-between; font-weight: 900; font-size: 18px; color: #6366f1; }
-          .button { display: block; background: #fff; color: #000; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 0.1em; margin-top: 30px; }
-          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.2em; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">ORDER CONFIRMED</div>
-          <p class="subheader">Thank you for supporting a creator on Creatorly.</p>
-          
-          <div class="order-card">
-            <p style="font-size: 10px; font-weight: 900; color: #444; margin-bottom: 16px; text-transform: uppercase;">Receipt for Order #${orderId}</p>
-            ${items.map(item => `
-              <div class="item">
-                <span class="item-name">${item.name} x ${item.quantity}</span>
-                <span class="item-price">₹${item.price.toLocaleString()}</span>
-              </div>
-            `).join('')}
-            <div class="divider"></div>
-            <div class="total">
-              <span>TOTAL (INCL. GST)</span>
-              <span>₹${amount.toLocaleString()}</span>
-            </div>
-          </div>
-
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/account/downloads" class="button">Access My Library</a>
-
-          <div class="footer">
-            &copy; 2026 CREATORLY • SHIPPED WITH ANTI-GRAVITY TECH
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  return sendEmail({
-    to: email,
-    subject: `Receipt: Order #${orderId.slice(-6)} confirmed!`,
-    html,
+  const productName = items.map(i => i.name).join(', ');
+  const { subject, html } = purchaseConfirmationEmail({
+    buyerName: 'Valued Customer',
+    productName,
+    creatorName: 'Creatorly Seller',
+    amount: amount * 100, // template expects paise
+    downloadUrl
   });
+  return sendGenericEmail({ to: email, subject, html });
 }
 
-export async function sendDownloadInstructionsEmail(
-  email: string,
-  orderId: string,
-  items: Array<{ name: string; productId: string }>
-) {
-  // In a real app, we'd generate individual tokens here, 
-  // but for simplicity we lead them to the secure dashboard.
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { font-family: 'Inter', -apple-system, sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
-          .header { font-size: 24px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.05em; font-style: italic; margin-bottom: 8px; text-align: center; }
-          .card { background: #6366f1; border-radius: 16px; padding: 24px; margin-bottom: 24px; color: #fff; text-align: center; }
-          .item-list { background: #111; border-radius: 16px; padding: 20px; text-align: left; }
-          .item-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
-          .dot { width: 8px; h-eight: 8px; background: #6366f1; border-radius: 50%; }
-          .button { display: block; background: #fff; color: #000; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 0.1em; margin-top: 30px; }
-          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.2em; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="card">
-            <div style="font-size: 48px; margin-bottom: 16px;">🚀</div>
-            <div class="header" style="color: #fff;">GET YOUR ASSETS</div>
-            <p style="font-size: 14px; opacity: 0.8;">Your digital content is ready for liftoff.</p>
-          </div>
-          
-          <div class="item-list">
-             <p style="font-size: 10px; font-weight: 900; color: #444; margin-bottom: 16px; text-transform: uppercase;">Included in this delivery:</p>
-             ${items.map(item => `
-               <div class="item-row">
-                 <div class="dot"></div>
-                 <span style="font-size: 14px; font-weight: 700;">${item.name}</span>
-               </div>
-             `).join('')}
-          </div>
-
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/account/downloads" class="button">Access My Library</a>
-
-          <p style="font-size: 12px; color: #666; text-align: center; margin-top: 24px;">
-            Link valid for 24 hours. Need help? Reply to this email.
-          </p>
-
-          <div class="footer">
-            &copy; 2026 CREATORLY • DIGITAL FLOW ACTIVATED
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  return sendEmail({
-    to: email,
-    subject: `Your downloads are ready! (Order #${orderId.slice(-6)})`,
-    html,
-  });
-}
-
-export async function sendLicenseKeyEmail(
-  email: string,
-  orderId: string,
-  items: Array<{ name: string; key: string }>
-) {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { font-family: 'Inter', sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
-          .header { font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 8px; text-align: center; }
-          .key-card { background: #111; border: 1px solid #222; border-radius: 16px; padding: 24px; margin-bottom: 24px; }
-          .key-label { font-size: 10px; font-weight: 900; color: #444; text-transform: uppercase; margin-bottom: 8px; }
-          .key-value { font-family: monospace; font-size: 18px; color: #6366f1; background: #000; padding: 12px; border-radius: 8px; border: 1px dashed #333; word-break: break-all; }
-          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.2em; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">YOUR LICENSE KEYS</div>
-          <p style="text-align: center; color: #888; margin-bottom: 30px;">Keep these keys safe. You'll need them to activate your software.</p>
-          
-          ${items.map(item => `
-            <div class="key-card">
-              <div class="key-label">${item.name}</div>
-              <div class="key-value">${item.key}</div>
-            </div>
-          `).join('')}
-
-          <div class="footer">
-            &copy; 2026 CREATORLY • SECURE KEY DELIVERY
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  return sendEmail({
-    to: email,
-    subject: `Your License Keys: Order #${orderId.slice(-6)}`,
-    html,
-  });
-}
-
+/**
+ * Send sale notification to creator
+ */
 export async function sendCreatorSaleNotificationEmail(
   email: string,
   productName: string,
   amount: number,
   buyerEmail: string,
-  monthlySales: number
+  _monthlySales?: number // keeping param for compat
 ) {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { font-family: 'Inter', sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
-          .header { font-size: 32px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 16px; text-align: center; color: #10b981; }
-          .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 30px 0; }
-          .stat-card { background: #111; padding: 20px; border-radius: 16px; border: 1px solid #222; }
-          .stat-label { font-size: 10px; font-weight: 900; color: #444; text-transform: uppercase; }
-          .stat-value { font-size: 20px; font-weight: 700; color: #fff; margin-top: 4px; }
-          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.2em; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">🎉 NEW SALE!</div>
-          <p style="text-align: center; color: #888;">You just made a sale on Creatorly.</p>
-          
-          <div class="stat-grid">
-            <div class="stat-card">
-              <div class="stat-label">Product</div>
-              <div class="stat-value">${productName}</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Amount</div>
-              <div class="stat-value">₹${amount.toLocaleString()}</div>
-            </div>
-          </div>
-
-          <div style="background: #111; padding: 20px; border-radius: 16px; border: 1px solid #222; margin-bottom: 24px;">
-            <div class="stat-label">Buyer</div>
-            <div class="stat-value" style="font-size: 16px;">${buyerEmail}</div>
-          </div>
-
-          <div style="text-align: center; padding: 20px; background: rgba(16, 185, 129, 0.1); border-radius: 16px; border: 1px solid rgba(16, 185, 129, 0.2);">
-            <div class="stat-label" style="color: #10b981;">Total Sales This Month</div>
-            <div class="stat-value" style="font-size: 24px; color: #10b981;">₹${monthlySales.toLocaleString()}</div>
-          </div>
-
-          <div class="footer">
-            &copy; 2026 CREATORLY • GROWTH MODE ACTIVATED
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  return sendEmail({
-    to: email,
-    subject: `🎉 Sale Notification: ${productName}`,
-    html,
+  const { subject, html } = saleNotificationEmail({
+    creatorName: 'Creator',
+    productName,
+    buyerEmail,
+    amount: amount * 100 // template expects paise
   });
+  return sendGenericEmail({ to: email, subject, html });
 }
 
-export async function sendNewsletterWelcomeEmail(email: string, creatorName: string) {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { font-family: 'Inter', sans-serif; background-color: #030303; color: #ffffff; padding: 40px; }
-          .container { max-width: 600px; margin: 0 auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; text-align: center; }
-          .header { font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 16px; }
-          .content { color: #888; font-size: 16px; line-height: 1.6; margin-bottom: 30px; }
-          .btn { display: inline-block; background: #6366f1; color: #fff; padding: 16px 32px; border-radius: 12px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 0.1em; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">WELCOME TO THE INNER CIRCLE</div>
-          <div class="content">
-            <p>You've successfully subscribed to <strong>${creatorName}'s</strong> newsletter on Creatorly.</p>
-            <p>Stay tuned for exclusive updates, early access to new products, and behind-the-scenes content.</p>
-          </div>
-          <a href="${process.env.NEXTAUTH_URL}/u/${creatorName.toLowerCase()}" class="btn">Visit My Store</a>
-        </div>
-      </body>
-    </html>
-  `;
-
-  return sendEmail({
-    to: email,
-    subject: `Welcome to ${creatorName}'s Newsletter!`,
-    html
-  });
+/**
+ * Send trial reminder
+ */
+export async function sendTrialReminderEmail(
+  email: string,
+  opts: { daysLeft: number; name?: string; plan?: string }
+) {
+  const { daysLeft, name = 'there', plan = 'Pro' } = opts;
+  const { subject, html } = trialWarningEmail({ name, daysLeft, plan });
+  return sendGenericEmail({ to: email, subject, html });
 }
 
-export async function sendPaymentFailureEmail(email: string, orderId: string) {
-  const html = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 40px; background: #fff; border: 1px solid #eee; border-radius: 12px;">
-      <h2 style="color: #e11d48;">Payment Failed</h2>
-      <p>We're sorry, but your payment for order <strong>#${orderId.slice(-6)}</strong> could not be processed.</p>
-      <p>This could be due to insufficient funds, an expired card, or a temporary issue with your bank.</p>
-      <div style="margin: 30px 0;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/checkout/retry?orderId=${orderId}" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">Retry Payment</a>
-      </div>
-      <p style="font-size: 12px; color: #666;">If you have any questions, please contact our support team.</p>
-    </div>
-  `;
-
-  return sendEmail({
-    to: email,
-    subject: `Action Required: Payment Failed for Order #${orderId.slice(-6)}`,
-    html
-  });
+/**
+ * Send trial expired notification
+ */
+export async function sendTrialExpiredEmail(
+  email: string,
+  opts: { name?: string; plan?: string }
+) {
+  const { name = 'there', plan = 'Pro' } = opts;
+  const { subject, html } = trialExpiredEmail({ name, plan });
+  return sendGenericEmail({ to: email, subject, html });
 }
 
-export async function sendUsageWarningEmail(email: string, resource: string, percentage: number) {
-  const isLimit = percentage >= 100;
+/**
+ * Send download instructions to buyer after purchase
+ */
+export async function sendDownloadInstructionsEmail(
+  email: string,
+  orderId: string,
+  items: Array<{ name: string; productId: string }>
+) {
+  const downloadUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/orders/${orderId}/downloads`;
+  const itemList = items.map(i => `<li>${i.name}</li>`).join('');
   const html = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 40px; background: #fff; border: 1px solid #eee; border-radius: 12px;">
-      <h2 style="color: ${isLimit ? '#e11d48' : '#f59e0b'};">${isLimit ? 'Limit Reached' : 'Usage Warning'}</h2>
-      <p>You have used <strong>${percentage}%</strong> of your monthly ${resource} allowance.</p>
-      <p>${isLimit ? 'You have reached your limit. Please upgrade to continue using this service.' : 'You are approaching your limit. Consider upgrading to avoid any interruptions.'}</p>
-      <div style="margin: 30px 0;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/billing" style="display: inline-block; padding: 12px 24px; background: #6366f1; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">Upgrade Plan</a>
-      </div>
-    </div>
+    <h2>Your Download is Ready!</h2>
+    <p>Thank you for your purchase. Your files are ready to download:</p>
+    <ul>${itemList}</ul>
+    <p><a href="${downloadUrl}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">Download Now</a></p>
+    <p style="color:#888;font-size:12px;">This link will expire in 24 hours. If you need assistance, reply to this email.</p>
   `;
-
-  return sendEmail({
-    to: email,
-    subject: `${isLimit ? 'Critical' : 'Alert'}: ${resource} Usage at ${percentage}%`,
-    html
-  });
+  return sendGenericEmail({ to: email, subject: `Your downloads are ready — Order #${orderId.slice(-6).toUpperCase()}`, html });
 }
 
+/**
+ * Send license key(s) to buyer after purchase
+ */
+export async function sendLicenseKeyEmail(
+  email: string,
+  orderId: string,
+  licenseKeys: Array<{ name: string; key: string }>
+) {
+  const keyRows = licenseKeys.map(lk =>
+    `<tr><td style="padding:8px;border:1px solid #eee;">${lk.name}</td><td style="padding:8px;border:1px solid #eee;font-family:monospace;">${lk.key}</td></tr>`
+  ).join('');
+  const html = `
+    <h2>Your License Key${licenseKeys.length > 1 ? 's' : ''}</h2>
+    <p>Here ${licenseKeys.length > 1 ? 'are your license keys' : 'is your license key'} for Order #${orderId.slice(-6).toUpperCase()}:</p>
+    <table style="border-collapse:collapse;width:100%;margin:16px 0;">
+      <tr style="background:#f5f5f5;"><th style="padding:8px;border:1px solid #eee;text-align:left;">Product</th><th style="padding:8px;border:1px solid #eee;text-align:left;">License Key</th></tr>
+      ${keyRows}
+    </table>
+    <p style="color:#888;font-size:12px;">Keep this email safe. If you need assistance, reply to this email.</p>
+  `;
+  return sendGenericEmail({ to: email, subject: `Your License Key — Order #${orderId.slice(-6).toUpperCase()}`, html });
+}
+
+/**
+ * Send affiliate commission notification
+ */
 export async function sendAffiliateNotificationEmail(
   email: string,
   affiliateCode: string,
@@ -484,190 +143,88 @@ export async function sendAffiliateNotificationEmail(
   orderId: string
 ) {
   const html = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 40px; background: #fff; border: 1px solid #eee; border-radius: 12px;">
-      <h2 style="color: #10b981;">Cha-ching! New Commission 💰</h2>
-      <p>Great news! You just earned a commission from a referral.</p>
-      
-      <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
-        <p style="margin: 0; font-size: 14px; color: #6b7280;">Affiliate Code</p>
-        <p style="margin: 5px 0 15px 0; font-weight: bold; font-size: 18px;">${affiliateCode}</p>
-        
-        <p style="margin: 0; font-size: 14px; color: #6b7280;">Commission Earned</p>
-        <p style="margin: 5px 0 0 0; font-weight: bold; font-size: 24px; color: #10b981;">₹${commissionAmount.toFixed(2)}</p>
-      </div>
-
-      <p style="font-size: 14px; color: #6b7280;">Order Reference: #${orderId.slice(-6)}</p>
-      
-      <div style="margin: 30px 0;">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/dashboard/affiliates" style="display: inline-block; padding: 12px 24px; background: #000; color: #fff; text-decoration: none; border-radius: 8px; font-weight: bold;">View Dashboard</a>
-      </div>
-    </div>
+    <h2>🎉 You Earned a Commission!</h2>
+    <p>Great news! A sale was made through your affiliate link <strong>${affiliateCode}</strong>.</p>
+    <p><strong>Commission earned:</strong> ₹${(commissionAmount / 100).toFixed(2)}</p>
+    <p><strong>Order:</strong> #${orderId.slice(-6).toUpperCase()}</p>
+    <p>Your earnings will be credited to your account balance.</p>
+    <p style="color:#888;font-size:12px;">Keep sharing your link to earn more!</p>
   `;
-
-  return sendEmail({
-    to: email,
-    subject: `You earned ₹${commissionAmount} commission!`,
-    html
-  });
+  return sendGenericEmail({ to: email, subject: `Affiliate Commission Earned — ₹${(commissionAmount / 100).toFixed(2)}`, html });
 }
 
+/**
+ * Verification Email (Legacy/Generic)
+ */
+export async function sendVerificationEmail(email: string, token: string) {
+  const verificationUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/auth/verify-email?token=${token}`;
+  const html = `<p>Please verify your email: <a href="${verificationUrl}">${verificationUrl}</a></p>`;
+  return sendGenericEmail({ to: email, subject: 'Verify Your Creatorly Email', html });
+}
 
+/**
+ * Send usage warning when approaching plan limits
+ */
+export async function sendUsageWarningEmail(
+  email: string,
+  opts: { feature: string; used: number; limit: number; name?: string }
+) {
+  const { feature, used, limit, name = 'there' } = opts;
+  const percent = Math.round((used / limit) * 100);
+  const html = `
+    <h2>⚠️ Usage Alert</h2>
+    <p>Hi ${name},</p>
+    <p>You've used <strong>${percent}%</strong> of your <strong>${feature}</strong> limit (${used}/${limit}).</p>
+    <p>Upgrade your plan to avoid interruptions.</p>
+    <p><a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/pricing" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">Upgrade Now</a></p>
+  `;
+  return sendGenericEmail({ to: email, subject: `Usage Alert: ${feature} at ${percent}%`, html });
+}
+
+/**
+ * Send marketing/campaign email to a subscriber
+ */
 export async function sendMarketingEmail(
-  to: string,
-  subject: string,
-  content: string,
-  creatorName: string,
-  unsubscribeUrl?: string
+  email: string,
+  opts: { subject: string; html: string; replyTo?: string }
 ) {
-  const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { font-family: 'Inter', -apple-system, sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
-          .header { font-size: 10px; font-weight: 900; color: #444; margin-bottom: 24px; text-transform: uppercase; letter-spacing: 0.1em; }
-          .content { color: #ccc; font-size: 16px; line-height: 1.6; margin-bottom: 30px; }
-          .content h1 { color: #fff; font-size: 24px; font-weight: 900; font-style: italic; margin-bottom: 20px; text-transform: uppercase; }
-          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.1em; border-top: 1px solid #222; padding-top: 20px; }
-          .unsubscribe { color: #6366f1; text-decoration: none; font-weight: 700; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">Sent via Creatorly by ${creatorName}</div>
-          <div class="content">
-            ${content}
-          </div>
-          <div class="footer">
-            &copy; 2026 ${creatorName} • Delivered by Creatorly
-            ${unsubscribeUrl ? `<br/><br/><a href="${unsubscribeUrl}" class="unsubscribe">Unsubscribe</a>` : ''}
-          </div>
-        </div>
-      </body>
-    </html>
-  `;
-
-  return sendEmail({
-    to,
-    subject,
-    html,
+  return sendGenericEmail({
+    to: email,
+    subject: opts.subject,
+    html: opts.html
   });
 }
 
-export async function sendBookingConfirmationEmail(
+/**
+ * Send newsletter welcome email to new subscribers
+ */
+export async function sendNewsletterWelcomeEmail(
   email: string,
-  bookingDetails: {
-    productName: string;
-    date: string;
-    time: string;
-    duration: number;
-  }
+  opts: { creatorName?: string; leadMagnetUrl?: string }
 ) {
+  const { creatorName = 'a Creatorly creator', leadMagnetUrl } = opts;
+  const downloadBlock = leadMagnetUrl
+    ? `<p><a href="${leadMagnetUrl}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">Download Your Freebie</a></p>`
+    : '';
   const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { font-family: 'Inter', -apple-system, sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
-          .card { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); border-radius: 20px; padding: 32px; text-align: center; margin-bottom: 30px; }
-          .header { font-size: 24px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 8px; }
-          .details { background: #111; border-radius: 16px; padding: 24px; border: 1px solid #222; }
-          .detail-row { display: flex; justify-content: space-between; margin-bottom: 12px; }
-          .label { color: #666; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
-          .value { color: #fff; font-size: 14px; font-weight: 700; }
-          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.1em; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="card">
-            <div style="font-size: 48px; margin-bottom: 16px;">📅</div>
-            <div class="header">SESSION CONFIRMED</div>
-            <p style="opacity: 0.8; font-size: 14px;">Get ready to level up your game.</p>
-          </div>
-
-          <div class="details">
-            <div class="detail-row">
-              <span class="label">Session Type</span>
-              <span class="value">${bookingDetails.productName}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Date</span>
-              <span class="value">${bookingDetails.date}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Time</span>
-              <span class="value">${bookingDetails.time}</span>
-            </div>
-            <div class="detail-row">
-              <span class="label">Duration</span>
-              <span class="value">${bookingDetails.duration} minutes</span>
-            </div>
-          </div>
-
-          <p style="color: #888; font-size: 12px; text-align: center; margin-top: 30px; line-height: 1.6;">
-            The creator will reach out to you with the meeting link before the session starts. 
-            You can also view your bookings in your account dashboard.
-          </p>
-
-          <div class="footer">
-            &copy; 2026 CREATORLY • CLOCKWORK PRECISION
-          </div>
-        </div>
-      </body>
-    </html>
-    `;
-
-  return sendEmail({
-    to: email,
-    subject: `Confirmed: Your session for ${bookingDetails.productName}`,
-    html
-  });
+    <h2>Welcome! 🎉</h2>
+    <p>Thanks for subscribing to <strong>${creatorName}</strong>'s list.</p>
+    ${downloadBlock}
+    <p style="color:#888;font-size:12px;">You can unsubscribe at any time by clicking the link at the bottom of future emails.</p>
+  `;
+  return sendGenericEmail({ to: email, subject: `Welcome from ${creatorName}!`, html });
 }
 
-export async function sendTrialReminderEmail(
-  email: string,
-  opts: { daysLeft: number; name?: string }
-) {
-  const { daysLeft, name = 'there' } = opts;
-  const isLastDay = daysLeft <= 1;
-
+/**
+ * Send password reset email
+ */
+export async function sendPasswordResetEmail(email: string, token: string) {
+  const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/auth/reset-password?token=${token}`;
   const html = `
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <style>
-          body { font-family: 'Inter', -apple-system, sans-serif; background-color: #030303; color: #ffffff; margin: 0; padding: 0; }
-          .container { max-width: 600px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; border-radius: 24px; padding: 40px; }
-          .badge { display: inline-block; background: ${isLastDay ? '#ef4444' : '#f59e0b'}; color: #fff; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; padding: 4px 12px; border-radius: 100px; margin-bottom: 24px; }
-          .header { font-size: 26px; font-weight: 900; text-transform: uppercase; font-style: italic; margin-bottom: 12px; }
-          .subheader { color: #888; font-size: 15px; line-height: 1.6; margin-bottom: 32px; }
-          .button { display: block; background: #6366f1; color: #fff; text-align: center; padding: 16px; border-radius: 12px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 0.1em; margin-top: 8px; }
-          .footer { text-align: center; font-size: 10px; color: #444; margin-top: 40px; text-transform: uppercase; letter-spacing: 0.2em; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="badge">${isLastDay ? 'Final Reminder' : `${daysLeft} Days Left`}</div>
-          <div class="header">${isLastDay ? 'Your Trial Ends Tomorrow' : 'Your Free Trial Is Almost Over'}</div>
-          <p class="subheader">
-            Hey ${name}! Your Creatorly free trial ${isLastDay ? 'ends tomorrow' : `has ${daysLeft} days left`}.
-            After your trial, your subscription will automatically begin. To change plans or cancel, visit billing before your trial ends.
-          </p>
-          <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://creatorly.in'}/dashboard/billing" class="button">Manage My Subscription</a>
-          <div class="footer">&copy; 2026 Creatorly</div>
-        </div>
-      </body>
-    </html>
+    <h2>Reset Your Password</h2>
+    <p>We received a request to reset your password. Click the button below to set a new one:</p>
+    <p><a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold;">Reset Password</a></p>
+    <p style="color:#888;font-size:12px;">This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>
   `;
-
-  return sendEmail({
-    to: email,
-    subject: isLastDay
-      ? '⏰ Final Reminder: Your Creatorly trial ends tomorrow'
-      : `⚡ ${daysLeft} days left on your Creatorly trial`,
-    html,
-  });
+  return sendGenericEmail({ to: email, subject: 'Reset Your Creatorly Password', html });
 }

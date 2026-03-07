@@ -13,17 +13,40 @@ async function getHandler(req: NextRequest, user: any) {
     await connectToDatabase();
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
+    const search = searchParams.get('search');
 
     const filter: any = { creatorId: user._id };
-    if (status === 'active') {
+
+    if (status === 'Active') {
         filter.isActive = true;
-        filter.validUntil = { $gt: new Date() };
-    } else if (status === 'inactive') {
+    } else if (status === 'Inactive') {
         filter.isActive = false;
     }
 
-    const coupons = await Coupon.find(filter).sort({ createdAt: -1 });
-    return { coupons };
+    if (search) {
+        filter.code = { $regex: search, $options: 'i' };
+    }
+
+    const [coupons, stats] = await Promise.all([
+        Coupon.find(filter).sort({ createdAt: -1 }),
+        Coupon.aggregate([
+            { $match: { creatorId: user._id } },
+            {
+                $group: {
+                    _id: null,
+                    total: { $sum: 1 },
+                    active: { $sum: { $cond: ['$isActive', 1, 0] } },
+                    totalRedemptions: { $sum: '$usageCount' },
+                    totalRevenue: { $sum: '$totalRevenueDriven' }
+                }
+            }
+        ])
+    ]);
+
+    return {
+        coupons,
+        stats: stats[0] || { total: 0, active: 0, totalRedemptions: 0, totalRevenue: 0 }
+    };
 }
 
 /**

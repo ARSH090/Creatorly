@@ -213,25 +213,28 @@ export async function POST(req: NextRequest) {
                                 }
                             }
 
-                            // 2. Post-Purchase Email (One-off via Queue)
-                            if (product.postPurchaseEmailEnabled && product.postPurchaseEmailSubject && product.postPurchaseEmailContent) {
-                                await QueueJob.create({
-                                    type: 'one_off_email',
-                                    payload: {
-                                        email: order.customerEmail,
-                                        subject: product.postPurchaseEmailSubject,
-                                        content: product.postPurchaseEmailContent,
-                                        creatorId: order.creatorId.toString(),
-                                        source: 'purchase_delivery'
-                                    },
-                                    nextRunAt: new Date()
-                                });
-                                console.log(`[RAZORPAY WEBHOOK] Enqueued post-purchase email for order ${order.orderNumber}`);
-                            }
+                            // 2. Post-Purchase Email Confirmation & Sale Notification
+                            const { sendPaymentConfirmationEmail, sendCreatorSaleNotificationEmail } = await import('@/lib/services/email');
+                            const creator = await User.findById(order.creatorId);
+
+                            await Promise.allSettled([
+                                sendPaymentConfirmationEmail(
+                                    order.customerEmail,
+                                    order._id.toString(),
+                                    order.total / 100,
+                                    order.items
+                                ),
+                                creator?.email ? sendCreatorSaleNotificationEmail(
+                                    creator.email,
+                                    product.title || product.name || 'Product',
+                                    order.total / 100,
+                                    order.customerEmail
+                                ) : Promise.resolve()
+                            ]);
 
                             // 3. Digital Fulfillment (Files, Courses, Licenses)
                             await DigitalDeliveryService.fulfillOrder(order._id.toString());
-                            console.log(`[RAZORPAY WEBHOOK] Triggered fulfillment for order ${order.orderNumber}`);
+                            console.log(`[RAZORPAY WEBHOOK] Triggered fulfillment and sent emails for order ${order.orderNumber}`);
                         }
                     } catch (automationErr) {
                         console.error('[RAZORPAY WEBHOOK] Post-purchase automation/fulfillment failed:', automationErr);

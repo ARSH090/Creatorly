@@ -247,14 +247,6 @@ export default function StorefrontBuilder() {
                     </h2>
                     <div className="flex gap-2">
                         <button
-                            onClick={() => router.push('/dashboard/storefront/editor')}
-                            className="flex items-center gap-2 bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 px-3 py-2 rounded-xl hover:bg-indigo-500 hover:text-white transition-all text-[10px] uppercase font-black tracking-widest"
-                            title="Switch to Advance Editor"
-                        >
-                            <Sparkles className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Advance Editor</span>
-                        </button>
-                        <button
                             onClick={() => setShowMobilePreview(!showMobilePreview)}
                             className="md:hidden p-2 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
                             title="Toggle preview"
@@ -277,6 +269,26 @@ export default function StorefrontBuilder() {
                             Save
                         </button>
                     </div>
+                </div>
+
+                {/* Advanced Editor CTA */}
+                <div className="px-6 py-4 border-b border-white/5 bg-gradient-to-br from-indigo-500/5 to-purple-500/5">
+                    <button
+                        onClick={() => router.push('/dashboard/storefront/editor')}
+                        className="w-full group relative overflow-hidden p-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 bg-[length:200%_auto] hover:bg-[right_center] transition-all duration-500 shadow-xl shadow-indigo-500/20 active:scale-[0.98]"
+                    >
+                        <div className="flex items-center gap-3 text-left relative z-10">
+                            <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                                <Sparkles className="w-5 h-5 text-white" />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-white uppercase tracking-[0.2em] italic leading-none mb-1">Advanced Canvas</p>
+                                <p className="text-[9px] text-white/60 font-medium leading-tight">Full-screen pixel perfect editor for complete brand control</p>
+                            </div>
+                        </div>
+                        {/* Shimmer effect */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                    </button>
                 </div>
 
                 {/* Tabs */}

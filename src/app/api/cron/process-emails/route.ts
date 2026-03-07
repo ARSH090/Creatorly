@@ -141,9 +141,10 @@ export async function GET(req: NextRequest) {
                 for (const email of recipients) {
                     await sendMarketingEmail(
                         email,
-                        campaign.subject,
-                        htmlContent, // Pixel is here
-                        creatorName
+                        {
+                            subject: campaign.subject,
+                            html: htmlContent,
+                        }
                     );
                     sentKey++;
                     // Update stats incrementally or batch?

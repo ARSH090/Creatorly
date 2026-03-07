@@ -3,12 +3,15 @@ import AbandonedCheckout from '@/lib/models/AbandonedCheckout';
 import Product from '@/lib/models/Product';
 import User from '@/lib/models/User';
 
+import { IUser } from '@/lib/models/User';
+import { IProduct } from '@/lib/models/Product';
+
 interface RecoveryEmailData {
     checkoutId: string;
     buyerEmail: string;
     buyerName?: string;
-    product: any;
-    creator: any;
+    product: IProduct;
+    creator: IUser;
     couponCode: string;
     recoveryNumber: number;
 }

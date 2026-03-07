@@ -41,7 +41,10 @@ const Footer: React.FC = () => {
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-6 pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6">
-        <span className="text-xl font-black text-white tracking-tighter underline decoration-indigo-500 decoration-2 underline-offset-4">Creatorly</span>
+        <span className="text-xl font-black italic tracking-tighter">
+          <span className="text-white">CREATOR</span>
+          <span className="text-indigo-500">LY</span>
+        </span>
         <div className="flex flex-col items-end gap-1">
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-600">© 2026 Creatorly. All rights reserved.</p>
           <a href="mailto:hello@creatorly.com" className="text-[10px] text-zinc-500 hover:text-white">hello@creatorly.com</a>

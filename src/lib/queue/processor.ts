@@ -349,10 +349,10 @@ async function handleEmailBroadcast(job: IQueueJob) {
 
             await sendMarketingEmail(
                 recipientEmail,
-                campaign.subject,
-                content,
-                creatorName,
-                unsubscribeUrl
+                {
+                    subject: campaign.subject,
+                    html: content,
+                }
             );
             successCount++;
         } catch (err) {

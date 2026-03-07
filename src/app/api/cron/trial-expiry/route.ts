@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { User } from '@/lib/models/User';
 import { Subscription } from '@/lib/models/Subscription';
 import { Plan } from '@/lib/models/Plan';
-import { sendTrialReminderEmail } from '@/lib/services/email';
+import { sendTrialReminderEmail, sendTrialExpiredEmail } from '@/lib/services/email';
 
 /**
  * GET /api/cron/trial-expiry
@@ -85,7 +85,11 @@ export async function GET(req: NextRequest) {
                 }
                 await user.save();
 
-                // TODO: Send "Trial ended, please update payment" email
+                // Send "Trial ended" email
+                await sendTrialExpiredEmail(user.email, {
+                    name: user.displayName || user.username,
+                    plan: user.subscriptionTier
+                }).catch(console.error);
             }
         }
 

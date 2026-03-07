@@ -156,7 +156,7 @@ async function handler(req: NextRequest, user: any, context: any) {
 
     } catch (error: any) {
         console.error('[Dashboard Stats] Error:', error);
-        return NextResponse.json({ error: error.message || 'Internal Server Error', stack: error.stack }, { status: 500 });
+        return NextResponse.json({ error: error.message || 'Internal Server Error' }, { status: 500 });
     }
 }
 

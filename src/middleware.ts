@@ -131,9 +131,24 @@ export default clerkMiddleware(async (auth, req) => {
     }
 
     // 4. Security Headers
-    response.headers.set('X-Frame-Options', 'DENY');
+    response.headers.set('X-Frame-Options', 'SAMEORIGIN');
     response.headers.set('X-Content-Type-Options', 'nosniff');
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+
+    // Content Security Policy
+    const cspDirectives = [
+        "default-src 'self'",
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.razorpay.com https://checkout.razorpay.com https://*.clerk.accounts.dev https://cdn.clerk.dev",
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src 'self' https://fonts.gstatic.com",
+        "img-src 'self' data: blob: https://*.amazonaws.com https://*.s3.amazonaws.com https://img.clerk.com https://*.clerk.dev",
+        "connect-src 'self' https://api.clerk.dev https://*.clerk.accounts.dev https://api.razorpay.com https://*.upstash.io wss://*.pusher.com https://*.posthog.com https://*.vercel-analytics.com",
+        "frame-src https://api.razorpay.com https://checkout.razorpay.com https://*.clerk.accounts.dev",
+        "object-src 'none'",
+        "base-uri 'self'",
+    ].join('; ');
+    response.headers.set('Content-Security-Policy', cspDirectives);
 
     // 5. Custom Domain & Path Routing
     const firstSegment = pathname.split('/')[1];

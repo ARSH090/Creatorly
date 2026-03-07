@@ -134,6 +134,11 @@ export const CouponSchema = z.object({
     validFrom: z.date().or(z.string().transform(val => new Date(val))).default(() => new Date()),
     validUntil: z.date().or(z.string().transform(val => new Date(val))).optional(),
     isActive: z.boolean().default(true),
+    bogoConfig: z.object({
+        buyQuantity: z.number().int().min(1).default(1),
+        getQuantity: z.number().int().min(1).default(1),
+        getDiscountValue: z.number().min(0).max(100).default(100)
+    }).optional(),
     internalNote: z.string().optional(),
     showHintOnStorefront: z.boolean().default(false),
 });

@@ -66,3 +66,43 @@ export const DELETE = withAuth(async (req: NextRequest, user: any, { params }: a
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 });
+
+export const PATCH = withAuth(async (req: NextRequest, user: any, { params }: any) => {
+    try {
+        const { id } = params;
+        const userId = user._id;
+        const data = await req.json();
+
+        await connectToDatabase();
+
+        // Whitelist allowed fields
+        const allowedFields = [
+            'keyword', 'matchType', 'dmMessage', 'replyText', 'replyVariants',
+            'followGate', 'dailyLimit', 'isActive', 'applyTo', 'targetPostUrl',
+            'name', 'triggerType', 'responseMessage', 'priority', 'platform',
+            'requireFollow', 'sendAsReply', 'cooldownMinutes'
+        ];
+        const updates: Record<string, unknown> = {};
+        for (const field of allowedFields) {
+            if (field in data) updates[field] = data[field];
+        }
+
+        if (data.replyText) {
+            updates.loopPreventionId = crypto.createHash('md5').update(data.replyText).digest('hex');
+        }
+
+        const rule = await AutoReplyRule.findOneAndUpdate(
+            { _id: id, creatorId: userId },
+            { $set: updates },
+            { new: true, runValidators: true }
+        );
+
+        if (!rule) {
+            return NextResponse.json({ error: 'Rule not found' }, { status: 404 });
+        }
+
+        return NextResponse.json({ success: true, rule });
+    } catch (error: any) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+});
