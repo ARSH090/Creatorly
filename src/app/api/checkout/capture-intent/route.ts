@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
         }
 
         // 2. Upsert abandoned checkout (don't create duplicate if already exists for this email/product and not recovered)
-        await AbandonedCheckout.findOneAndUpdate(
+        const checkout = await AbandonedCheckout.findOneAndUpdate(
             { buyerEmail: email, productId, status: 'abandoned' },
             {
                 creatorId: product.creatorId,
@@ -29,6 +29,16 @@ export async function POST(req: NextRequest) {
                 recoveryEnded: false
             },
             { upsert: true, new: true }
+        );
+
+        // 3. Enqueue 1-hour delay recovery job if it's new/upserted and first time queueing
+        // Actually, just having upsert handles the creation. We can enqueue it, and the worker will check if it's already recovered.
+        // To avoid multiple queueing, we only enqueue if we've just captured or it's within 1 hour. But it's safe to just queue it, 
+        // the worker can deduplicate based on checkout._id.
+        const { mailQueue } = await import('@/lib/queue');
+        await mailQueue.add('abandoned-cart-recovery',
+            { checkoutId: checkout._id.toString() },
+            { delay: 1000 * 60 * 60, jobId: `recovery-${checkout._id.toString()}` }
         );
 
         return NextResponse.json(successResponse('Intent captured'));

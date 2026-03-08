@@ -10,6 +10,8 @@ import {
     processStoryReplyTrigger
 } from '@/lib/services/autoDMService';
 
+export const maxDuration = 60; // Max allowed for Vercel Hobby/Pro handling external calls
+
 // GET — Meta webhook verification
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -85,15 +87,17 @@ export async function POST(req: NextRequest) {
             for (const change of entry.changes || []) {
                 // Comment trigger
                 if (change.field === 'comments') {
+                    const isLiveVideo = change.value.media?.media_product_type === 'LIVE_VIDEO';
                     await processCommentTrigger({
                         creatorId: creator._id.toString(),
                         creatorIgId,
                         accessToken,
-                        postId: change.value.media?.id,
+                        postId: change.value.media?.id || 'live',
                         commentId: change.value.id,
                         commentText: change.value.text || '',
                         commenterIgId: change.value.from?.id,
                         commenterUsername: change.value.from?.username || 'user',
+                        isLiveVideo,
                     }).catch(e => console.error('Error in processCommentTrigger:', e));
                 }
 

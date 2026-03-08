@@ -17,7 +17,7 @@ export interface IProduct extends Document {
     };
 
     // Status & Organization
-    status: 'draft' | 'published' | 'archived';
+    status: 'draft' | 'published' | 'active' | 'archived';
     categoryId?: mongoose.Types.ObjectId;
     tags?: string[]; // Array of tag names or IDs
 
@@ -203,7 +203,7 @@ const ProductSchema: Schema = new Schema({
 
     status: {
         type: String,
-        enum: ['draft', 'published', 'archived'],
+        enum: ['draft', 'published', 'active', 'archived'],
         default: 'draft',
         index: true
     },

@@ -1,6 +1,6 @@
+'use client';
 /* eslint-disable react-hooks/exhaustive-deps, react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const, import/no-anonymous-default-export */
 // @ts-nocheck
-'use client';
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';

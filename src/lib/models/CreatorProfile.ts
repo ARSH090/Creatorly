@@ -140,7 +140,7 @@ export interface ICreatorProfile extends Document {
         answer: string;
     }>;
 
-    // New block builder fields
+    // New enhanced theme (stored as a flexible Map)
     blocksLayout?: any[];
     themeV2?: Record<string, any>;
     storefrontSeo?: {
@@ -154,6 +154,15 @@ export interface ICreatorProfile extends Document {
         enabled: boolean;
         password?: string;
         hint?: string;
+    };
+
+    // Advanced Storefront Features
+    customCss?: string;
+    pixels?: {
+        metaPixelId?: string;
+        tiktokPixelId?: string;
+        ga4MeasurementId?: string;
+        snapchatPixelId?: string;
     };
 
     // New customization fields
@@ -271,6 +280,14 @@ const CreatorProfileSchema: Schema = new Schema({
         enabled: { type: Boolean, default: false },
         password: String,
         hint: String
+    },
+
+    customCss: { type: String, default: '' },
+    pixels: {
+        metaPixelId: String,
+        tiktokPixelId: String,
+        ga4MeasurementId: String,
+        snapchatPixelId: String
     },
 
     customDomain: {

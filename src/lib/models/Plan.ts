@@ -6,6 +6,7 @@ export interface IPlan extends Document {
     description: string;
     badge: string;
     isActive: boolean;
+    isVisible: boolean;
     isHighlighted: boolean;
     displayOrder: number;
     price: number; // In paise
@@ -62,6 +63,11 @@ const PlanSchema = new mongoose.Schema({
         // e.g. "Most Popular" | "Best Value" | ""
     },
     isActive: {
+        type: Boolean,
+        default: true,
+        index: true,
+    },
+    isVisible: {
         type: Boolean,
         default: true,
         index: true,

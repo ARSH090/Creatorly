@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -109,7 +110,7 @@ export default function ProjectsPage() {
                         <div key={project._id} className="bg-zinc-900/50 rounded-3xl border border-white/5 overflow-hidden group hover:border-indigo-500/30 transition-all flex flex-col">
                             <div className="aspect-video bg-zinc-800 relative flex items-center justify-center border-b border-white/5 overflow-hidden">
                                 {project.image ? (
-                                    <img src={project.image} alt={project.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                                    <Image width={800} height={800} src={project.image} alt={project.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                                 ) : (
                                     <Package className="w-12 h-12 text-zinc-700 group-hover:text-indigo-500/20 transition-colors" />
                                 )}

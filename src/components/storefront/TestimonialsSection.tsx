@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import React from 'react';
 import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -57,7 +58,7 @@ const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testimonials,
                                     <div className="flex items-center gap-4 pt-4">
                                         <div className="w-12 h-12 rounded-full overflow-hidden bg-indigo-500/10 border-2 border-indigo-500/20">
                                             {t.avatar ? (
-                                                <img src={t.avatar} alt={t.name} className="w-full h-full object-cover" />
+                                                <Image width={800} height={800} src={t.avatar} alt={t.name} className="w-full h-full object-cover" />
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-indigo-400 font-bold">
                                                     {t.name.charAt(0)}

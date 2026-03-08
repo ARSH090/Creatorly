@@ -20,10 +20,12 @@ export const getMongoUser = cache(async (): Promise<IUser | null> => {
         const { headers } = await import('next/headers');
         const headerList = await headers();
         const incomingSecret = headerList.get('x-test-secret');
+        const incomingEmail = headerList.get('x-test-email');
 
         if (testSecret && incomingSecret === testSecret) {
             await connectToDatabase();
-            const testUser = await User.findOne({ email: 'test@creatorly.in' });
+            const emailToFind = incomingEmail || 'test@creatorly.in';
+            const testUser = await User.findOne({ email: emailToFind });
             if (testUser) return testUser;
         }
 

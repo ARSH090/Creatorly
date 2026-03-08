@@ -3,7 +3,7 @@ import mongoose, { Schema, Document, Model } from 'mongoose';
 export type DMProvider = 'instagram' | 'whatsapp' | 'telegram';
 export type DMStatus = 'success' | 'failed' | 'rate_limited' | 'policy_violation' | 'coming_soon' | 'pending';
 export type DeliveryStatus = 'sent' | 'delivered' | 'read' | 'failed' | 'pending';
-export type TriggerSource = 'comment' | 'dm' | 'automation' | 'lead_capture';
+export type TriggerSource = 'comment' | 'dm' | 'automation' | 'lead_capture' | 'live_video_comment';
 
 export interface IDMLog extends Document {
     creatorId: mongoose.Types.ObjectId;
@@ -40,7 +40,7 @@ const DMLogSchema: Schema = new Schema({
     messageId: { type: String, index: true },
     ruleId: { type: Schema.Types.ObjectId, ref: 'AutoReplyRule' },
     serviceOfferingId: { type: Schema.Types.ObjectId, ref: 'ServiceOffering' },
-    triggerSource: { type: String, enum: ['comment', 'dm', 'automation', 'lead_capture'], default: 'lead_capture', required: true },
+    triggerSource: { type: String, enum: ['comment', 'dm', 'automation', 'lead_capture', 'live_video_comment'], default: 'lead_capture', required: true },
     status: {
         type: String,
         enum: ['success', 'failed', 'rate_limited', 'policy_violation', 'coming_soon', 'pending'],

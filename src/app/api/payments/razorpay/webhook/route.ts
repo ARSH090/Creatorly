@@ -11,6 +11,7 @@ import User from '@/lib/models/User'; // For tier management
 import { generateDownloadToken } from '@/lib/services/downloadToken';
 import mongoose from 'mongoose';
 import { log } from '@/utils/logger';
+import { sendFinancialAlert, sendCriticalAlert } from '@/lib/services/alertService';
 
 /**
  * Helper to process a successful order (One-time or Subscription Renewal)
@@ -195,6 +196,7 @@ export async function POST(req: NextRequest) {
             order.status = 'completed';
             order.paidAt = new Date();
             await order.save();
+            await sendFinancialAlert(`Order ${order.orderNumber || order._id} Captured`, order.total || 0);
 
             // TIER: Increment monotonic counter if creator is on FREE tier
             try {
@@ -318,6 +320,17 @@ export async function POST(req: NextRequest) {
                     const booking = await Booking.findById(order.metadata.bookingId);
                     if (booking) {
                         booking.status = 'confirmed';
+
+                        if (booking.locationType === 'google_meet' || !booking.locationType) {
+                            try {
+                                const { createGoogleMeetEvent } = await import('@/lib/services/meetingLinkService');
+                                await createGoogleMeetEvent(booking._id.toString());
+                                log.info(`Google Meet event generated for booking ${booking._id}`);
+                            } catch (meetErr: any) {
+                                log.error(`Failed to generate Meet event for booking ${booking._id}`, { error: meetErr.message });
+                            }
+                        }
+
                         await booking.save();
                         log.info(`Booking ${booking._id} confirmed for order ${order._id}`);
 
@@ -493,6 +506,7 @@ export async function POST(req: NextRequest) {
                         }
                     });
                     log.info(`Order created for subscription renewal: ${subId}`, { paymentId });
+                    await sendFinancialAlert(`Subscription ${subId} Renewed`, amount);
                 } else {
                     log.error(`Product ${sub.productId} not found for subscription renewal ${subId}`);
                 }

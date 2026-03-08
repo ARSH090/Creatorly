@@ -183,6 +183,19 @@ export async function POST(req: Request) {
                 console.error('Stock decrement error:', sErr);
             }
 
+            // E. Mark Abandoned Checkout as recovered
+            try {
+                const AbandonedCheckout = (await import('@/lib/models/AbandonedCheckout')).default;
+                for (const item of order.items) {
+                    await AbandonedCheckout.findOneAndUpdate(
+                        { buyerEmail: order.customerEmail.toLowerCase(), productId: item.productId, status: 'abandoned' },
+                        { status: 'recovered', recoveredAt: new Date(), recoveredOrderId: order._id }
+                    );
+                }
+            } catch (acErr) {
+                console.error('Abandoned checkout recovery marked error:', acErr);
+            }
+
             console.log(`✅ Order ${payment.order_id} captured and verified`);
         }
 

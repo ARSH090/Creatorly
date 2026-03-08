@@ -1,3 +1,4 @@
+import Image from 'next/image';
 "use client";
 
 /* eslint-disable react-hooks/exhaustive-deps, react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const, import/no-anonymous-default-export */
@@ -202,7 +203,7 @@ export default function CreatorDashboard() {
                                     myProducts.map(product => (
                                         <div key={product._id} className="group bg-zinc-900/40 border border-white/5 p-6 rounded-[2.5rem] hover:border-white/10 transition-all flex flex-col h-full">
                                             <div className="w-full aspect-square bg-zinc-800/50 rounded-2xl mb-6 overflow-hidden relative">
-                                                <img src={product.image} alt={product.name} className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500" />
+                                                <Image width={800} height={800} src={product.image} alt={product.name} className="w-full h-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all duration-500" />
                                                 <div className="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 text-[10px] font-bold text-white uppercase tracking-widest">
                                                     ₹{product.price}
                                                 </div>

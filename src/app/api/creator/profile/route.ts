@@ -8,6 +8,8 @@ import { revalidatePath } from 'next/cache';
 import { invalidateCache } from '@/lib/cache';
 import { z } from 'zod';
 import { successResponse } from '@/types/api';
+import { sanitizeCustomCss } from '@/lib/utils/sanitizeCss';
+import { validatePixelIds } from '@/lib/utils/validatePixelIds';
 
 /**
  * GET /api/creator/profile
@@ -41,6 +43,8 @@ async function getHandler(req: NextRequest, user: any, context: any) {
         customDomain: creatorProfile.customDomain,
         domainVerified: creatorProfile.isCustomDomainVerified,
         storefrontData: creatorProfile,
+        customCss: creatorProfile.customCss,
+        pixels: creatorProfile.pixels,
         // Alias for tests
         storefrontConfig: creatorProfile
     };
@@ -97,6 +101,13 @@ const profileUpdateSchema = z.object({
     showProfilePhoto: z.boolean().optional(),
     currency: z.string().optional(),
     isPublished: z.boolean().optional(),
+    customCss: z.string().max(50000).optional(),
+    pixels: z.object({
+        metaPixelId: z.string().optional(),
+        tiktokPixelId: z.string().optional(),
+        ga4MeasurementId: z.string().optional(),
+        snapchatPixelId: z.string().optional(),
+    }).optional(),
 });
 
 /**
@@ -118,7 +129,8 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
         displayName, bio, avatar, storeSlug,
         theme, layout, links, socialLinks, customDomain,
         testimonials, faqs, blocksLayout, themeV2,
-        showProfilePhoto, currency, isPublished
+        showProfilePhoto, currency, isPublished,
+        customCss, pixels
     } = validation.data;
 
     const userUpdates: any = {};
@@ -150,6 +162,14 @@ async function patchHandler(req: NextRequest, user: any, context: any) {
     if (themeV2) profileUpdates.themeV2 = themeV2;
     if (currency) profileUpdates.currency = currency;
     if (isPublished !== undefined) profileUpdates.isPublished = isPublished;
+
+    if (customCss !== undefined) {
+        profileUpdates.customCss = sanitizeCustomCss(customCss);
+    }
+
+    if (pixels !== undefined) {
+        profileUpdates.pixels = validatePixelIds(pixels);
+    }
 
     // Handle Domain Changes
     if (customDomain !== undefined) {

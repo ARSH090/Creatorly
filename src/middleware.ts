@@ -130,25 +130,46 @@ export default clerkMiddleware(async (auth, req) => {
         });
     }
 
-    // 4. Security Headers
+    // ── Maintenance Mode Gate ──
+    const isMaintenanceMode = process.env.MAINTENANCE_MODE === 'true';
+    const isAdminRoute = pathname.startsWith('/admin');
+
+    if (isMaintenanceMode && !isAdminRoute && !pathname.startsWith('/api/platform')) {
+        return new Response(
+            `<!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Creatorly — Under Maintenance</title>
+                <style>
+                    body { background: #09090b; color: #71717a; font-family: system-ui, -apple-system, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }
+                    .container { max-width: 600px; padding: 2rem; }
+                    h1 { color: white; font-size: 2.5rem; font-weight: 900; letter-spacing: -0.05em; margin-bottom: 1rem; italic; text-transform: uppercase; }
+                    p { font-size: 1.125rem; line-height: 1.6; }
+                    .logo { color: #f43f5e; font-weight: 900; font-size: 1.5rem; margin-bottom: 2rem; }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="logo">CREATORLY</div>
+                    <h1>Upgrade in Progress</h1>
+                    <p>We're currently performing some scheduled maintenance to improve your experience. We'll be back online shortly.</p>
+                </div>
+            </body>
+            </html>`,
+            {
+                status: 503,
+                headers: { 'Content-Type': 'text/html' }
+            }
+        );
+    }
+
+    // ── Security Headers ──
     response.headers.set('X-Frame-Options', 'SAMEORIGIN');
     response.headers.set('X-Content-Type-Options', 'nosniff');
     response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-
-    // Content Security Policy
-    const cspDirectives = [
-        "default-src 'self'",
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.razorpay.com https://checkout.razorpay.com https://*.clerk.accounts.dev https://cdn.clerk.dev",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data: blob: https://*.amazonaws.com https://*.s3.amazonaws.com https://img.clerk.com https://*.clerk.dev",
-        "connect-src 'self' https://api.clerk.dev https://*.clerk.accounts.dev https://api.razorpay.com https://*.upstash.io wss://*.pusher.com https://*.posthog.com https://*.vercel-analytics.com",
-        "frame-src https://api.razorpay.com https://checkout.razorpay.com https://*.clerk.accounts.dev",
-        "object-src 'none'",
-        "base-uri 'self'",
-    ].join('; ');
-    response.headers.set('Content-Security-Policy', cspDirectives);
 
     // 5. Custom Domain & Path Routing
     const firstSegment = pathname.split('/')[1];
@@ -157,7 +178,7 @@ export default clerkMiddleware(async (auth, req) => {
         'api', 'trpc', 'u', 'pricing', 'features', 'blog', 'terms', 'privacy', 'refund-policy', '_next',
         'subscribe', 'onboarding', 'checkout', 'cart', 'learn', 'book', 'explore', 'p', 'portal',
         'thank-you', 'order-success', 'sso-callback', 'account', 'autodm', 'user-profile', 'ref', 'setup',
-        'subscription'
+        'subscription', 'resources'
     ];
 
     const hostname = req.headers.get("host") || "";

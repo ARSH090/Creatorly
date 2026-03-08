@@ -61,9 +61,9 @@ export default function AdminStoresPage() {
             const res = await fetch(`/api/admin/stores?${params}`);
             if (res.ok) {
                 const result = await res.json();
-                setStores(result.data.stores);
-                setTotalPages(result.meta.totalPages);
-                setStats(result.data.stats || stats);
+                setStores(result.stores || []);
+                setTotalPages(result.pagination?.pages || 1);
+                setStats(result.stats || stats);
             }
         } catch (error) {
             toast.error('Failed to query the store relay');

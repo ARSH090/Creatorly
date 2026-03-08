@@ -32,6 +32,11 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { name, triggerType, triggerConfig, steps } = body;
 
+        // 1. Plan Gate Check
+        const { requirePlanFeature } = await import('@/lib/planGate');
+        const gate = await requirePlanFeature(user._id.toString(), 'autoDMHub');
+        if (!gate.allowed) return gate.response!;
+
         if (!name || !triggerType) {
             return NextResponse.json({ error: 'Name and triggerType are required' }, { status: 400 });
         }

@@ -1,3 +1,4 @@
+import Image from 'next/image';
 /* eslint-disable react-hooks/exhaustive-deps, react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const, import/no-anonymous-default-export */
 import React from 'react';
 import { connectToDatabase } from '@/lib/db/mongodb';
@@ -40,7 +41,7 @@ export default async function PublicBookingPage({ params }: { params: { username
                     <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 p-1 mx-auto mb-6 shadow-2xl shadow-indigo-500/20">
                         <div className="w-full h-full rounded-full bg-black overflow-hidden border-4 border-black">
                             {creator.avatar ? (
-                                <img src={creator.avatar} alt={creator.displayName} className="w-full h-full object-cover" />
+                                <Image width={800} height={800} src={creator.avatar} alt={creator.displayName} className="w-full h-full object-cover" />
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-3xl font-black text-white">
                                     {creator.displayName?.charAt(0)}

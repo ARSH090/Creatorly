@@ -22,6 +22,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [stats, setStats] = useState<any>(null);
     const [notifications, setNotifications] = useState<any[]>([]);
+    const [mounted, setMounted] = useState(false);
+
+    // Prevent hydration mismatch — wait for client mount
+    useEffect(() => { setMounted(true); }, []);
 
     // Fetch dashboard data
     useEffect(() => {
@@ -132,13 +136,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
                                 {stats && (
                                     <>
-                                        <div className="text-xs">
-                                            <span className="text-zinc-500 font-medium">Today</span>
-                                            <span className="font-bold text-white ml-2">₹{stats.todayRevenue}</span>
-                                        </div>
-                                        <div className="text-xs">
-                                            <span className="text-zinc-500 font-medium">Visitors</span>
-                                            <span className="font-bold text-white ml-2">{stats.todayVisitors}</span>
+                                        <div className="flex items-center gap-4 border-l border-white/5 pl-6">
+                                            <div className="text-xs">
+                                                <span className="text-zinc-500 font-medium">Today</span>
+                                                <span className="font-bold text-white ml-2">₹{stats.todayRevenue}</span>
+                                            </div>
+                                            <div className="text-xs">
+                                                <span className="text-zinc-500 font-medium">Visitors</span>
+                                                <span className="font-bold text-white ml-2">{stats.todayVisitors}</span>
+                                            </div>
+                                            {mounted && stats?.subscription?.tier && (
+                                                <div className="ml-2 px-2.5 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-md">
+                                                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none">
+                                                        {stats.subscription.tier}
+                                                    </span>
+                                                </div>
+                                            )}
                                         </div>
                                     </>
                                 )}
@@ -159,14 +172,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             <div className="flex items-center gap-3 pl-4 border-l border-white/5">
                                 <div className="text-right hidden sm:block">
                                     <p className="text-sm font-bold text-white leading-none mb-1">
-                                        {stats?.profile?.displayName || user?.fullName || 'Creator'}
+                                        {mounted ? (stats?.profile?.displayName || user?.fullName || 'Creator') : 'Creator'}
                                     </p>
                                     <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-wider">
-                                        @{user?.username || 'username'}
+                                        @{mounted && user?.username ? user.username : 'username'}
                                     </p>
                                 </div>
                                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border-2 border-white/10 overflow-hidden">
-                                    {(stats?.profile?.avatar || user?.imageUrl) ? (
+                                    {mounted && (stats?.profile?.avatar || user?.imageUrl) ? (
                                         // eslint-disable-next-line @next/next/no-img-element
                                         <img
                                             src={stats?.profile?.avatar || user?.imageUrl}
@@ -175,7 +188,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                         />
                                     ) : (
                                         <div className="w-full h-full flex items-center justify-center text-white text-[10px] font-bold">
-                                            {(stats?.profile?.displayName || user?.fullName || 'C').charAt(0).toUpperCase()}
+                                            {mounted ? (stats?.profile?.displayName || user?.fullName || 'C').charAt(0).toUpperCase() : 'C'}
                                         </div>
                                     )}
                                 </div>
@@ -186,7 +199,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </header>
 
             {/* Trial Banner */}
-            {stats?.subscription?.status === 'trialing' && (
+            {mounted && stats?.subscription?.status === 'trialing' && (
                 <div className="bg-gradient-to-r from-indigo-600 to-purple-600 py-2.5 px-4 flex items-center justify-between shadow-lg shadow-indigo-500/10">
                     <div className="flex items-center gap-3">
                         <div className="bg-white/20 p-1.5 rounded-lg">
@@ -357,8 +370,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                 key={tab.label}
                                 href={tab.href}
                                 className={`flex flex-col items-center justify-center gap-1 px-2 py-1.5 rounded-xl transition-all min-w-[56px] ${isActive
-                                        ? 'text-white'
-                                        : 'text-zinc-600 hover:text-zinc-400'
+                                    ? 'text-white'
+                                    : 'text-zinc-600 hover:text-zinc-400'
                                     }`}
                             >
                                 <tab.icon className={`w-5 h-5 ${isActive ? 'text-indigo-400' : ''}`} />

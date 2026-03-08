@@ -17,9 +17,9 @@ export const Logo: React.FC<LogoProps> = ({
     showTagline = false
 }) => {
     return (
-        <div className={`flex items-center gap-3 group ${className}`}>
+        <span className={`inline-flex items-center gap-3 group ${className}`} suppressHydrationWarning>
             {showText && (
-                <div className="flex flex-col">
+                <span className="flex flex-col">
                     <span className="text-2xl font-black italic tracking-tighter leading-none">
                         <span className="text-white">CREATOR</span>
                         <span className="text-indigo-400">LY</span>
@@ -29,9 +29,9 @@ export const Logo: React.FC<LogoProps> = ({
                             Monetize Your Creativity
                         </span>
                     )}
-                </div>
+                </span>
             )}
-        </div>
+        </span>
     );
 };
 

@@ -129,8 +129,8 @@ export default function NewServicePage() {
                                         key={mins}
                                         onClick={() => setFormData({ ...formData, duration: mins })}
                                         className={`py-3 rounded-xl border font-bold text-xs transition-all ${formData.duration === mins
-                                                ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-                                                : 'bg-black border-white/10 text-zinc-500 hover:border-white/20'
+                                            ? 'bg-indigo-500 border-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+                                            : 'bg-black border-white/10 text-zinc-500 hover:border-white/20'
                                             }`}
                                     >
                                         {mins} Min
@@ -255,8 +255,8 @@ export default function NewServicePage() {
                     <div className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {[
-                                { id: 'zoom', name: 'Zoom Video', icon: Video, desc: 'Auto-generates meeting link' },
-                                { id: 'google_meet', name: 'Google Meet', icon: Globe, desc: 'Add your custom meet link' },
+                                { id: 'google_meet', name: 'Google Meet', icon: Globe, desc: 'Auto-generates meeting link' },
+                                { id: 'zoom', name: 'Zoom Video', icon: Video, desc: 'Add your personal Zoom link' },
                                 { id: 'phone', name: 'Phone Call', icon: Phone, desc: 'You call the client' },
                                 { id: 'in_person', name: 'In Person', icon: MapPin, desc: 'Meet at a physical location' },
                             ].map((type) => (
@@ -264,8 +264,8 @@ export default function NewServicePage() {
                                     key={type.id}
                                     onClick={() => setFormData({ ...formData, meetingType: type.id })}
                                     className={`p-5 rounded-3xl border cursor-pointer transition-all flex items-center gap-4 ${formData.meetingType === type.id
-                                            ? 'bg-indigo-500/10 border-indigo-500/50'
-                                            : 'bg-black border-white/10 hover:border-white/20'
+                                        ? 'bg-indigo-500/10 border-indigo-500/50'
+                                        : 'bg-black border-white/10 hover:border-white/20'
                                         }`}
                                 >
                                     <div className={`p-3 rounded-2xl ${formData.meetingType === type.id ? 'bg-indigo-500 text-white' : 'bg-zinc-800 text-zinc-500'}`}>
@@ -279,12 +279,30 @@ export default function NewServicePage() {
                             ))}
                         </div>
 
-                        {formData.meetingType === 'google_meet' && (
+                        {formData.meetingType === 'zoom' && (
                             <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
-                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Meet Link</label>
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Personal Zoom Link</label>
                                 <input
                                     type="text"
-                                    placeholder="meet.google.com/xxx-xxxx-xxx"
+                                    placeholder="https://zoom.us/j/YOUR_MEETING_ID"
+                                    className={`w-full bg-black border rounded-2xl px-5 py-4 text-white outline-none transition-all ${formData.meetingLink && !/^https:\/\/(?:[a-zA-Z0-9-]+\.)?zoom\.us\/j\/\d+(?:\?pwd=[a-zA-Z0-9]+)?$/.test(formData.meetingLink)
+                                            ? 'border-red-500'
+                                            : 'border-white/10 focus:border-indigo-500'
+                                        }`}
+                                    value={formData.meetingLink}
+                                    onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
+                                />
+                                {formData.meetingLink && !/^https:\/\/(?:[a-zA-Z0-9-]+\.)?zoom\.us\/j\/\d+(?:\?pwd=[a-zA-Z0-9]+)?$/.test(formData.meetingLink) && (
+                                    <p className="text-red-500 text-xs mt-1">Please enter a valid personal Zoom link (e.g. https://zoom.us/j/1234567890)</p>
+                                )}
+                            </div>
+                        )}
+                        {formData.meetingType === 'custom_link' && (
+                            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                                <label className="text-xs font-bold text-zinc-500 uppercase tracking-widest">Meeting Link</label>
+                                <input
+                                    type="text"
+                                    placeholder="https://your-custom-link.com"
                                     className="w-full bg-black border border-white/10 rounded-2xl px-5 py-4 text-white outline-none focus:border-indigo-500"
                                     value={formData.meetingLink}
                                     onChange={(e) => setFormData({ ...formData, meetingLink: e.target.value })}
@@ -429,10 +447,10 @@ export default function NewServicePage() {
                             key={step.id}
                             onClick={() => setCurrentStep(step.id)}
                             className={`flex items-center gap-3 p-4 rounded-2xl cursor-pointer transition-all ${currentStep === step.id
-                                    ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
-                                    : currentStep > step.id
-                                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10'
-                                        : 'bg-transparent text-zinc-600 hover:text-zinc-400 hover:bg-white/5'
+                                ? 'bg-indigo-500 text-white shadow-lg shadow-indigo-500/20'
+                                : currentStep > step.id
+                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/10'
+                                    : 'bg-transparent text-zinc-600 hover:text-zinc-400 hover:bg-white/5'
                                 }`}
                         >
                             <div className={`p-1.5 rounded-lg ${currentStep === step.id ? 'bg-white/20' : 'bg-transparent'}`}>

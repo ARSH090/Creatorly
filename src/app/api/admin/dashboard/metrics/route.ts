@@ -51,14 +51,14 @@ export const GET = withAdminAuth(async (req, user, context) => {
           },
         },
       ]),
-      Order.aggregate([
+      Payout.aggregate([
         {
-          $match: { payoutStatus: 'pending' },
+          $match: { status: 'pending' },
         },
         {
           $group: {
             _id: null,
-            total: { $sum: '$creatorEarnings' },
+            total: { $sum: '$amount' },
           },
         },
       ]),
@@ -86,7 +86,7 @@ export const GET = withAdminAuth(async (req, user, context) => {
       {
         $group: {
           _id: '$creatorId',
-          revenue: { $sum: '$creatorEarnings' },
+          revenue: { $sum: { $multiply: ['$total', 0.95] } },
           orders: { $sum: 1 },
         },
       },
@@ -176,7 +176,7 @@ export const GET = withAdminAuth(async (req, user, context) => {
         orderId: order.orderId,
         creator: order.creatorId?.displayName,
         customer: order.userId?.displayName,
-        amount: order.totalAmount,
+        amount: order.total,
         status: order.status,
         createdAt: order.createdAt,
       })),

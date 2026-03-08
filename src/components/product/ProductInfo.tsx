@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 /* eslint-disable react-hooks/exhaustive-deps, react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const, import/no-anonymous-default-export */
 
@@ -84,9 +85,9 @@ export default function ProductInfo({ product, theme }: ProductInfoProps) {
                 <div className="flex flex-col items-center lg:items-start">
                     <span className="text-[10px] font-black text-zinc-600 uppercase tracking-widest mb-1">Secure</span>
                     <div className="flex gap-2">
-                        <img src="/icons/visa.svg" alt="Visa" className="h-4 opacity-50 grayscale hover:grayscale-0 transition-all" />
-                        <img src="/icons/mastercard.svg" alt="Mastercard" className="h-4 opacity-50 grayscale hover:grayscale-0 transition-all" />
-                        <img src="/icons/upi.svg" alt="UPI" className="h-4 opacity-50 grayscale hover:grayscale-0 transition-all" />
+                        <Image width={800} height={800} src="/icons/visa.svg" alt="Visa" className="h-4 opacity-50 grayscale hover:grayscale-0 transition-all" />
+                        <Image width={800} height={800} src="/icons/mastercard.svg" alt="Mastercard" className="h-4 opacity-50 grayscale hover:grayscale-0 transition-all" />
+                        <Image width={800} height={800} src="/icons/upi.svg" alt="UPI" className="h-4 opacity-50 grayscale hover:grayscale-0 transition-all" />
                     </div>
                 </div>
                 <div className="w-px h-8 bg-white/5" />

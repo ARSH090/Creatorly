@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -178,7 +179,7 @@ export default function ProductForm({ initialData, isEditing = false }: ProductF
                             />
                             {formData.coverImageUrl && (
                                 <div className="relative group w-full aspect-video rounded-3xl overflow-hidden border border-white/10 mt-4">
-                                    <img src={formData.coverImageUrl} className="w-full h-full object-cover" alt="Identity" />
+                                    <Image width={800} height={800} src={formData.coverImageUrl} className="w-full h-full object-cover" alt="Identity" />
                                     <button
                                         onClick={() => handleChange('coverImageUrl', '')}
                                         className="absolute top-4 right-4 p-2 bg-black/60 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"

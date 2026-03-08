@@ -22,7 +22,7 @@ const PricingPreviewSection: React.FC = () => {
                 <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
                     {/* Free Plan */}
                     <div className="p-8 rounded-3xl border border-white/10 bg-zinc-900/30 flex flex-col">
-                        <h3 className="text-xl font-bold text-white mb-2">Starter</h3>
+                        <h3 className="text-xl font-bold text-white mb-2">Free</h3>
                         <div className="flex items-baseline gap-1 mb-2">
                             <span className="text-4xl font-bold text-white">₹0</span>
                             <span className="text-zinc-500">/month</span>
@@ -31,7 +31,7 @@ const PricingPreviewSection: React.FC = () => {
                         <p className="text-zinc-400 text-sm mb-8">Perfect for getting started.</p>
 
                         <ul className="space-y-4 mb-8 flex-1">
-                            {["5 Products", "Basic Analytics", "Store Builder", "Community Support"].map((feat, i) => (
+                            {["3 Products", "Basic Analytics", "Store Builder", "Community Support"].map((feat, i) => (
                                 <li key={i} className="flex gap-3 text-sm text-zinc-300">
                                     <Check className="w-5 h-5 text-indigo-500 shrink-0" /> {feat}
                                 </li>
@@ -55,7 +55,7 @@ const PricingPreviewSection: React.FC = () => {
                         <p className="text-zinc-400 text-sm mb-8">For serious creators scaling up.</p>
 
                         <ul className="space-y-4 mb-8 flex-1">
-                            {["Unlimited Products", "0% Transaction Fees", "Custom Domain", "Advanced Analytics", "Email Marketing", "Affiliate Program"].map((feat, i) => (
+                            {["25 Products", "0% Transaction Fees", "Mobile Storefront", "Advanced Analytics", "Email Marketing", "Affiliate Program"].map((feat, i) => (
                                 <li key={i} className="flex gap-3 text-sm text-zinc-300">
                                     <Check className="w-5 h-5 text-indigo-400 shrink-0" /> {feat}
                                 </li>

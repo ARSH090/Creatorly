@@ -18,6 +18,7 @@ export interface IEmailCampaign extends Document {
         unsubscribed: number;
     };
     listId?: mongoose.Types.ObjectId;
+    targetAudience?: string;
     createdAt: Date;
     updatedAt: Date;
 }

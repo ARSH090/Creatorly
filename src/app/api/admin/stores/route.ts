@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { User } from '@/lib/models/User';
 import { withAdminAuth } from '@/lib/auth/withAuth';
+import CreatorProfile from '@/lib/models/CreatorProfile';
+import Product from '@/lib/models/Product';
+import Order from '@/lib/models/Order';
 import AuditLog from '@/lib/models/AuditLog';
 
 // GET /api/admin/stores
@@ -15,27 +17,50 @@ export const GET = withAdminAuth(async (req) => {
 
         await connectToDatabase();
 
-        const query: any = { role: 'creator' };
+        const query: any = {};
         if (search) {
             query.$or = [
-                { displayName: { $regex: search, $options: 'i' } },
-                { email: { $regex: search, $options: 'i' } },
-                { username: { $regex: search, $options: 'i' } },
-                { storeSlug: { $regex: search, $options: 'i' } }
+                { storeName: { $regex: search, $options: 'i' } },
+                { customDomain: { $regex: search, $options: 'i' } }
             ];
         }
         if (status && status !== 'all') {
-            query.storeStatus = status;
+            if (status === 'active') query.isPublished = true;
+            if (status === 'suspended') query.isPublished = false; // Simple mapping for now
         }
 
-        const [stores, total] = await Promise.all([
-            User.find(query)
+        const [profiles, total] = await Promise.all([
+            CreatorProfile.find(query)
+                .populate('creatorId', 'displayName username email avatar status')
                 .sort({ createdAt: -1 })
                 .skip((page - 1) * limit)
                 .limit(limit)
                 .lean(),
-            User.countDocuments(query)
+            CreatorProfile.countDocuments(query)
         ]);
+
+        // Enrich with product counts and revenue (sequential for simplicity, could be optimized with aggregation)
+        const stores = await Promise.all(profiles.map(async (p: any) => {
+            const [productCount, orders] = await Promise.all([
+                Product.countDocuments({ creatorId: p.creatorId?._id, deletedAt: null }),
+                Order.find({ creatorId: p.creatorId?._id, status: 'paid' }).select('total')
+            ]);
+            const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0) / 100;
+
+            return {
+                ...p,
+                productCount,
+                revenue,
+                totalOrders: orders.length
+            };
+        }));
+
+        const stats = {
+            total: await CreatorProfile.countDocuments(),
+            active: await CreatorProfile.countDocuments({ isPublished: true }),
+            suspended: await CreatorProfile.countDocuments({ isPublished: false }),
+            flagged: 0 // Will add flag field to CreatorProfile if needed, or use a default
+        };
 
         return NextResponse.json({
             stores,
@@ -44,7 +69,8 @@ export const GET = withAdminAuth(async (req) => {
                 page,
                 limit,
                 pages: Math.ceil(total / limit)
-            }
+            },
+            stats
         });
     } catch (error: any) {
         return NextResponse.json({ error: error.message }, { status: 500 });

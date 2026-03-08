@@ -47,11 +47,11 @@ const nextConfig = {
             },
         ],
         formats: ['image/avif', 'image/webp'],
-        minimumCacheTTL: 60,
+        minimumCacheTTL: 2592000,
     },
     // Next.js 14 compatible experimental features
     experimental: {
-        serverComponentsExternalPackages: ['isomorphic-dompurify', 'jsdom'],
+        serverComponentsExternalPackages: ['isomorphic-dompurify', 'jsdom', 'mongoose', 'ioredis'],
         optimizePackageImports: [
             'framer-motion',
             'lucide-react',
@@ -67,14 +67,15 @@ const nextConfig = {
         const isDev = process.env.NODE_ENV === 'development';
         const ContentSecurityPolicy = `
           default-src 'self';
-          script-src 'self' 'unsafe-inline' ${isDev ? "'unsafe-eval'" : ''} 
+          script-src 'self' 'unsafe-inline' 'unsafe-eval' 
             https://checkout.razorpay.com 
             https://apis.google.com 
             https://accounts.google.com 
             https://www.gstatic.com 
             https://*.clerk.com 
             https://*.clerk.accounts.dev 
-            https://va.vercel-scripts.com;
+            https://va.vercel-scripts.com 
+            blob:;
           style-src 'self' 'unsafe-inline' 
             https://fonts.googleapis.com 
             https://*.clerk.com;
@@ -92,6 +93,8 @@ const nextConfig = {
             https://checkout.razorpay.com 
             https://api.razorpay.com 
             https://lottie.host 
+            https://va.vercel-scripts.com 
+            https://vitals.vercel-insights.com
             wss://*.clerk.com
             ${isDev ? 'ws://localhost:3000 http://localhost:3000' : ''};
           frame-src 'self' 
@@ -103,7 +106,7 @@ const nextConfig = {
           object-src 'none';
           base-uri 'self';
           form-action 'self';
-        `.replace(/\s{2,}/g, ' ').trim();
+        `.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
 
         return [
             {

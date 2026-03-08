@@ -3,11 +3,14 @@
 import { useState } from 'react';
 import { useSignIn } from '@clerk/nextjs';
 import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
 
 export default function LoginPage() {
   const { isLoaded, signIn, setActive } = useSignIn();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [captchaLoadError, setCaptchaLoadError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const [formData, setFormData] = useState({
     identifier: '',
@@ -36,7 +39,8 @@ export default function LoginPage() {
       }
     } catch (err: any) {
       if (err.errors?.[0]?.meta?.paramName === 'captcha') {
-        setError('CAPTCHA check failed. Please refresh and try again.');
+        setCaptchaLoadError(true);
+        setError('');
       } else {
         setError(err.errors?.[0]?.message || 'Invalid email or password');
       }
@@ -74,6 +78,14 @@ export default function LoginPage() {
                   {error}
                 </div>
               )}
+              {captchaLoadError && (
+                <p className="text-sm text-red-400">
+                  Security check failed to load. Please disable browser extensions or{' '}
+                  <button type="button" onClick={() => window.location.reload()} className="underline">
+                    refresh the page
+                  </button>.
+                </p>
+              )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2.5">
@@ -95,15 +107,26 @@ export default function LoginPage() {
                   <label className="block text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-1">
                     Password
                   </label>
-                  <input
-                    type="password"
-                    required
-                    className="w-full px-6 py-4.5 bg-white/[0.03] border border-white/5 rounded-2xl focus:border-indigo-500/50 focus:bg-white/[0.05] outline-none transition-all font-medium text-white placeholder-zinc-600 text-base"
-                    placeholder="••••••••"
-                    value={formData.password}
-                    onChange={e => setFormData({ ...formData, password: e.target.value })}
-                    disabled={loading}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      className="w-full pl-6 pr-12 py-4.5 bg-white/[0.03] border border-white/5 rounded-2xl focus:border-indigo-500/50 focus:bg-white/[0.05] outline-none transition-all font-medium text-white placeholder-zinc-600 text-base"
+                      placeholder="••••••••"
+                      value={formData.password}
+                      onChange={e => setFormData({ ...formData, password: e.target.value })}
+                      disabled={loading}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(s => !s)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300"
+                      tabIndex={-1}
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                   <div className="text-right px-1">
                     <Link href="/auth/forgot-password" className="text-sm text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
                       Forgot password?

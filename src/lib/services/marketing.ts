@@ -1,6 +1,9 @@
 import SequenceEnrollment from '../models/SequenceEnrollment';
 import EmailSequence from '../models/EmailSequence';
 import mongoose from 'mongoose';
+import { triggerSequencesForSubscriber } from './sequenceTrigger';
+import Subscriber from '../models/Subscriber';
+import crypto from 'crypto';
 
 /**
  * Enrolls a user in a matching active sequence for a given trigger.
@@ -8,62 +11,60 @@ import mongoose from 'mongoose';
 export async function enrollInSequence(
     email: string,
     creatorId: string | mongoose.Types.ObjectId,
-    triggerType: 'signup' | 'purchase' | 'abandoned_cart'
+    triggerType: 'signup' | 'purchase' | 'abandoned_cart' | 'lead_magnet' | 'new_subscriber' | 'manual',
+    triggerProductId?: string
 ) {
     try {
-        // 1. Find active sequence for this creator and trigger
+        // 1. Find or create subscriber to grab firstName and unsubscribeToken
+        let subscriber = await Subscriber.findOne({ email, creatorId });
+        if (!subscriber) {
+            subscriber = await Subscriber.create({
+                creatorId,
+                email,
+                name: email.split('@')[0],
+                status: 'active',
+                unsubscribeToken: crypto.randomBytes(32).toString('hex')
+            });
+        } else if (!subscriber.unsubscribeToken) {
+            subscriber.unsubscribeToken = crypto.randomBytes(32).toString('hex');
+            await subscriber.save();
+        }
+
+        const firstName = subscriber.name?.split(' ')[0] || 'there';
+
+        // 2. Schedule sequence steps directly in BullMQ
+        await triggerSequencesForSubscriber({
+            creatorId: creatorId.toString(),
+            subscriberEmail: email,
+            firstName,
+            unsubscribeToken: subscriber.unsubscribeToken,
+            triggerType,
+            triggerProductId
+        });
+
+        // Optional: keep SequenceEnrollment for stats/tracking if you want, 
+        // but the BullMQ queue 'email-sequence-step' now handles the actual delivery logic natively.
+        // We'll upsert an enrollment record just so the status is tracked
         const sequence = await EmailSequence.findOne({
             creatorId: new mongoose.Types.ObjectId(creatorId.toString()),
             triggerType,
             isActive: true
         });
 
-        if (!sequence || !sequence.steps || sequence.steps.length === 0) {
-            return { success: false, message: 'No active sequence found for this trigger' };
+        if (sequence) {
+            await SequenceEnrollment.findOneAndUpdate(
+                { email, sequenceId: sequence._id },
+                { status: 'active', metadata: { triggerType, enrolledAt: new Date() } },
+                { upsert: true, new: true, setDefaultsOnInsert: true }
+            );
+
+            await EmailSequence.findByIdAndUpdate(sequence._id, {
+                $inc: { 'stats.enrollments': 1 }
+            });
         }
 
-        // 2. Identify the first step
-        const steps = [...sequence.steps].sort((a, b) => a.sequenceOrder - b.sequenceOrder);
-        const firstStep = steps[0];
-
-        // Calculate due date (Step 0 indexed in enrollment, mapping to first step in sequence)
-        const nextStepDueAt = new Date(Date.now() + (firstStep.delayHours || 0) * 60 * 60 * 1000);
-
-        // 3. Create or update enrollment
-        const enrollment = await SequenceEnrollment.findOneAndUpdate(
-            { email, sequenceId: sequence._id, status: 'active' },
-            {
-                creatorId: sequence.creatorId,
-                currentStep: 0,
-                nextStepDueAt,
-                metadata: { triggerType, enrolledAt: new Date() }
-            },
-            { upsert: true, new: true, setDefaultsOnInsert: true }
-        );
-
-        // 4. Create the first QueueJob for this sequence
-        const { QueueJob } = await import('../models/QueueJob');
-        await QueueJob.create({
-            type: 'email_sequence_step',
-            payload: {
-                sequenceId: sequence._id.toString(),
-                enrollmentId: enrollment._id.toString(),
-                email,
-                subject: firstStep.subject,
-                content: firstStep.content,
-                stepIndex: 0
-            },
-            nextRunAt: nextStepDueAt,
-            status: 'pending'
-        });
-
-        // 5. Update stats on the sequence
-        await EmailSequence.findByIdAndUpdate(sequence._id, {
-            $inc: { 'stats.enrollments': 1 }
-        });
-
-        console.log(`[Marketing] Enrolled ${email} in sequence "${sequence.name}" and scheduled first step.`);
-        return { success: true, enrollmentId: enrollment._id };
+        console.log(`[Marketing] Enqueued ${email} for sequences matching trigger: ${triggerType}`);
+        return { success: true };
 
     } catch (error) {
         console.error('[Marketing] Sequence enrollment failed:', error);

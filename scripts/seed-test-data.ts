@@ -1,7 +1,7 @@
 import * as dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.resolve(process.cwd(), '.env.test') });
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
 async function seedTestData() {
     try {
@@ -25,14 +25,22 @@ async function seedTestData() {
 
         // 2. Create Test Product
         await Product.findOneAndUpdate(
-            { title: 'Test Ebook', creatorId: creator._id },
+            { slug: 'test-ebook' },
             {
-                price: 1000, // $10.00
-                type: 'ebook',
-                fileUrl: 'https://test-bucket.s3.amazonaws.com/ebook.pdf',
-                description: 'This is a test product for automated QA.'
+                creatorId: creator._id,
+                title: 'Test Ebook',
+                slug: 'test-ebook',
+                productType: 'ebook',
+                description: 'This is a test product for automated QA.',
+                pricing: {
+                    basePrice: 100000, // ₹1000.00
+                    currency: 'INR',
+                    taxInclusive: false
+                },
+                status: 'published',
+                isActive: true
             },
-            { upsert: true }
+            { upsert: true, new: true }
         );
 
         console.log('✅ Test data fixtures seeded successfully.');

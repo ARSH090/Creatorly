@@ -10,9 +10,13 @@ interface StorefrontPageProps {
 
 export async function generateMetadata({ params }: StorefrontPageProps) {
     const { username } = await params;
+    const reserved = ['dashboard', 'admin', 'auth', 'cart', 'checkout', 'api', 'setup', 'onboarding', 'u', 'p'];
+    if (reserved.includes(username.toLowerCase())) {
+        notFound();
+    }
     await connectToDatabase();
     const creator = await User.findOne({ username: username.toLowerCase() });
-    
+
     if (!creator) {
         return { title: 'Not Found | Creatorly' };
     }
@@ -25,9 +29,13 @@ export async function generateMetadata({ params }: StorefrontPageProps) {
 
 export default async function StorefrontPage({ params }: StorefrontPageProps) {
     const { username } = await params;
+    const reserved = ['dashboard', 'admin', 'auth', 'cart', 'checkout', 'api', 'setup', 'onboarding', 'u', 'p'];
+    if (reserved.includes(username.toLowerCase())) {
+        notFound();
+    }
     await connectToDatabase();
 
-    const creator = await User.findOne({ 
+    const creator = await User.findOne({
         username: username.toLowerCase(),
         status: 'active'
     }).lean();
@@ -43,7 +51,7 @@ export default async function StorefrontPage({ params }: StorefrontPageProps) {
     }).sort({ createdAt: -1 }).lean();
 
     return (
-        <StorefrontView 
+        <StorefrontView
             creator={JSON.parse(JSON.stringify(creator))}
             products={JSON.parse(JSON.stringify(products))}
         />

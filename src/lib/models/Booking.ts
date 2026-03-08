@@ -12,6 +12,9 @@ export interface IBooking extends Document {
     endTime: Date;
     timezone: string;
     status: 'confirmed' | 'completed' | 'cancelled' | 'no_show';
+    locationType?: 'google_meet' | 'zoom' | 'phone' | 'in_person' | 'custom_link';
+    calendarEventId?: string;
+    meetLinkGeneratedAt?: Date;
     meetingLink?: string;
     zoomMeetingId?: string;
     paymentStatus: 'free' | 'paid' | 'pending' | 'refunded';
@@ -46,6 +49,13 @@ const BookingSchema: Schema = new Schema({
         default: 'confirmed',
         index: true
     },
+    locationType: {
+        type: String,
+        enum: ['google_meet', 'zoom', 'phone', 'in_person', 'custom_link'],
+        default: 'google_meet'
+    },
+    calendarEventId: String,
+    meetLinkGeneratedAt: Date,
     meetingLink: { type: String },
     zoomMeetingId: { type: String },
     paymentStatus: {

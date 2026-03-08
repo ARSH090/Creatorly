@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
@@ -71,7 +72,7 @@ export default async function SuccessPage({ params }: { params: Promise<{ userna
                                 <div key={idx} className="bg-[#0A0A0A] border border-white/5 rounded-[2rem] p-6 flex items-center gap-6 text-left group hover:border-white/10 transition-colors">
                                     <div className="w-16 h-16 bg-zinc-900 rounded-2xl overflow-hidden relative border border-white/5 flex-shrink-0">
                                         {item.product?.image ? (
-                                            <img src={item.product.image} className="object-cover w-full h-full" alt={item.name} />
+                                            <Image width={800} height={800} src={item.product.image} className="object-cover w-full h-full" alt={item.name} />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center">
                                                 <FileText className="w-6 h-6 text-zinc-700" />

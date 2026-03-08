@@ -13,6 +13,7 @@ export async function processCommentTrigger(data: {
     commentText: string;
     commenterIgId: string;
     commenterUsername: string;
+    isLiveVideo?: boolean;
 }) {
     // 1. Get all active rules for this creator
     const rules = await AutoDMRule.find({
@@ -200,10 +201,11 @@ export async function processStoryReplyTrigger(data: any) {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 async function logAutoDM(params: any) {
+    const defaultTriggerType = params.isLiveVideo ? 'live_video_comment' : 'comment';
     await AutoDMLog.create({
         creatorId: params.creatorId,
         ruleId: params.rule?._id,
-        triggerType: params.triggerType || 'comment',
+        triggerType: params.triggerType || defaultTriggerType,
         instagramUserId: params.commenterIgId,
         instagramUsername: params.commenterUsername,
         commentId: params.commentId,

@@ -13,7 +13,7 @@ export default function LegalLayout({
                 </div>
                 <div className="mt-12 pt-8 border-t border-zinc-800 text-center">
                     <p className="text-zinc-500 text-sm">
-                        &copy; {new Date().getFullYear()} Creatorly. In compliance with Indian IT Act 2000 & RBI Guidelines.
+                        &copy; 2026 Creatorly. In compliance with Indian IT Act 2000 & RBI Guidelines.
                     </p>
                 </div>
             </div>

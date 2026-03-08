@@ -27,6 +27,13 @@ async function postHandler(req: NextRequest, user: any) {
         throw new Error('Service name is required');
     }
 
+    if (body.meetingType === 'zoom') {
+        const zoomRegex = /^https:\/\/(?:[a-zA-Z0-9-]+\.)?zoom\.us\/j\/\d+(?:\?pwd=[a-zA-Z0-9]+)?$/;
+        if (!body.meetingLink || !zoomRegex.test(body.meetingLink)) {
+            throw new Error('Please provide a valid personal Zoom link');
+        }
+    }
+
     // Generate unique slug
     const baseSlug = slugify(body.name, { lower: true, strict: true });
     let bookingSlug = baseSlug;

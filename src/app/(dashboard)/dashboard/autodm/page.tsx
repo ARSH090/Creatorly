@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@clerk/nextjs';
@@ -197,7 +198,7 @@ export default function AutoDMDashboard() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-zinc-900 border dark:border-zinc-800 rounded-2xl p-6 shadow-sm">
                 <div className="flex items-center gap-4">
                     {status.profilePicUrl ? (
-                        <img src={status.profilePicUrl} alt="IG Profile" className="w-16 h-16 rounded-full border border-zinc-200" />
+                        <Image width={800} height={800} src={status.profilePicUrl} alt="IG Profile" className="w-16 h-16 rounded-full border border-zinc-200" />
                     ) : (
                         <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                             <Instagram className="text-zinc-400 w-8 h-8" />

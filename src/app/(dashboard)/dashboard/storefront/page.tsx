@@ -97,7 +97,7 @@ export default function StorefrontBuilder() {
     const router = useRouter();
     const { user, email, displayName, photoURL } = useAuth();
     const [isSaving, setIsSaving] = useState(false);
-    const [activeTab, setActiveTab] = useState<'design' | 'links' | 'layout'>('design');
+    const [activeTab, setActiveTab] = useState<'design' | 'links' | 'layout' | 'advanced'>('design');
     const [expandedLinkIdx, setExpandedLinkIdx] = useState<number | null>(null);
     const [showMobilePreview, setShowMobilePreview] = useState(false);
     const [uploadingThumbnailIdx, setUploadingThumbnailIdx] = useState<number | null>(null);
@@ -124,6 +124,13 @@ export default function StorefrontBuilder() {
 
     const [links, setLinks] = useState<any[]>([]);
     const [storeSlug, setStoreSlug] = useState<string>('');
+    const [customCss, setCustomCss] = useState<string>('');
+    const [pixels, setPixels] = useState({
+        metaPixelId: '',
+        tiktokPixelId: '',
+        snapchatPixelId: '',
+        ga4MeasurementId: ''
+    });
 
     // ── Fetch saved data ──
     useEffect(() => {
@@ -143,6 +150,8 @@ export default function StorefrontBuilder() {
                     ...newLink(l.order ?? 0),
                     ...l,
                 })));
+                if (data.customCss) setCustomCss(data.customCss);
+                if (data.pixels) setPixels(prev => ({ ...prev, ...data.pixels }));
             } catch (err) {
                 console.error('fetchProfile', err);
             }
@@ -220,7 +229,7 @@ export default function StorefrontBuilder() {
             const res = await fetch('/api/creator/profile', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ theme, layout, links }),
+                body: JSON.stringify({ theme, layout, links, customCss, pixels }),
             });
             if (!res.ok) throw new Error('Save failed');
             toast.success('Storefront saved!');
@@ -293,7 +302,7 @@ export default function StorefrontBuilder() {
 
                 {/* Tabs */}
                 <div className="flex border-b border-white/5 flex-shrink-0 bg-black/20">
-                    {(['design', 'links', 'layout'] as const).map(tab => (
+                    {(['design', 'links', 'layout', 'advanced'] as const).map(tab => (
                         <button
                             key={tab}
                             onClick={() => setActiveTab(tab)}
@@ -824,6 +833,51 @@ export default function StorefrontBuilder() {
                             </div>
                         </div>
                     )}
+
+                    {/* ══ ADVANCED TAB ════════════════════════════════════════ */}
+                    {activeTab === 'advanced' && (
+                        <div className="p-6 space-y-8">
+                            <section className="space-y-4">
+                                <div>
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Analytics Pixels</h3>
+                                    <p className="text-[10px] text-zinc-700 mt-1">Track conversions and retarget visitors.</p>
+                                </div>
+                                <div className="space-y-3">
+                                    {[
+                                        { label: 'Meta Pixel ID', key: 'metaPixelId', placeholder: 'e.g. 1234567890' },
+                                        { label: 'TikTok Pixel ID', key: 'tiktokPixelId', placeholder: 'e.g. CE123...' },
+                                        { label: 'Google Analytics (GA4)', key: 'ga4MeasurementId', placeholder: 'G-XXXXXXXXXX' },
+                                        { label: 'Snapchat Pixel ID', key: 'snapchatPixelId', placeholder: 'e.g. a1b2c3d4...' },
+                                    ].map(({ label, key, placeholder }) => (
+                                        <div key={key} className="space-y-1">
+                                            <span className="text-[10px] font-bold text-zinc-400">{label}</span>
+                                            <input
+                                                type="text"
+                                                value={(pixels as any)[key]}
+                                                onChange={e => setPixels(prev => ({ ...prev, [key]: e.target.value }))}
+                                                placeholder={placeholder}
+                                                className="w-full bg-zinc-900 border border-white/10 rounded-xl px-3 py-2.5 text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-indigo-500/50"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </section>
+
+                            <section className="space-y-4 pt-6 border-t border-white/5">
+                                <div>
+                                    <h3 className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Custom CSS</h3>
+                                    <p className="text-[10px] text-zinc-700 mt-1">Inject custom styles directly into your storefront.</p>
+                                </div>
+                                <textarea
+                                    value={customCss}
+                                    onChange={e => setCustomCss(e.target.value)}
+                                    placeholder=".my-custom-class { color: red; }"
+                                    className="w-full h-48 bg-zinc-900 border border-white/10 rounded-xl px-3 py-3 text-xs font-mono text-zinc-300 placeholder-zinc-600 resize-none focus:outline-none focus:border-indigo-500/50"
+                                />
+                                <p className="text-[9px] text-zinc-600 mt-1">Avoid using &lt;style&gt; tags, just write raw CSS.</p>
+                            </section>
+                        </div>
+                    )}
                 </div>
             </aside>
 
@@ -873,7 +927,7 @@ export default function StorefrontBuilder() {
                                             <div key="hero" className="flex flex-col items-center text-center space-y-4">
                                                 <div className="w-20 h-20 rounded-[1.5rem] bg-zinc-800 border-4 border-black shadow-2xl overflow-hidden">
                                                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                                                    <img
+                                                    <Image width={800} height={800} 
                                                         src={photoURL || `https://api.dicebear.com/7.x/initials/svg?seed=${displayName || 'Creator'}`}
                                                         alt="avatar"
                                                         className="w-full h-full object-cover"
@@ -933,7 +987,7 @@ export default function StorefrontBuilder() {
                                                             >
                                                                 {link.thumbnail
                                                                     // eslint-disable-next-line @next/next/no-img-element
-                                                                    ? <img src={link.thumbnail} alt="" className="w-full h-full object-cover" />
+                                                                    ? <Image width={800} height={800} src={link.thumbnail} alt="" className="w-full h-full object-cover" />
                                                                     : <IconComp className="w-3.5 h-3.5" style={{ color: link.badgeColor || theme.primaryColor }} />
                                                                 }
                                                             </div>

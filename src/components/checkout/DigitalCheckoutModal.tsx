@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -176,7 +177,7 @@ export default function DigitalCheckoutModal({ open, onOpenChange, product, cust
                         {/* Summary Card */}
                         <div className="flex items-center gap-4 p-4 bg-white/[0.03] border border-white/5 rounded-2xl">
                             <div className="w-16 h-16 bg-zinc-900 rounded-xl overflow-hidden shrink-0 border border-white/5">
-                                <img src={product.thumbnail || product.image || '/placeholder-product.png'} alt={product.title} className="w-full h-full object-cover" />
+                                <Image width={800} height={800} src={product.thumbnail || product.image || '/placeholder-product.png'} alt={product.title} className="w-full h-full object-cover" />
                             </div>
                             <div className="flex-1 min-w-0">
                                 <h4 className="font-bold text-white truncate">{product.title || product.name}</h4>

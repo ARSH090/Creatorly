@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 /* eslint-disable react-hooks/exhaustive-deps, react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const, import/no-anonymous-default-export */
 
@@ -122,7 +123,7 @@ export default function PostCard({ post, communityUsername, onLikeToggle }: Post
             <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center font-black text-white text-sm overflow-hidden border border-white/10">
                     {post.authorAvatar ? (
-                        <img src={post.authorAvatar} alt={post.author} className="w-full h-full object-cover" />
+                        <Image width={800} height={800} src={post.authorAvatar} alt={post.author} className="w-full h-full object-cover" />
                     ) : (
                         post.author[0]?.toUpperCase()
                     )}
@@ -139,7 +140,7 @@ export default function PostCard({ post, communityUsername, onLikeToggle }: Post
             {/* Image */}
             {post.image && (
                 <div className="rounded-2xl overflow-hidden bg-zinc-900 border border-white/5">
-                    <img src={post.image} alt="Post media" className="w-full max-h-80 object-cover" />
+                    <Image width={800} height={800} src={post.image} alt="Post media" className="w-full max-h-80 object-cover" />
                 </div>
             )}
 

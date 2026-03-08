@@ -9,6 +9,11 @@ export async function GET(req: NextRequest) {
         const user = await getMongoUser();
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
+        // 1. Plan Gate Check
+        const { requirePlanFeature } = await import('@/lib/planGate');
+        const gate = await requirePlanFeature(user._id.toString(), 'emailMarketing');
+        if (!gate.allowed) return gate.response!;
+
         const { searchParams } = new URL(req.url);
         const tag = searchParams.get('tag');
         const source = searchParams.get('source');

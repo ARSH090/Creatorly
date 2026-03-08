@@ -9,12 +9,12 @@
     "projectName": "insta",
     "projectPath": "e:\\insta",
     "testIds": [],
-    "additionalInstruction": "",
+    "additionalInstruction": "Verify all bug fixes: critical plan limits, admin stores API refactor, onboarding plan selection, and public storefront serialization. Ensure no regressions in authentication or product management.",
     "serverMode": "development",
     "envs": {
       "API_KEY": "sk-user-zdXzTG0gr3wflCyiKBVyedlLqhEePnbNeIDh8zFyLjo4-tnW_TqbqMBTxng_LQ1rFCBDHJle5Q4LZC2bsrdn92QNJiqjxmO-guMd24wfaJCB3xMbjmkH4ZX5UokLCleCbiM"
     }
   },
-  "serverPort": 53688,
+  "serverPort": 57137,
   "proxy": "http://e8329ff1-34e4-4fab-b900-4b57e14212a4:mkIqKjSFfVB3uQ5OerbfzWC5icHQrfHZ@tun.testsprite.com:8080"
 }

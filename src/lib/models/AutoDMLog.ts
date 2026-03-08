@@ -4,7 +4,7 @@ export interface IAutoDMLog extends Document {
     creatorId: mongoose.Types.ObjectId;
     ruleId?: mongoose.Types.ObjectId;
     flowId?: mongoose.Types.ObjectId;
-    triggerType: 'comment' | 'dm' | 'story_reply' | 'new_follower';
+    triggerType: 'comment' | 'dm' | 'story_reply' | 'new_follower' | 'live_video_comment';
     instagramUserId: string;
     instagramUsername: string;
     commentId?: string;
@@ -24,7 +24,7 @@ const AutoDMLogSchema: Schema = new Schema({
     creatorId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     ruleId: { type: Schema.Types.ObjectId, ref: 'AutoDMRule' },
     flowId: { type: Schema.Types.ObjectId, ref: 'AutoDMFlow' },
-    triggerType: { type: String, enum: ['comment', 'dm', 'story_reply', 'new_follower'], required: true },
+    triggerType: { type: String, enum: ['comment', 'dm', 'story_reply', 'new_follower', 'live_video_comment'], required: true },
     instagramUserId: { type: String, required: true },
     instagramUsername: { type: String, required: true },
     commentId: { type: String },

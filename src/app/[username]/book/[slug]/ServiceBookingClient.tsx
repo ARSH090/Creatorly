@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -55,7 +56,7 @@ export default function ServiceBookingClient({ creator, service }: { creator: an
                 <div className="lg:w-[400px] space-y-8">
                     <div className="sticky top-12">
                         <div className="flex items-center gap-4 mb-8">
-                            <img src={creator.avatar} alt={creator.displayName} className="w-12 h-12 rounded-full object-cover border-2 border-white/10" />
+                            <Image width={800} height={800} src={creator.avatar} alt={creator.displayName} className="w-12 h-12 rounded-full object-cover border-2 border-white/10" />
                             <div>
                                 <p className="text-sm font-bold text-zinc-400">{creator.displayName}</p>
                                 <h1 className="text-2xl font-black text-white">{service.name}</h1>

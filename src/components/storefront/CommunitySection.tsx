@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 import React from 'react';
 import { MessageSquare, Heart, Share2 } from 'lucide-react';
@@ -50,7 +51,7 @@ export default function CommunitySection({ creatorName }: CommunitySectionProps)
 
                         {post.image && (
                             <div className="mb-4 rounded-xl overflow-hidden aspect-video">
-                                <img src={post.image} alt="Post attachment" className="w-full h-full object-cover" />
+                                <Image width={800} height={800} src={post.image} alt="Post attachment" className="w-full h-full object-cover" />
                             </div>
                         )}
 

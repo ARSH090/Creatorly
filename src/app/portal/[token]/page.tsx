@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 /* eslint-disable react-hooks/exhaustive-deps, react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const, import/no-anonymous-default-export */
 
@@ -113,7 +114,7 @@ export default function ClientPortalPage() {
                         </div>
                         <div className="h-8 w-px bg-white/5" />
                         <div className="flex items-center gap-3">
-                            <img className="w-8 h-8 rounded-full border border-white/10" src={project.clientId?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${project._id}`} alt="" />
+                            <Image width={800} height={800} className="w-8 h-8 rounded-full border border-white/10" src={project.clientId?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${project._id}`} alt="" />
                             <span className="text-xs font-black text-white tracking-tight hidden sm:block">Client Member</span>
                         </div>
                     </div>

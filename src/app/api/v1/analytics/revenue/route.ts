@@ -3,12 +3,18 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import DailyMetric from '@/lib/models/DailyMetric';
 import { Order } from '@/lib/models/Order';
 import { getMongoUser } from '@/lib/auth/get-user';
+import { checkFeatureAccess } from '@/lib/middleware/checkFeatureAccess';
 
 export async function GET(req: NextRequest) {
     try {
         await connectToDatabase();
         const user = await getMongoUser();
         if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+        const access = await checkFeatureAccess(user._id.toString(), 'analytics');
+        if (!access.allowed) {
+            return NextResponse.json({ error: access.message || 'Advanced analytics requires a higher plan' }, { status: 403 });
+        }
 
         const { searchParams } = new URL(req.url);
         const days = parseInt(searchParams.get('days') || '30');

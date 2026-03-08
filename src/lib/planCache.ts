@@ -37,28 +37,29 @@ export async function getAllPlans() {
 // ── GET SINGLE PLAN ───────────────────────────────
 export async function getPlanById(planId: string) {
     if (!planId) return null;
+    const normalizedId = planId.toLowerCase();
 
     try {
-        const cached = await redis.get(PLAN_KEY(planId));
+        const cached = await redis.get(PLAN_KEY(normalizedId));
         if (cached) return typeof cached === 'string' ? JSON.parse(cached) : cached;
     } catch (err) {
-        console.warn(`Redis cache read failed for plan ${planId}:`, err);
+        console.warn(`Redis cache read failed for plan ${normalizedId}:`, err);
     }
 
     await connectToDatabase();
     const plan = await Plan.findOne({
-        id: planId.toLowerCase()
+        id: normalizedId
     }).lean();
 
     if (plan) {
         try {
             await redis.setex(
-                PLAN_KEY(planId),
+                PLAN_KEY(normalizedId),
                 TTL,
                 JSON.stringify(plan)
             );
         } catch (err) {
-            console.warn(`Redis cache write failed for plan ${planId}:`, err);
+            console.warn(`Redis cache write failed for plan ${normalizedId}:`, err);
         }
     }
 
@@ -69,7 +70,7 @@ export async function getPlanById(planId: string) {
 export async function invalidatePlanCache(planId?: string) {
     try {
         await redis.del(ALL_PLANS_KEY);
-        if (planId) await redis.del(PLAN_KEY(planId));
+        if (planId) await redis.del(PLAN_KEY(planId.toLowerCase()));
         console.log(`Plan cache invalidated: ${planId || 'all'}`);
     } catch (err) {
         console.error('Cache invalidation failed:', err);

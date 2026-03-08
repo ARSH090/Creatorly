@@ -25,12 +25,12 @@ export interface IUser extends Document {
 
     // Stan Store: Subscription & Billing
     // Stan Store: Subscription & Billing
-    plan?: 'free' | 'starter' | 'pro' | 'business';
+    plan?: 'free' | 'starter' | 'pro' | 'elite';
     planExpiresAt?: Date;
     stripeCustomerId?: string;
 
     // NEW: Tier Management & Subscription
-    subscriptionTier: 'free' | 'starter' | 'pro' | 'business';
+    subscriptionTier: 'free' | 'starter' | 'pro' | 'elite';
     subscriptionStatus: 'active' | 'trialing' | 'expired' | 'cancelled' | 'banned';
     subscriptionStartAt?: Date;
     subscriptionEndAt?: Date;
@@ -143,6 +143,14 @@ export interface IUser extends Document {
         profilePicUrl?: string;
     };
 
+    // Google Calendar Integration
+    googleAccessToken?: string;
+    googleRefreshToken?: string;
+    googleTokenExpiry?: Date;
+    googleCalendarChannelId?: string;
+    googleCalendarChannelExpiry?: Date;
+    googleCalendarSyncToken?: string;
+
     planLimits?: {
         maxProducts: number;
         maxStorageMb: number;
@@ -234,7 +242,7 @@ const UserSchema: Schema = new Schema({
     },
     plan: {
         type: String,
-        enum: ['free', 'starter', 'pro', 'business'],
+        enum: ['free', 'starter', 'pro', 'elite'],
         default: 'free',
         index: true,
     },
@@ -343,7 +351,7 @@ const UserSchema: Schema = new Schema({
     // Tier Management & Subscription
     subscriptionTier: {
         type: String,
-        enum: ['free', 'starter', 'pro', 'business'],
+        enum: ['free', 'starter', 'pro', 'elite'],
         default: 'free',
         index: true
     },
@@ -449,6 +457,14 @@ const UserSchema: Schema = new Schema({
         followersCount: { type: Number, default: 0 },
         profilePicUrl: { type: String, default: null },
     },
+
+    // Google Calendar Integration
+    googleAccessToken: String,
+    googleRefreshToken: String,
+    googleTokenExpiry: Date,
+    googleCalendarChannelId: String,
+    googleCalendarChannelExpiry: Date,
+    googleCalendarSyncToken: String,
 
     // NEW: Payment Settings (Multi-provider)
     paymentConfigs: {

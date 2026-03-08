@@ -5,32 +5,35 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 
 export default function MobileStickyCTA() {
+    const [mounted, setMounted] = useState(false);
     const [isVisible, setIsVisible] = useState(false);
     const [hasScrolledPastHero, setHasScrolledPastHero] = useState(false);
 
     useEffect(() => {
+        setMounted(true);
+
         const handleScroll = () => {
-            // Show after scrolling past hero (~600px)
             const scrolled = window.scrollY > 600;
             setHasScrolledPastHero(scrolled);
         };
 
-        window.addEventListener('scroll', handleScroll);
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
-
-    useEffect(() => {
-        // Check screen size
         const handleResize = () => {
-            setIsVisible(window.innerWidth < 1024); // Only show on mobile/tablet
+            setIsVisible(window.innerWidth < 1024);
         };
 
         handleResize();
+        handleScroll();
+
+        window.addEventListener('scroll', handleScroll);
         window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', handleResize);
+        };
     }, []);
 
-    if (!isVisible || !hasScrolledPastHero) return null;
+    if (!mounted || !isVisible || !hasScrolledPastHero) return null;
 
     return (
         <motion.div

@@ -7,51 +7,42 @@ import "./globals.css";
 import { Inter } from "next/font/google";
 const inter = Inter({ subsets: ["latin"], display: "swap", variable: "--font-sans" });
 
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  themeColor: '#4F46E5',
+}
+
 export const metadata: Metadata = {
+  metadataBase: new URL('https://creatorly.in'),
   title: {
-    default: "Creatorly — The Operating System for Indian Creators",
-    template: "%s | Creatorly"
+    default: 'Creatorly — India\'s Creator Commerce Platform',
+    template: '%s | Creatorly',
   },
-  description: "The all-in-one platform for Indian creators to manage stores, payments, and audience engagement with sub-second performance.",
-  keywords: ["creator economy", "india", "ecommerce", "digital products", "monetization"],
-  authors: [{ name: "Creatorly Team" }],
-  icons: {
-    icon: [
-      { url: "/creatorly-logo.png" },
-      { url: "/creatorly-logo.png", sizes: "32x32", type: "image/png" },
-      { url: "/creatorly-logo.png", sizes: "16x16", type: "image/png" }
-    ],
-    apple: [
-      { url: "/creatorly-logo.png" }
-    ],
-    shortcut: ["/creatorly-logo.png"]
-  },
+  description: 'Sell digital products, automate Instagram DMs, build your storefront, and grow your audience. India\'s most complete creator platform with INR payments.',
+  keywords: ['creator economy India', 'sell digital products India', 'link in bio India', 'Instagram automation', 'creator platform'],
+  robots: { index: true, follow: true },
   openGraph: {
-    type: "website",
-    locale: "en_IN",
-    url: "https://creatorly.in",
-    siteName: "Creatorly",
-    images: [{
-      url: "/og-image.jpg",
-      width: 1200,
-      height: 630,
-      alt: "Creatorly Platform"
-    }]
+    type: 'website',
+    locale: 'en_IN',
+    url: 'https://creatorly.in',
+    siteName: 'Creatorly',
+    title: 'Creatorly — India\'s Creator Commerce Platform',
+    description: 'Sell digital products, automate Instagram DMs, build your storefront.',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Creatorly' }],
   },
   twitter: {
-    card: "summary_large_image",
-    site: "@creatorly_in",
-    creator: "@creatorly_in"
+    card: 'summary_large_image',
+    title: 'Creatorly — India\'s Creator Commerce Platform',
+    description: 'Sell digital products, automate Instagram DMs, build your storefront.',
+    images: ['/og-image.png'],
   },
-  metadataBase: new URL("https://creatorly.in"),
-};
-
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 5,
-  userScalable: true,
-};
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
+  manifest: '/manifest.json',
+}
 
 import { ClerkProvider } from "@clerk/nextjs";
 
@@ -71,27 +62,25 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <ClerkProvider>
-      <SyncUser />
-      <SessionMonitor />
-      <html lang="en" suppressHydrationWarning>
-        <head>
-          <link
-            rel="preconnect"
-            href="https://fonts.googleapis.com"
-            crossOrigin="anonymous"
-          />
-          <link
-            rel="preconnect"
-            href="https://fonts.gstatic.com"
-            crossOrigin="anonymous"
-          />
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <link
+          rel="preconnect"
+          href="https://fonts.googleapis.com"
+          crossOrigin="anonymous"
+        />
+        <link
+          rel="preconnect"
+          href="https://fonts.gstatic.com"
+          crossOrigin="anonymous"
+        />
 
-          {/* DNS prefetch for external services */}
-          <link rel="dns-prefetch" href="https://graph.facebook.com" />
-          <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
-        </head>
-        <body className={`${inter.variable} ${inter.className} antialiased`} data-suppress-hydration-warning="true">
+        {/* DNS prefetch for external services */}
+        <link rel="dns-prefetch" href="https://graph.facebook.com" />
+        <link rel="dns-prefetch" href="https://cdn.jsdelivr.net" />
+      </head>
+      <body className={`${inter.variable} ${inter.className} antialiased bg-[#020617] text-slate-50`} data-suppress-hydration-warning="true">
+        <ClerkProvider>
           <PostHogProvider>
             <QueryProvider>
               <ErrorBoundary>
@@ -103,9 +92,11 @@ export default function RootLayout({
             <SpeedInsights />
             <Analytics />
           </PostHogProvider>
-        </body>
-      </html>
-    </ClerkProvider>
+          <SyncUser />
+          <SessionMonitor />
+        </ClerkProvider>
+      </body>
+    </html>
   );
 }
 

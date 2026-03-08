@@ -226,12 +226,12 @@ export default async function CreatorStorefront({
     const products = await ProductModel.find({
         creatorId: creator._id,
         isActive: true,
-        status: 'active'
+        status: 'published'
     })
-        .select('name price type image description isFeatured createdAt')
+        .select('title pricing productType coverImageUrl description isFeatured createdAt image name price type')
         .sort({ isFeatured: -1, createdAt: -1 })
         .limit(productLimit === Infinity ? 0 : productLimit)
-        .lean();
+        .lean({ virtuals: true });
 
     // ── Purchased products ──
     const currentUser = await getCurrentUser();
@@ -306,6 +306,88 @@ export default async function CreatorStorefront({
         recordTrafficHit(creator._id.toString(), `/u/${username}`, utmParams).catch(console.error);
     }
 
+    // ── Custom Code Injections (CSS + Pixels) ──
+    const customInjections = (
+        <>
+            {profile?.customCss && (
+                <style id="creatorly-custom-css" dangerouslySetInnerHTML={{ __html: profile.customCss }} />
+            )}
+
+            {profile?.pixels?.metaPixelId && (
+                <Script
+                    id="meta-pixel"
+                    strategy="afterInteractive"
+                    dangerouslySetInnerHTML={{
+                        __html: `
+                            !function(f,b,e,v,n,t,s)
+                            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                            n.queue=[];t=b.createElement(e);t.async=!0;
+                            t.src=v;s=b.getElementsByTagName(e)[0];
+                            s.parentNode.insertBefore(t,s)}(window, document,'script',
+                            'https://connect.facebook.net/en_US/fbevents.js');
+                            fbq('init', '${profile.pixels.metaPixelId}');
+                            fbq('track', 'PageView');
+                        `
+                    }}
+                />
+            )}
+
+            {profile?.pixels?.tiktokPixelId && (
+                <Script
+                    id="tiktok-pixel"
+                    strategy="afterInteractive"
+                    dangerouslySetInnerHTML={{
+                        __html: `
+                            !function (w, d, t) {
+                              w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};var o=document.createElement("script");o.type="text/javascript",o.async=!0,o.src=i+"?sdkid="+e+"&lib="+t;var a=document.getElementsByTagName("script")[0];a.parentNode.insertBefore(o,a)};
+                              ttq.load('${profile.pixels.tiktokPixelId}');
+                              ttq.page();
+                            }(window, document, 'ttq');
+                        `
+                    }}
+                />
+            )}
+
+            {profile?.pixels?.ga4MeasurementId && (
+                <>
+                    <Script src={`https://www.googletagmanager.com/gtag/js?id=${profile.pixels.ga4MeasurementId}`} strategy="afterInteractive" />
+                    <Script
+                        id="ga4-pixel"
+                        strategy="afterInteractive"
+                        dangerouslySetInnerHTML={{
+                            __html: `
+                    window.dataLayer = window.dataLayer || [];
+                    function gtag(){dataLayer.push(arguments);}
+                    gtag('js', new Date());
+                    gtag('config', '${profile.pixels.ga4MeasurementId}');
+                    `
+                        }}
+                    />
+                </>
+            )}
+
+            {profile?.pixels?.snapchatPixelId && (
+                <Script
+                    id="snapchat-pixel"
+                    strategy="afterInteractive"
+                    dangerouslySetInnerHTML={{
+                        __html: `
+            (function(e,t,n){if(e.snaptr)return;var a=e.snaptr=function()
+            {a.handleRequest ? a.handleRequest.apply(a, arguments) : a.queue.push(arguments)};
+            a.queue=[];var s='script';r=t.createElement(s);r.async=!0;
+            r.src=n;var u=t.getElementsByTagName(s)[0];
+                            u.parentNode.insertBefore(r,u);})(window,document,
+            'https://sc-static.net/scevent.min.js');
+            snaptr('init', '${profile.pixels.snapchatPixelId}');
+            snaptr('track', 'PAGE_VIEW');
+            `
+                    }}
+                />
+            )}
+        </>
+    );
 
     // ── NEW: Block-based renderer ─────────────────────────────────────────────
     if (blocksLayout && themeV2) {
@@ -344,6 +426,7 @@ export default async function CreatorStorefront({
                     type="application/ld+json"
                     dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
                 />
+                {customInjections}
                 <StorefrontRenderer
                     blocks={blocksLayout}
                     theme={themeV2}

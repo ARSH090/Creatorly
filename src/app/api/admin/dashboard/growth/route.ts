@@ -35,7 +35,7 @@ export const GET = withAdminAuth(async (req, user, context) => {
                 {
                     $group: {
                         _id: { $dateToString: { format: "%Y-%m", date: "$createdAt" } },
-                        revenue: { $sum: "$totalAmount" }
+                        revenue: { $sum: "$total" }
                     }
                 },
                 { $sort: { "_id": 1 } }

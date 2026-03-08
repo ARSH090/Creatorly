@@ -4,7 +4,7 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import MobileNavigation from '@/components/navigation/MobileNavigation';
+import MobileNavigation from '@/components/navigation/MobileNavigationV2';
 import CookieConsent from '@/components/common/CookieConsent';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {

@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 /* eslint-disable react-hooks/exhaustive-deps, react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const, import/no-anonymous-default-export */
 
@@ -98,7 +99,7 @@ export default function PublicProjectPage() {
                     <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 pt-4">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-500 overflow-hidden border border-white/5">
-                                {project.creator?.avatar ? <img src={project.creator.avatar} className="w-full h-full object-cover" /> : <Package className="w-5 h-5" />}
+                                {project.creator?.avatar ? <Image width={800} height={800} src={project.creator.avatar} className="w-full h-full object-cover" /> : <Package className="w-5 h-5" />}
                             </div>
                             <div>
                                 <p className="text-[10px] font-black text-zinc-500 uppercase tracking-widest -mb-0.5">Creator</p>

@@ -228,3 +228,27 @@ export async function sendPasswordResetEmail(email: string, token: string) {
   `;
   return sendGenericEmail({ to: email, subject: 'Reset Your Creatorly Password', html });
 }
+
+/**
+ * Send booking confirmation email
+ */
+export async function sendBookingConfirmationEmail(
+  email: string,
+  opts: { productName: string; date: string; time: string; duration: number }
+) {
+  const { productName, date, time, duration } = opts;
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2>Booking Confirmed! ✅</h2>
+        <p>Your booking for <strong>${productName}</strong> is confirmed.</p>
+        <div style="background: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p style="margin: 5px 0;"><strong>Date:</strong> ${date}</p>
+            <p style="margin: 5px 0;"><strong>Time:</strong> ${time}</p>
+            <p style="margin: 5px 0;"><strong>Duration:</strong> ${duration} minutes</p>
+        </div>
+        <p>The creator will provide the meeting link separately at the time of the event if it hasn't been provided already.</p>
+        <p style="color:#888;font-size:12px; margin-top: 30px;">Thank you for your booking through Creatorly.</p>
+    </div>
+  `;
+  return sendGenericEmail({ to: email, subject: `Booking Confirmed: ${productName}`, html });
+}

@@ -1,5 +1,5 @@
-
 'use client';
+
 
 import { motion } from 'framer-motion';
 import { LucideIcon, ChevronRight, CalendarCheck } from 'lucide-react';

@@ -1,5 +1,5 @@
-
 'use client';
+
 
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, TrendingDown, Users, ShoppingBag, Wallet, Eye, ArrowRight, Plus, Zap, Loader2, Globe } from "lucide-react";

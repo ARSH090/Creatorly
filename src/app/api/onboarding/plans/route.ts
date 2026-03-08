@@ -23,15 +23,15 @@ export async function GET() {
             name: plan.name,
             description: plan.description,
             monthly: {
-                price: plan.monthlyPrice,
-                display: `₹${(plan.monthlyPrice / 100).toLocaleString('en-IN')}`,
-                razorpayId: plan.razorpayMonthlyPlanId
+                price: plan.price || 0,
+                display: `₹${((plan.price || 0) / 100).toLocaleString('en-IN')}`,
+                razorpayId: plan.razorpayPlanId
             },
             yearly: {
-                price: plan.yearlyPrice,
-                display: `₹${(plan.yearlyPrice / 100).toLocaleString('en-IN')}`,
-                razorpayId: plan.razorpayYearlyPlanId,
-                savings: `Save ₹${((plan.monthlyPrice * 12 - plan.yearlyPrice) / 100).toLocaleString('en-IN')}`
+                price: (plan.price || 0) * 10,
+                display: `₹${(((plan.price || 0) * 10) / 100).toLocaleString('en-IN')}`,
+                razorpayId: plan.razorpayPlanId, // Placeholder
+                savings: `Save ₹${(((plan.price || 0) * 12 - (plan.price || 0) * 10) / 100).toLocaleString('en-IN')}`
             },
             features: plan.features || [],
             limits: plan.limits,

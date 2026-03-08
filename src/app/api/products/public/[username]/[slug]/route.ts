@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import User from '@/lib/models/User';
+import { CreatorProfile } from '@/lib/models/CreatorProfile';
 import { errorResponse } from '@/types/api';
 
 export async function GET(req: NextRequest, { params }: any) {
@@ -26,6 +27,8 @@ export async function GET(req: NextRequest, { params }: any) {
             return NextResponse.json(errorResponse('Product not found'), { status: 404 });
         }
 
+        const profile = await CreatorProfile.findOne({ creatorId: creator._id }).select('pixels');
+
         // 3. Return product + creator info
         return NextResponse.json({
             product,
@@ -33,7 +36,8 @@ export async function GET(req: NextRequest, { params }: any) {
                 name: creator.displayName,
                 image: creator.avatar,
                 username: creator.username,
-                bio: creator.bio
+                bio: creator.bio,
+                pixels: profile?.pixels
             }
         });
     } catch (error: any) {

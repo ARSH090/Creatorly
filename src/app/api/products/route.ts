@@ -30,7 +30,8 @@ const postHandler = async (req: NextRequest, user: any) => {
         const { checkFeatureAccess } = await import('@/lib/middleware/checkFeatureAccess');
         const currentCount = await Product.countDocuments({
             creatorId: user._id,
-            status: { $in: ['published', 'active'] }
+            status: { $in: ['published', 'draft', 'active'] },
+            deletedAt: null
         });
 
         const featureCheck = await checkFeatureAccess(user._id.toString(), 'products', currentCount);
@@ -52,7 +53,7 @@ const postHandler = async (req: NextRequest, user: any) => {
 
         // 2. Map Validated Data to Product Schema
         const productName = data.name || data.title || 'Untitled';
-        const isProductActive = !!(data.isPublished || data.isActive || data.isPublic || data.status === 'active');
+        const isProductActive = !!(data.isPublished || data.isActive || data.isPublic || data.status === 'published' || data.status === 'active');
 
         const productData = {
             creatorId: user._id,
@@ -68,7 +69,7 @@ const postHandler = async (req: NextRequest, user: any) => {
             category: data.category,
             image: data.image,
             productType: data.productType || 'digital_download',
-            status: isProductActive ? 'active' : 'draft',
+            status: isProductActive ? 'published' : 'draft',
             isActive: isProductActive,
             files: data.files || [],
             accessRules: {
@@ -128,9 +129,9 @@ export async function GET(req: NextRequest) {
             creatorId = user._id.toString();
         }
 
-        const query: any = { creatorId };
+        const query: any = { creatorId, deletedAt: null };
         if (searchParams.get('creatorId')) {
-            query.status = 'active';
+            query.status = { $in: ['published', 'active'] };
             query.isActive = true;
         }
 

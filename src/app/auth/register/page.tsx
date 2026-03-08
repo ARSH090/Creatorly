@@ -23,6 +23,7 @@ export default function RegisterPage() {
 
     const [stage, setStage] = useState<Stage>('form');
     const [loading, setLoading] = useState(false);
+    const [captchaLoadError, setCaptchaLoadError] = useState(false);
     const [error, setError] = useState('');
     const [usernameAvail, setUsernameAvail] = useState<boolean | null>(null);
     const [usernameChecking, setUsernameChecking] = useState(false);
@@ -85,7 +86,12 @@ export default function RegisterPage() {
                 setError('Signup incomplete. Please contact support.');
             }
         } catch (err: any) {
-            setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || 'Registration failed. Please try again.');
+            if (err.errors?.[0]?.meta?.paramName === 'captcha') {
+                setCaptchaLoadError(true);
+                setError('');
+            } else {
+                setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || 'Registration failed. Please try again.');
+            }
         } finally {
             setLoading(false);
         }
@@ -232,6 +238,14 @@ export default function RegisterPage() {
                                     <div className="bg-red-500/10 text-red-400 p-4 rounded-2xl text-sm font-medium border border-red-500/20">
                                         {error}
                                     </div>
+                                )}
+                                {captchaLoadError && (
+                                    <p className="text-sm text-red-400">
+                                        Security check failed to load. Please disable browser extensions or{' '}
+                                        <button type="button" onClick={() => window.location.reload()} className="underline">
+                                            refresh the page
+                                        </button>.
+                                    </p>
                                 )}
 
                                 {/* Username */}

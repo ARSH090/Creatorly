@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 /* eslint-disable react-hooks/exhaustive-deps, react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const, import/no-anonymous-default-export */
 
@@ -76,7 +77,7 @@ export default function SubscriptionsPage() {
                             >
                                 <div className="flex items-center justify-between">
                                     <div className="w-14 h-14 bg-zinc-800 rounded-2xl overflow-hidden border border-white/5">
-                                        <img src={sub.productId.image} className="w-full h-full object-cover" alt={sub.productId.name} />
+                                        <Image width={800} height={800} src={sub.productId.image} className="w-full h-full object-cover" alt={sub.productId.name} />
                                     </div>
                                     <div className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border ${getStatusColor(sub.status)}`}>
                                         {sub.status}

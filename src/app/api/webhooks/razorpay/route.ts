@@ -50,8 +50,7 @@ export async function POST(req: NextRequest) {
         const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
         if (!secret) {
             console.error('CRITICAL: Razorpay Webhook Secret not configured');
-            // Still return 200 — this is a server config error, not Razorpay's fault
-            return NextResponse.json({ status: 'config_error' }, { status: 200 });
+            return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 });
         }
 
         const expectedSignature = crypto
@@ -62,7 +61,7 @@ export async function POST(req: NextRequest) {
         if (expectedSignature !== signature) {
             const ip = req.headers.get('x-forwarded-for') || 'unknown';
             console.warn(`[RAZORPAY WEBHOOK] Invalid signature from ${ip} — dropping`);
-            return NextResponse.json({ status: 'ignored' }, { status: 200 });
+            return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
         }
 
         const event = JSON.parse(body);

@@ -1,4 +1,5 @@
 'use client';
+import Image from 'next/image';
 
 /* eslint-disable react-hooks/exhaustive-deps, react/no-unescaped-entities, @next/next/no-img-element, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, prefer-const, import/no-anonymous-default-export */
 
@@ -93,7 +94,7 @@ export default function ExplorePage() {
                                                 <div className="flex items-center gap-6">
                                                     <div className="w-20 h-20 rounded-3xl bg-zinc-800 relative overflow-hidden ring-4 ring-black shadow-2xl">
                                                         {creator.avatar && (
-                                                            <img src={creator.avatar} alt={creator.username} className="object-cover w-full h-full" />
+                                                            <Image width={800} height={800} src={creator.avatar} alt={creator.username} className="object-cover w-full h-full" />
                                                         )}
                                                     </div>
                                                     <div>

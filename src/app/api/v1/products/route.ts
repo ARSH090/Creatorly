@@ -4,6 +4,7 @@ import Product from '@/lib/models/Product';
 import { getMongoUser } from '@/lib/auth/get-user';
 import { getCached, invalidateCache } from '@/lib/cache';
 import mongoose from 'mongoose';
+import { checkFeatureAccess } from '@/lib/middleware/checkFeatureAccess';
 
 // FORCE DYNAMIC for these routes as they depend on request data/auth
 export const dynamic = 'force-dynamic';
@@ -55,8 +56,7 @@ export async function GET(req: NextRequest) {
                     .skip(skip)
                     .limit(limit)
                     .select('title pricing status productType categoryId createdAt slug thumbnail image isActive')
-                    .populate('categoryId', 'name')
-                    .lean(),
+                    .populate('categoryId', 'name'),
                 Product.countDocuments(query)
             ]);
             return { products, total };
@@ -89,6 +89,18 @@ export async function POST(req: NextRequest) {
         const creatorId = user._id;
 
         const body = await req.json();
+
+        // Tier Limit Check
+        const access = await checkFeatureAccess(creatorId.toString(), 'products');
+        if (!access.allowed) {
+            return NextResponse.json({
+                error: access.message || 'Product limit reached',
+                code: access.errorCode,
+                limit: access.limit,
+                current: access.current,
+                upgrade_url: access.upgradeUrl
+            }, { status: 403 });
+        }
 
         // Basic Validation
         if (!body.title || body.title.length < 3 || body.title.length > 100) {

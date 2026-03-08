@@ -26,23 +26,40 @@ async function getHandler(req: NextRequest, user: any) {
 
   const skip = (page - 1) * limit;
 
-  const [payouts, total] = await Promise.all([
+  const [payouts, total, summaryData] = await Promise.all([
     Payout.find(query)
       .populate('creatorId', 'displayName email payoutDetails')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .lean(),
-    Payout.countDocuments(query)
+    Payout.countDocuments(query),
+    Payout.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalAmount: { $sum: '$amount' },
+          pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
+          paid: { $sum: { $cond: [{ $eq: ['$status', 'paid'] }, 1, 0] } },
+          rejected: { $sum: { $cond: [{ $eq: ['$status', 'rejected'] }, 1, 0] } }
+        }
+      }
+    ])
   ]);
 
+  const summary = summaryData[0] || { totalAmount: 0, pending: 0, paid: 0, rejected: 0 };
+
   return NextResponse.json({
-    payouts,
-    pagination: {
-      total,
-      page,
-      limit,
-      pages: Math.ceil(total / limit)
+    success: true,
+    data: {
+      payouts,
+      summary,
+      pagination: {
+        total,
+        page,
+        limit,
+        pages: Math.ceil(total / limit)
+      }
     }
   });
 }

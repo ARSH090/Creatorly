@@ -1,9 +1,8 @@
 // Tier Management Constants
 export const TIER = {
     FREE: 'free',
-    STARTER: 'starter',
     PRO: 'pro',
-    BUSINESS: 'business'
+    ELITE: 'elite'
 } as const;
 
 export const SUBSCRIPTION_STATUS = {
@@ -23,12 +22,12 @@ export const KYC_STATUS = {
 // Tier Limits Configuration
 export const TIER_LIMITS = {
     [TIER.FREE]: {
-        products: 1,
+        products: 3,
         leadMagnets: 1,
         bookings: 1,
         leads: 100,
         ordersLifetime: 50,
-        storageMb: 200,
+        storageMb: 100,
         feePercent: 10,
         analytics: false,
         emailBroadcasts: false,
@@ -40,36 +39,18 @@ export const TIER_LIMITS = {
         upsells: false,
         teamMembers: 0
     },
-    [TIER.STARTER]: {
-        products: 10,
-        leadMagnets: 5,
-        bookings: 5,
-        leads: Infinity,
-        ordersLifetime: Infinity,
-        storageMb: 5120, // 5GB
-        feePercent: 5,
-        analytics: true,
-        emailBroadcasts: true,
-        community: true,
-        customDomain: false, // Checklist: Custom domain requires Business
-        watermark: false,
-        affiliates: true,
-        discountCodes: true,
-        upsells: true,
-        teamMembers: 1
-    },
     [TIER.PRO]: {
-        products: Infinity,
-        leadMagnets: Infinity,
-        bookings: Infinity,
+        products: 25,
+        leadMagnets: 10,
+        bookings: 20,
         leads: Infinity,
         ordersLifetime: Infinity,
-        storageMb: 20480, // 20GB
-        feePercent: 0, // Checklist: Transaction fee 0% requires Pro or above
+        storageMb: 10240, // 10GB
+        feePercent: 0,
         analytics: true,
         emailBroadcasts: true,
         community: true,
-        customDomain: false, // Checklist: Custom domain requires Business
+        customDomain: false,
         watermark: false,
         affiliates: true,
         discountCodes: true,
@@ -77,7 +58,7 @@ export const TIER_LIMITS = {
         teamMembers: 5,
         apiAccess: true
     },
-    [TIER.BUSINESS]: {
+    [TIER.ELITE]: {
         products: Infinity,
         leadMagnets: Infinity,
         bookings: Infinity,
@@ -88,7 +69,7 @@ export const TIER_LIMITS = {
         analytics: true,
         emailBroadcasts: true,
         community: true,
-        customDomain: true, // Only Business gets custom domain
+        customDomain: true,
         watermark: false,
         affiliates: true,
         discountCodes: true,
@@ -96,7 +77,7 @@ export const TIER_LIMITS = {
         prioritySupport: true,
         whiteLabel: true,
         advancedAnalytics: true,
-        teamMembers: 20,
+        teamMembers: 100,
         apiAccess: true
     }
 } as const;
@@ -128,18 +109,6 @@ export const IP_SIGNUP_LIMITS = {
 
 // Subscription Billing
 export const SUBSCRIPTION_PLANS = {
-    STARTER_MONTHLY: {
-        tier: TIER.STARTER,
-        period: 'monthly',
-        priceINR: 999,
-        pricePaise: 99900
-    },
-    STARTER_YEARLY: {
-        tier: TIER.STARTER,
-        period: 'yearly',
-        priceINR: 9999,
-        pricePaise: 999900
-    },
     PRO_MONTHLY: {
         tier: TIER.PRO,
         period: 'monthly',
@@ -152,14 +121,14 @@ export const SUBSCRIPTION_PLANS = {
         priceINR: 19999,
         pricePaise: 1999900
     },
-    BUSINESS_MONTHLY: {
-        tier: TIER.BUSINESS,
+    ELITE_MONTHLY: {
+        tier: TIER.ELITE,
         period: 'monthly',
         priceINR: 3999,
         pricePaise: 399900
     },
-    BUSINESS_YEARLY: {
-        tier: TIER.BUSINESS,
+    ELITE_YEARLY: {
+        tier: TIER.ELITE,
         period: 'yearly',
         priceINR: 39999,
         pricePaise: 3999900

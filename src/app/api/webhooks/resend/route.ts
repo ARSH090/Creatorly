@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
-import { EmailCampaign } from '@/lib/models/EmailCampaign';
+import EmailCampaign from '@/lib/models/EmailCampaign';
 import EmailSequence from '@/lib/models/EmailSequence';
+import Subscriber from '@/lib/models/Subscriber';
 
 /**
  * POST /api/webhooks/resend
@@ -9,25 +10,42 @@ import EmailSequence from '@/lib/models/EmailSequence';
  */
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
-        const { type, data } = body;
+        const payload = await req.json();
 
-        // Verify Resend signature in production (Recommended)
-        // For now, we process based on the expected payload
+        // Resend sends an array of events or a single event
+        const events = Array.isArray(payload) ? payload : [payload];
 
         await connectToDatabase();
 
-        const email = data.to[0];
-        const tags = data.tags || {};
-        const campaignId = tags.campaignId;
-        const sequenceId = tags.sequenceId;
+        for (const event of events) {
+            const { type, data } = event;
+            const email = data?.to?.[0] || data?.email;
 
-        if (campaignId) {
-            await handleCampaignEvent(campaignId, type);
-        }
+            if (!email) continue;
 
-        if (sequenceId) {
-            await handleSequenceEvent(sequenceId, type);
+            const tags = data?.tags || {};
+            const campaignId = tags.campaignId || data?.headers?.['X-Campaign-Id'];
+            const sequenceId = tags.sequenceId;
+
+            if (campaignId) {
+                await handleCampaignEvent(campaignId, type);
+            }
+
+            if (sequenceId) {
+                await handleSequenceEvent(sequenceId, type);
+            }
+
+            if (type === 'email.bounced') {
+                await Subscriber.updateMany(
+                    { email: email.toLowerCase() },
+                    { status: 'bounced', bouncedAt: new Date() }
+                );
+            } else if (type === 'email.complained') {
+                await Subscriber.updateMany(
+                    { email: email.toLowerCase() },
+                    { status: 'unsubscribed', unsubscribedAt: new Date() }
+                );
+            }
         }
 
         return NextResponse.json({ received: true });
@@ -46,6 +64,7 @@ async function handleCampaignEvent(campaignId: string, type: string) {
         case 'email.opened': update['stats.opened'] = 1; break;
         case 'email.clicked': update['stats.clicked'] = 1; break;
         case 'email.bounced': update['stats.bounced'] = 1; break;
+        case 'email.complained': update['stats.unsubscribed'] = 1; break;
     }
 
     if (Object.keys(update).length > 0) {
