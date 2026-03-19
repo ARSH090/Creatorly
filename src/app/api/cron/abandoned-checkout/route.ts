@@ -1,22 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/db/mongodb';
-import abandonedCheckoutRecovery from '@/lib/services/abandonedCheckoutRecovery';
+import { withCronAuth } from '@/lib/auth/cron';
 
-/**
- * CRON: /api/cron/abandoned-checkout
- * Process abandoned checkout recovery emails
- * Should be called every hour
- */
-export async function GET(req: NextRequest) {
+export const GET = withCronAuth(async (req: NextRequest) => {
     try {
-        // Verify this is a cron request (you might want to add authentication)
-        const authHeader = req.headers.get('authorization');
-        if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        console.log('Starting abandoned checkout recovery processing...');
-        
         await connectToDatabase();
         await abandonedCheckoutRecovery.processPendingRecoveries();
         

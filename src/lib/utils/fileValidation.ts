@@ -122,7 +122,7 @@ function getMimeTypesForExtension(ext: string): string[] {
         '.png': ['image/png'],
         '.gif': ['image/gif'],
         '.webp': ['image/webp'],
-        '.svg': ['image/svg+xml'],
+        // '.svg': ['image/svg+xml'], // Blocked (VULN-03)
         '.pdf': ['application/pdf'],
         '.doc': ['application/msword'],
         '.docx': ['application/vnd.openxmlformats-officedocument.wordprocessingml.document'],

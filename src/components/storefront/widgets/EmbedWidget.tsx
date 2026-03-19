@@ -2,15 +2,11 @@
 
 import React from 'react';
 import type { EmbedSettings } from '@/types/storefront-blocks.types';
+import { sanitizeHtml } from '@/lib/utils/sanitizer';
 
 interface EmbedWidgetProps {
     settings: EmbedSettings;
     theme: Record<string, string>;
-}
-
-function safeHtml(html: string): string {
-    if (/<script/i.test(html)) return '<p style="color:red;font-size:12px">Unsafe embed removed (contains scripts).</p>';
-    return html;
 }
 
 export default function EmbedWidget({ settings, theme }: EmbedWidgetProps) {
@@ -42,12 +38,13 @@ export default function EmbedWidget({ settings, theme }: EmbedWidgetProps) {
                     allow="payment; microphone; camera"
                     title={title || 'Embedded content'}
                     loading="lazy"
+                    sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
                 />
             ) : (
                 <div
                     className="w-full"
                     style={{ minHeight: height }}
-                    dangerouslySetInnerHTML={{ __html: safeHtml(code) }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(code) }}
                 />
             )}
         </div>

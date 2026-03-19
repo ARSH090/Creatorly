@@ -1,17 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { connectToDatabase } from '@/lib/db/mongodb';
-import { Subscription } from '@/lib/models/Subscription';
-import { User } from '@/lib/models/User';
-import { Product } from '@/lib/models/Product';
-import { log } from '@/utils/logger';
+import { withCronAuth } from '@/lib/auth/cron';
 
-export async function GET(req: NextRequest) {
-    // Basic security check for Vercel Cron
-    const authHeader = req.headers.get('authorization');
-    if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
+export const GET = withCronAuth(async (req: NextRequest) => {
     try {
         await connectToDatabase();
         const now = new Date();

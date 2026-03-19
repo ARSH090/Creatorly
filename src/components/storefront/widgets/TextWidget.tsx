@@ -2,6 +2,7 @@
 
 import React from 'react';
 import type { TextSettings } from '@/types/storefront-blocks.types';
+import { sanitizeHtml } from '@/lib/utils/sanitizer';
 
 interface TextWidgetProps {
     settings: TextSettings;
@@ -34,7 +35,7 @@ export default function TextWidget({ settings, theme }: TextWidgetProps) {
                     fontSize: SIZE_MAP[fontSize] || '1rem',
                     maxWidth: MAX_W_MAP[maxWidth] || '640px',
                 }}
-                dangerouslySetInnerHTML={{ __html: content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
             />
         </div>
     );

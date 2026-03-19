@@ -13,7 +13,7 @@ export async function adminAuthMiddleware(req: NextRequest) {
       );
     }
 
-    if (!user.role || !['admin', 'super_admin', 'super-admin'].includes(user.role)) {
+    if (!user.role || !['admin', 'super-admin'].includes(user.role)) {
       return NextResponse.json(
         { error: 'Forbidden - Admin access required' },
         { status: 403 }
@@ -43,17 +43,17 @@ export async function adminAuthMiddleware(req: NextRequest) {
 
 export function checkAdminPermission(action: string, role?: string) {
   const permissions: Record<string, string[]> = {
-    view_dashboard: ['admin', 'super_admin'],
-    view_users: ['admin', 'super_admin'],
-    manage_users: ['super_admin'],
-    view_orders: ['admin', 'super_admin'],
-    create_order: ['super_admin'],
-    process_refund: ['admin', 'super_admin'],
-    manage_payouts: ['super_admin'],
-    view_finance: ['admin', 'super_admin'],
-    manage_coupons: ['admin', 'super_admin'],
-    manage_products: ['admin', 'super_admin'],
-    manage_settings: ['super_admin'],
+    view_dashboard: ['admin', 'super-admin'],
+    view_users: ['admin', 'super-admin'],
+    manage_users: ['super-admin'],
+    view_orders: ['admin', 'super-admin'],
+    create_order: ['super-admin'],
+    process_refund: ['admin', 'super-admin'],
+    manage_payouts: ['super-admin'],
+    view_finance: ['admin', 'super-admin'],
+    manage_coupons: ['admin', 'super-admin'],
+    manage_products: ['admin', 'super-admin'],
+    manage_settings: ['super-admin'],
   };
 
   return permissions[action]?.includes(role || '') || false;

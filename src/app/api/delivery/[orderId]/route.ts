@@ -3,12 +3,19 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import Order from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
 
+import { getMongoUser } from '@/lib/auth/get-user';
+
 export async function GET(
     req: NextRequest,
     { params }: { params: Promise<{ orderId: string }> }
 ) {
     try {
         await connectToDatabase();
+        const user = await getMongoUser();
+        if (!user) {
+            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
         const { orderId } = await params;
 
         // 1. Fetch Order and include Product details
@@ -19,6 +26,11 @@ export async function GET(
 
         if (!order) {
             return NextResponse.json({ error: 'Order not found' }, { status: 404 });
+        }
+
+        // Ownership Check (VULN: Prevent direct object reference attack)
+        if (order.userId.toString() !== user._id.toString()) {
+            return NextResponse.json({ error: 'Forbidden - You do not own this order' }, { status: 403 });
         }
 
         // 2. Validate Order Status
