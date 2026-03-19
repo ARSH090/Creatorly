@@ -14,6 +14,13 @@ async function handler(req: NextRequest, user: any) {
             return NextResponse.json(errorResponse('Filename and fileType are required'), { status: 400 });
         }
 
+        const { validateFileUpload } = await import('@/lib/utils/fileValidation');
+        const validation = validateFileUpload(filename, fileType);
+        
+        if (!validation.valid) {
+            return NextResponse.json(errorResponse(validation.error || 'File type not allowed'), { status: 400 });
+        }
+
         const sanitizedName = sanitizeKey(filename);
         const extension = filename.split('.').pop();
         const key = `${user._id}/${folder}/${Date.now()}-${sanitizedName}.${extension}`;

@@ -334,6 +334,28 @@ const ProductSchema: Schema = new Schema({
     toObject: { virtuals: true }
 });
 
+// Pre-save sanitization hook (VULN-04/05/10)
+ProductSchema.pre('save', async function(this: IProduct) {
+    const { sanitizeHtml } = await import('@/lib/utils/sanitizer');
+    
+    if (this.description) this.description = sanitizeHtml(this.description);
+    if (this.shortDescription) this.shortDescription = sanitizeHtml(this.shortDescription);
+    if (this.thankYouMessage) this.thankYouMessage = sanitizeHtml(this.thankYouMessage);
+    if (this.postPurchaseEmailContent) this.postPurchaseEmailContent = sanitizeHtml(this.postPurchaseEmailContent);
+    
+    if (this.testimonials && Array.isArray(this.testimonials)) {
+        this.testimonials.forEach(t => {
+            if (t.content) t.content = sanitizeHtml(t.content);
+        });
+    }
+    
+    if (this.faqs && Array.isArray(this.faqs)) {
+        this.faqs.forEach(f => {
+            if (f.answer) f.answer = sanitizeHtml(f.answer);
+        });
+    }
+});
+
 // Soft-delete: auto-filter deleted products from all queries
 ProductSchema.pre('find', function () { this.where({ isDeleted: { $ne: true } }); });
 ProductSchema.pre('findOne', function () { this.where({ isDeleted: { $ne: true } }); });

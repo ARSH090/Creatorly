@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
 
         // 1. Fetch Product
         const product = await Product.findById(productId);
-        if (!product || (product.pricingType !== 'free' && product.pricing?.basePrice !== 0)) {
+        if (!product || product.pricingType !== 'free' || (product.pricing?.basePrice ?? 0) !== 0) {
             return NextResponse.json(errorResponse('This product is not free'), { status: 400 });
         }
 
@@ -38,7 +38,8 @@ export async function POST(req: NextRequest) {
         }
 
         // 3. Create Order
-        const orderNumber = `ORD-FREE-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        const { nanoid } = await import('nanoid');
+        const orderNumber = `ORD-FREE-${nanoid(10).toUpperCase()}`;
 
         const order = await Order.create({
             orderNumber,
@@ -59,7 +60,7 @@ export async function POST(req: NextRequest) {
             paymentStatus: 'paid', // Mark as paid since it's free
             paidAt: new Date(),
             paymentGateway: 'razorpay', // Placeholder to satisfy models if needed
-            razorpayOrderId: `free_${Date.now()}` // Unique placeholder
+            razorpayOrderId: `free_${nanoid(12)}` // Unique placeholder
         });
 
         // 4. Trigger Fulfillment

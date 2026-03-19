@@ -3,12 +3,12 @@ const nextConfig = {
     compress: true,
     poweredByHeader: false,
     reactStrictMode: true,
-    // Allow production builds even if ESLint/TS warnings are present
+    // Re-enable production build checks (Audit V6)
     eslint: {
-        ignoreDuringBuilds: true,
+        ignoreDuringBuilds: false,
     },
     typescript: {
-        ignoreBuildErrors: true,
+        ignoreBuildErrors: false,
     },
     // Image optimization
     images: {

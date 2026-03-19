@@ -52,36 +52,53 @@ export default function StorefrontView({ creator, products }: StorefrontViewProp
           
           {/* Social Links */}
           <div className="flex justify-center gap-4">
-            {creator.socialLinks?.instagram && (
-              <a
-                href={creator.socialLinks.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"
-              >
-                <Instagram size={20} />
-              </a>
-            )}
-            {creator.socialLinks?.twitter && (
-              <a
-                href={creator.socialLinks.twitter}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"
-              >
-                <Twitter size={20} />
-              </a>
-            )}
-            {creator.socialLinks?.website && (
-              <a
-                href={creator.socialLinks.website}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"
-              >
-                <Globe size={20} />
-              </a>
-            )}
+            {(() => {
+              const sanitizeUrl = (url: string | undefined) => {
+                if (!url) return undefined;
+                if (url.toLowerCase().startsWith('javascript:')) return undefined;
+                if (!url.startsWith('http')) return `https://${url}`;
+                return url;
+              };
+              
+              const instagram = sanitizeUrl(creator.socialLinks?.instagram);
+              const twitter = sanitizeUrl(creator.socialLinks?.twitter);
+              const website = sanitizeUrl(creator.socialLinks?.website);
+
+              return (
+                <>
+                  {instagram && (
+                    <a
+                      href={instagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"
+                    >
+                      <Instagram size={20} />
+                    </a>
+                  )}
+                  {twitter && (
+                    <a
+                      href={twitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"
+                    >
+                      <Twitter size={20} />
+                    </a>
+                  )}
+                  {website && (
+                    <a
+                      href={website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors"
+                    >
+                      <Globe size={20} />
+                    </a>
+                  )}
+                </>
+              );
+            })()}
           </div>
         </div>
 

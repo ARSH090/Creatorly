@@ -1,4 +1,4 @@
-﻿import { auth } from '@clerk/nextjs/server';
+import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 import { AdminSidebar } from '@/components/admin/AdminSidebar';
 import { connectToDatabase } from '@/lib/db/mongodb';
@@ -16,15 +16,19 @@ export default async function AdminLayout({
     const incomingSecret = headerList.get('x-test-secret');
     const testEmail = headerList.get('x-test-email');
 
-    if (testSecret && incomingSecret === testSecret && testEmail === 'admin@creatorly.test') {
-        return (
-            <div className="flex h-screen bg-slate-50">
-                <AdminSidebar />
-                <main className="flex-1 overflow-y-auto p-8">
-                    {children}
-                </main>
-            </div>
-        );
+    if (testSecret && incomingSecret === testSecret && process.env.NODE_ENV !== 'production' && testEmail) {
+        await connectToDatabase();
+        const user = await User.findOne({ email: testEmail });
+        if (user && (user.role === 'admin' || user.role === 'super-admin')) {
+            return (
+                <div className="flex h-screen bg-slate-50">
+                    <AdminSidebar />
+                    <main className="flex-1 overflow-y-auto p-8">
+                        {children}
+                    </main>
+                </div>
+            );
+        }
     }
 
     const { userId } = await auth();

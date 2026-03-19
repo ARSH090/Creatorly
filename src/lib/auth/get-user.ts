@@ -2,6 +2,7 @@ import { currentUser, auth } from "@clerk/nextjs/server";
 import { connectToDatabase } from "@/lib/db/mongodb";
 import User, { IUser } from "@/lib/models/User";
 import { cache } from 'react';
+import { headers } from 'next/headers';
 
 /**
  * Optimized user fetcher with request-level caching.
@@ -10,23 +11,17 @@ import { cache } from 'react';
 export const getMongoUser = cache(async (): Promise<IUser | null> => {
     try {
         // ── Bypass for Testing ──
-        // Only works in dev/preview if TEST_SECRET is set
         const testSecret = process.env.TEST_SECRET;
-        // In Next.js App Router, we can't easily access headers in a cached function like this 
-        // unless we pass them or use 'headers()' from 'next/headers'.
-        // However, 'getMongoUser' is often called without arguments.
-
-        // Let's use headers() from next/headers
-        const { headers } = await import('next/headers');
         const headerList = await headers();
         const incomingSecret = headerList.get('x-test-secret');
         const incomingEmail = headerList.get('x-test-email');
 
-        if (testSecret && incomingSecret === testSecret) {
+        if (testSecret && incomingSecret === testSecret && process.env.NODE_ENV !== 'production') {
             await connectToDatabase();
-            const emailToFind = incomingEmail || 'test@creatorly.in';
-            const testUser = await User.findOne({ email: emailToFind });
-            if (testUser) return testUser;
+            if (incomingEmail) {
+                const testUser = await User.findOne({ email: incomingEmail });
+                if (testUser) return testUser;
+            }
         }
 
         const { userId } = await auth();

@@ -32,10 +32,16 @@ export interface IRazorpayOrderOptions {
     notes?: Record<string, string>;
 }
 
-export const createRazorpayOrder = async (options: IRazorpayOrderOptions, credentials?: { keyId: string; keySecret: string }) => {
+export const createRazorpayOrder = async (options: IRazorpayOrderOptions, credentials?: { keyId: string; keySecret: string }, idempotencyKey?: string) => {
     try {
         const instance = getRazorpayInstance(credentials);
-        const order = await instance.orders.create(options);
+        const requestOptions = idempotencyKey ? {
+            headers: {
+                'X-Razorpay-Idempotency-Key': idempotencyKey
+            }
+        } : undefined;
+        
+        const order = await instance.orders.create(options, requestOptions as any);
         return order;
     } catch (error) {
         console.error('Error creating Razorpay order:', error);

@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { Subscription } from '@/lib/models/Subscription';
@@ -233,7 +233,68 @@ export async function POST(req: NextRequest) {
 
                             // 3. Digital Fulfillment (Files, Courses, Licenses)
                             await DigitalDeliveryService.fulfillOrder(order._id.toString());
-                            console.log(`[RAZORPAY WEBHOOK] Triggered fulfillment and sent emails for order ${order.orderNumber}`);
+
+                            // 4. Affiliate Attribution
+                            const affiliateCode = order.metadata?.affiliate_code || order.affiliateId; // Check metadata first
+                            if (affiliateCode) {
+                                try {
+                                    const { attributeOrderToAffiliate } = await import('@/lib/utils/affiliates');
+                                    await attributeOrderToAffiliate(order._id.toString(), affiliateCode);
+                                    console.log(`[RAZORPAY WEBHOOK] Attributed order ${order._id} to affiliate ${affiliateCode}`);
+                                } catch (affErr) {
+                                    console.error('[RAZORPAY WEBHOOK] Affiliate attribution failed:', affErr);
+                                }
+                            }
+
+                            // 5. Analytics & Conversion Tracking
+                            try {
+                                const { recordConversion } = await import('@/lib/utils/analytics');
+                                const source = order.metadata?.source || 'direct';
+                                await recordConversion(order.creatorId.toString(), source, order.total / 100);
+                            } catch (analyticsErr) {
+                                console.error('[RAZORPAY WEBHOOK] Conversion tracking failed:', analyticsErr);
+                            }
+
+                            // 6. Marketing Sequences & Tags
+                            try {
+                                const { enrollInSequence, applyPurchaseTags } = await import('@/lib/utils/marketing');
+                                const { getOrCreateSubscriber } = await import('@/lib/utils/tags');
+                                const subscriber = await getOrCreateSubscriber(order.creatorId.toString(), order.customerEmail, order.customerName, 'checkout');
+                                await applyPurchaseTags(order.creatorId.toString(), subscriber._id.toString(), product._id.toString());
+                                await enrollInSequence(order.customerEmail, order.creatorId.toString(), 'purchase', product._id.toString());
+                            } catch (marketingErr) {
+                                console.error('[RAZORPAY WEBHOOK] Marketing workflow failed:', marketingErr);
+                            }
+
+                            // 7. Booking & Meet Generation
+                            if (order.metadata?.bookingId) {
+                                try {
+                                    const { Booking } = await import('@/lib/models/Booking');
+                                    const booking = await Booking.findById(order.metadata.bookingId);
+                                    if (booking) {
+                                        booking.status = 'confirmed';
+                                        if (booking.locationType === 'google_meet' || !booking.locationType) {
+                                            const { createGoogleMeetEvent } = await import('@/lib/services/meetingLinkService');
+                                            await createGoogleMeetEvent(booking._id.toString());
+                                        }
+                                        await booking.save();
+                                        console.log(`[RAZORPAY WEBHOOK] Confirmed booking ${booking._id}`);
+                                    }
+                                } catch (bookingErr) {
+                                    console.error('[RAZORPAY WEBHOOK] Booking fulfillment failed:', bookingErr);
+                                }
+                            }
+
+                            // 8. Project Auto-Creation
+                            try {
+                                const { ProjectService } = await import('@/lib/services/projectService');
+                                const project = await ProjectService.createProjectFromOrder(order._id.toString());
+                                if (project) console.log(`[RAZORPAY WEBHOOK] Created project ${project._id}`);
+                            } catch (projErr) {
+                                console.error('[RAZORPAY WEBHOOK] Project auto-creation failed:', projErr);
+                            }
+
+                            console.log(`[RAZORPAY WEBHOOK] Triggered comprehensive fulfillment for order ${order.orderNumber}`);
                         }
                     } catch (automationErr) {
                         console.error('[RAZORPAY WEBHOOK] Post-purchase automation/fulfillment failed:', automationErr);

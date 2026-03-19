@@ -40,10 +40,7 @@ export function withAdminAuth(
     handler: ApiHandler
 ) {
     return withAuth(async (req, user, context) => {
-        // Bypass for test user
-        const isTestUser = user.email === 'test@creatorly.in';
-
-        if (user.role !== 'admin' && user.role !== 'super-admin' && !isTestUser) {
+        if (user.role !== 'admin' && user.role !== 'super-admin') {
             return NextResponse.json(
                 { error: 'Forbidden - Admin access required' },
                 { status: 403 }
@@ -60,10 +57,7 @@ export function withCreatorAuth(
     handler: ApiHandler
 ) {
     return withAuth(async (req, user, context) => {
-        // Bypass for test user
-        const isTestUser = user.email === 'test@creatorly.in';
-
-        if (user.role !== 'creator' && user.role !== 'admin' && user.role !== 'super-admin' && !isTestUser) {
+        if (user.role !== 'creator' && user.role !== 'admin' && user.role !== 'super-admin') {
             return NextResponse.json(
                 { error: 'Forbidden - Creator access required' },
                 { status: 403 }

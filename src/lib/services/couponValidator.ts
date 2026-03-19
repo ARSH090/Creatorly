@@ -165,13 +165,25 @@ export async function validateCoupon(
 /**
  * Increment coupon usage count
  */
-export async function incrementCouponUsage(couponId: string): Promise<void> {
+export async function incrementCouponUsage(couponId: string): Promise<boolean> {
     try {
         await connectToDatabase();
-        await Coupon.findByIdAndUpdate(couponId, {
-            $inc: { usageCount: 1, usedCount: 1 }
-        });
+        // VULN-07 Fix: Atomic check and increment
+        const result = await Coupon.findOneAndUpdate(
+            { 
+                _id: couponId, 
+                $or: [
+                    { usageLimit: { $exists: false } },
+                    { usageLimit: 0 },
+                    { $expr: { $lt: ["$usedCount", "$usageLimit"] } }
+                ]
+            },
+            { $inc: { usedCount: 1, usageCount: 1 } },
+            { new: true }
+        );
+        return !!result;
     } catch (error) {
         console.error('Failed to increment coupon usage:', error);
+        return false;
     }
 }

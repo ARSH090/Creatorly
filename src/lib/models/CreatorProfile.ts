@@ -330,6 +330,30 @@ const CreatorProfileSchema: Schema = new Schema({
             expiry_date: Number
         }
     }
+// Pre-save sanitization hook (VULN-04/05/10/11)
+CreatorProfileSchema.pre('save', async function(this: ICreatorProfile) {
+    const { sanitizeHtml, sanitizeCss, sanitizeBlocks } = await import('@/lib/utils/sanitizer');
+    
+    if (this.description) this.description = sanitizeHtml(this.description);
+    if (this.customCss) this.customCss = sanitizeCss(this.customCss);
+    
+    if (this.testimonials && Array.isArray(this.testimonials)) {
+        this.testimonials.forEach(t => {
+            if (t.content) t.content = sanitizeHtml(t.content);
+        });
+    }
+    
+    if (this.faqs && Array.isArray(this.faqs)) {
+        this.faqs.forEach(f => {
+            if (f.answer) f.answer = sanitizeHtml(f.answer);
+        });
+    }
+    
+    if (this.blocksLayout && Array.isArray(this.blocksLayout)) {
+        this.blocksLayout = sanitizeBlocks(this.blocksLayout);
+    }
+});
+
 }, { timestamps: true });
 
 // Custom Domain index handled in field definition via sparse: true

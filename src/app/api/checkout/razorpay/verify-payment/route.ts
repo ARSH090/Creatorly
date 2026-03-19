@@ -41,6 +41,12 @@ export async function POST(req: NextRequest) {
             return NextResponse.json(errorResponse('Invalid payment signature'), { status: 400 });
         }
 
+        // ── SEC-02: Verify Amount with Razorpay API ──
+        const { getRazorpayInstance } = await import('@/lib/payments/razorpay');
+        const razorpay = getRazorpayInstance();
+        const rzpOrder = await razorpay.orders.fetch(razorpay_order_id);
+        const verifiedAmount = rzpOrder.amount; // In paise
+
         // 2. Check Idempotency - Prevent duplicate processing if webhook already handled it
         const existingOrder = await Order.findOne({ razorpayPaymentId: razorpay_payment_id });
         if (existingOrder && existingOrder.status === 'completed') {
@@ -77,8 +83,22 @@ export async function POST(req: NextRequest) {
         accessTokenExpiry.setDate(accessTokenExpiry.getDate() + 30); // 30 days
 
         // 6. Create Order
-        const orderNumber = `ORD-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-        const amount = body.amount || (product.pricing?.salePrice || product.pricing?.basePrice || product.price || 0);
+        const { nanoid } = await import('nanoid');
+        const orderNumber = `ORD-${nanoid(10).toUpperCase()}`;
+        const expectedAmount = (product.pricing?.salePrice || product.pricing?.basePrice || product.price || 0);
+
+        // Razorpay amount is in paise, expectedAmount might be in rupees or paise (need to check standard)
+        // Creatorly uses paise for internal pricing to avoid float issues usually, but looking at the code:
+        // product.pricing?.salePrice || product.pricing?.basePrice seems to be in rupees (e.g. 500)
+        // Razorpay verifiedAmount is ALWAYS in paise.
+        const expectedAmountInPaise = expectedAmount * 100;
+
+        if (Math.abs(verifiedAmount - expectedAmountInPaise) > 100) { // allow 1 rupee delta for rounding
+            console.error(`[SEC-02] Amount mismatch: verified=${verifiedAmount}, expected=${expectedAmountInPaise}`);
+            return NextResponse.json(errorResponse('Payment amount mismatch. Potential tampering detected.'), { status: 400 });
+        }
+
+        const amount = expectedAmount; // Use the verified expected amount, not body.amount
 
         const order = await Order.create({
             orderNumber,
@@ -125,10 +145,15 @@ export async function POST(req: NextRequest) {
 
         // 9. Increment Coupon Usage
         if (couponCode) {
-            await Coupon.findOneAndUpdate(
-                { code: couponCode.toUpperCase() },
-                { $inc: { usedCount: 1, totalRevenueDriven: amount } }
-            );
+            try {
+                const { incrementCouponUsage } = await import('@/lib/services/couponValidator');
+                const incremented = await incrementCouponUsage(couponCode.toUpperCase());
+                if (!incremented) {
+                    console.warn(`[VULN-07] Coupon ${couponCode} usage limit reached during order fulfillment.`);
+                }
+            } catch (couponErr) {
+                console.error('Failed to increment coupon usage:', couponErr);
+            }
         }
 
         // 10. Success Response

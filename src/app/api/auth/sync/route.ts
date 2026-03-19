@@ -7,20 +7,23 @@ export async function POST(req: NextRequest) {
     try {
         const testSecret = process.env.TEST_SECRET;
         const incomingSecret = req.headers.get('x-test-secret');
-        const isTestBypass = testSecret && incomingSecret === testSecret;
+        const isTestBypass = testSecret && incomingSecret === testSecret && process.env.NODE_ENV !== 'production';
 
         let clerkUser: any;
         if (isTestBypass) {
-            clerkUser = {
-                id: 'user_test_123',
-                emailAddresses: [{ emailAddress: 'test@creatorly.in' }],
-                username: 'testcreator',
-                firstName: 'Test',
-                lastName: 'Creator',
-                imageUrl: 'https://example.com/avatar.png',
-                unsafeMetadata: { username: 'testcreator' },
-                publicMetadata: { role: 'creator' }
-            };
+            const incomingEmail = req.headers.get('x-test-email');
+            if (incomingEmail) {
+                clerkUser = {
+                    id: `user_test_${Math.random().toString(36).substring(2, 9)}`,
+                    emailAddresses: [{ emailAddress: incomingEmail }],
+                    username: incomingEmail.split('@')[0],
+                    firstName: 'Test',
+                    lastName: 'User',
+                    imageUrl: 'https://example.com/avatar.png',
+                    unsafeMetadata: { username: incomingEmail.split('@')[0] },
+                    publicMetadata: { role: 'creator' }
+                };
+            }
         } else {
             clerkUser = await currentUser();
         }

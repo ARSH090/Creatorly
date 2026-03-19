@@ -4,6 +4,7 @@ export const BLOCKED_FILE_EXTENSIONS = [
     '.jar', '.zip', '.rar', '.7z', '.tar', '.gz', '.sh', '.bash', '.ps1',
     '.php', '.asp', '.aspx', '.jsp', '.cgi', '.py', '.rb', '.pl', '.app',
     '.deb', '.rpm', '.dmg', '.pkg', '.msi', '.dll', '.so', '.dylib',
+    '.svg', // VULN-03: Block SVGs to prevent XSS
 ];
 
 // Dangerous MIME types to block
@@ -31,7 +32,7 @@ export const ALLOWED_MIME_TYPES = [
     'image/png',
     'image/gif',
     'image/webp',
-    'image/svg+xml',
+    // 'image/svg+xml', // VULN-03: Blocked to prevent XSS
     // Documents
     'application/pdf',
     'application/msword',

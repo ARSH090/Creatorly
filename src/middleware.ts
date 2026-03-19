@@ -46,10 +46,25 @@ export default clerkMiddleware(async (auth, req) => {
     const { pathname } = req.nextUrl;
 
     // ── Bypass for Testing ──
-    const testSecret = process.env.TEST_SECRET || "f3b9e4a3d2c1b0a9f8e7d6c5b4a3f2e1";
+    const testSecret = process.env.TEST_SECRET;
     const incomingSecret = req.headers.get('x-test-secret');
-    if (testSecret && incomingSecret === testSecret) {
+    if (testSecret && incomingSecret === testSecret && process.env.NODE_ENV !== 'production') {
         return NextResponse.next();
+    }
+
+    // ── CRON Security (VULN-01) ──
+    if (pathname.startsWith('/api/cron/')) {
+        const cronSecret = process.env.CRON_SECRET;
+        const authHeader = req.headers.get('authorization');
+        
+        // Block if secret not set or header mismatch
+        if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+            console.warn(`[SEC] Unauthorized cron attempt on ${pathname} from IP: ${req.ip || 'unknown'}`);
+            return new NextResponse(JSON.stringify({ error: 'Unauthorized' }), {
+                status: 401,
+                headers: { 'Content-Type': 'application/json' }
+            });
+        }
     }
 
     const { userId } = await auth();
@@ -174,7 +189,7 @@ export default clerkMiddleware(async (auth, req) => {
     // 5. Custom Domain & Path Routing
     const firstSegment = pathname.split('/')[1];
     const reservedPaths = [
-        'admin', 'dashboard', 'superadmin', 'auth', 'login', 'signup', 'register', 'sign-in', 'sign-up',
+        'admin', 'dashboard', 'super-admin', 'auth', 'login', 'signup', 'register', 'sign-in', 'sign-up',
         'api', 'trpc', 'u', 'pricing', 'features', 'blog', 'terms', 'privacy', 'refund-policy', '_next',
         'subscribe', 'onboarding', 'checkout', 'cart', 'learn', 'book', 'explore', 'p', 'portal',
         'thank-you', 'order-success', 'sso-callback', 'account', 'autodm', 'user-profile', 'ref', 'setup',
@@ -188,17 +203,18 @@ export default clerkMiddleware(async (auth, req) => {
         !cleanHostname.includes(process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, '').split(':')[0] || "creatorly.in") &&
         !cleanHostname.includes("vercel.app");
 
-    if (isCustomDomain && hasRedis) {
+    if (isCustomDomain) {
         try {
-            const { Redis } = await import('@upstash/redis');
-            const redis = Redis.fromEnv();
-            const username = await redis.get(`domain:${cleanHostname}`);
+            const { default: redis } = await import('@/lib/db/redis');
+            if (redis) {
+                const username = await redis.get(`domain:${cleanHostname}`);
 
-            if (username && typeof username === 'string') {
-                const url = req.nextUrl.clone();
-                if (pathname === '/' || pathname === '/book' || pathname === '/community' || pathname === '/learn') {
-                    url.pathname = `/u/${username}${pathname === '/' ? '' : pathname}`;
-                    return NextResponse.rewrite(url);
+                if (username && typeof username === 'string') {
+                    const url = req.nextUrl.clone();
+                    if (pathname === '/' || pathname === '/book' || pathname === '/community' || pathname === '/learn') {
+                        url.pathname = `/u/${username}${pathname === '/' ? '' : pathname}`;
+                        return NextResponse.rewrite(url);
+                    }
                 }
             }
         } catch (err) {

@@ -12,7 +12,7 @@ export default async function DashboardRootLayout({
     const testSecret = process.env.TEST_SECRET;
     const incomingSecret = headerList.get('x-test-secret');
 
-    if (testSecret && incomingSecret === testSecret) {
+    if (testSecret && incomingSecret === testSecret && process.env.NODE_ENV !== 'production') {
         return <DashboardLayout>{children}</DashboardLayout>;
     }
 
