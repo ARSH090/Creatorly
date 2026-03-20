@@ -38,11 +38,14 @@ export default function LoginPage() {
         setError('Additional steps required. Please check your email.');
       }
     } catch (err: any) {
-      if (err.errors?.[0]?.meta?.paramName === 'captcha') {
+      if (err.errors?.[0]?.meta?.paramName === 'captcha' || err.errors?.[0]?.code === 'captcha_invalid') {
         setCaptchaLoadError(true);
         setError('');
       } else {
-        setError(err.errors?.[0]?.message || 'Invalid email or password');
+        const clerkErr = err.errors?.[0];
+        const raw = clerkErr?.longMessage || clerkErr?.message || '';
+        const isPartial = raw.length > 0 && raw[0] === raw[0].toLowerCase();
+        setError(isPartial ? `Login failed: ${raw}` : raw || 'Invalid email or password. Please try again.');
       }
     } finally {
       setLoading(false);

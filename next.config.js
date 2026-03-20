@@ -75,6 +75,7 @@ const nextConfig = {
             https://*.clerk.com 
             https://*.clerk.accounts.dev 
             https://va.vercel-scripts.com 
+            https://challenges.cloudflare.com
             blob:;
           style-src 'self' 'unsafe-inline' 
             https://fonts.googleapis.com 
@@ -95,13 +96,15 @@ const nextConfig = {
             https://lottie.host 
             https://va.vercel-scripts.com 
             https://vitals.vercel-insights.com
+            https://challenges.cloudflare.com
             wss://*.clerk.com
             ${isDev ? 'ws://localhost:3000 http://localhost:3000' : ''};
           frame-src 'self' 
             https://checkout.razorpay.com 
             https://accounts.google.com 
             https://*.clerk.com 
-            https://*.clerk.accounts.dev;
+            https://*.clerk.accounts.dev
+            https://challenges.cloudflare.com;
           worker-src 'self' blob:;
           object-src 'none';
           base-uri 'self';

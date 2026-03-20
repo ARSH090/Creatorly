@@ -86,11 +86,14 @@ export default function RegisterPage() {
                 setError('Signup incomplete. Please contact support.');
             }
         } catch (err: any) {
-            if (err.errors?.[0]?.meta?.paramName === 'captcha') {
+            const clerkErr = err.errors?.[0];
+            if (clerkErr?.meta?.paramName === 'captcha' || clerkErr?.code === 'captcha_invalid') {
                 setCaptchaLoadError(true);
                 setError('');
             } else {
-                setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || 'Registration failed. Please try again.');
+                const raw = clerkErr?.longMessage || clerkErr?.message || '';
+                const isPartial = raw.length > 0 && raw[0] === raw[0].toLowerCase();
+                setError(isPartial ? `That value ${raw}` : raw || 'Registration failed. Please try again.');
             }
         } finally {
             setLoading(false);
@@ -116,7 +119,10 @@ export default function RegisterPage() {
                 setError('Verification incomplete. Please try again.');
             }
         } catch (err: any) {
-            setError(err.errors?.[0]?.longMessage || err.errors?.[0]?.message || 'Invalid verification code.');
+            const clerkErr = err.errors?.[0];
+            const raw = clerkErr?.longMessage || clerkErr?.message || '';
+            const isPartial = raw.length > 0 && raw[0] === raw[0].toLowerCase();
+            setError(isPartial ? `Code ${raw}` : raw || 'Invalid verification code. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -148,7 +154,7 @@ export default function RegisterPage() {
             <main className="relative z-10 min-h-screen flex items-start justify-center px-4 py-10 md:py-16">
                 <div className="w-full max-w-md">
                     {/* Clerk Turnstile CAPTCHA */}
-                    <div id="clerk-captcha" className="absolute w-0 h-0 overflow-hidden" />
+                    <div id="clerk-captcha" />
 
                     {/* Logo */}
                     <div className="text-center mb-8">
