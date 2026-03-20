@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { withAuth } from '@/lib/auth/withAuth';
 import { Order } from '@/lib/models/Order';
 import Product from '@/lib/models/Product';
-import { getPresignedDownloadUrl } from '@/lib/storage/s3';
+import { getDownloadUrl } from '@/lib/storage/s3';
 import { errorResponse } from '@/types/api';
 
 /**
@@ -68,7 +68,7 @@ async function getHandler(req: NextRequest, user: any, { params }: any) {
 
     // 3. Generate Presigned URL
     try {
-        const url = await getPresignedDownloadUrl(lessonFileKey, 14400); // 4 hours for streaming
+        const url = await getDownloadUrl(lessonFileKey, 14400); // 4 hours for streaming
         return NextResponse.json({ success: true, url });
     } catch (error) {
         return NextResponse.json(errorResponse('Failed to generate secure link'), { status: 500 });

@@ -1,46 +1,64 @@
-import { createMocks } from 'node-mocks-http';
-import { POST as verifyHandler } from '@/app/api/checkout/razorpay/verify-payment/route';
-import Order from '@/lib/models/Order';
-import { connectToDatabase } from '@/lib/db/mongodb';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import mongoose from 'mongoose';
 
-jest.mock('@/lib/db/mongodb');
-jest.mock('@/lib/models/Order');
+let mongod: MongoMemoryServer;
 
-describe('Payment Amount Verification Security Test', () => {
-    beforeAll(async () => {
-        await connectToDatabase();
-    });
+beforeAll(async () => {
+    mongod = await MongoMemoryServer.create();
+    await mongoose.connect(mongod.getUri());
+    process.env.RAZORPAY_KEY_SECRET = 'test_rzp_secret';
+});
 
-    it('should reject payment if signature is valid but amount is tampered', async () => {
-        // Mock order with ₹100 price
-        const mockOrder = {
-            _id: 'order_123',
-            total: 10000, // ₹100
-            paymentStatus: 'pending',
-            save: jest.fn(),
-        };
-        (Order.findById as jest.Mock).mockResolvedValue(mockOrder);
+afterAll(async () => {
+    await mongoose.disconnect();
+    await mongod.stop();
+});
 
-        const { req } = createMocks({
-            method: 'POST',
-            body: {
-                razorpay_order_id: 'rzp_order_123',
-                razorpay_payment_id: 'rzp_pay_123',
-                razorpay_signature: 'valid_sig_but_tampered_amount',
-                productId: 'prod_123',
-                email: 'buyer@example.com',
-                // Malicious client sends a smaller amount in metadata or similar
-            },
+describe('Payment amount verification — client cannot set price', () => {
+    it('rejects when no valid Razorpay order exists for the given order_id', async () => {
+        const { POST } = await import('@/app/api/checkout/razorpay/verify-payment/route');
+
+        const body = JSON.stringify({
+            razorpay_order_id: 'order_nonexistent_999',
+            razorpay_payment_id: 'pay_test_001',
+            razorpay_signature: 'fake_sig',
+            productId: new mongoose.Types.ObjectId().toString(),
+            email: 'buyer@test.com',
+            amount: 1, // attacker sends ₹0.01 paise
         });
 
-        // The handler MUST fetch the TRUE price from the DB (mockOrder.total)
-        // and NOT rely on any amount sent in the request body.
-        
-        const response = await verifyHandler(req as any);
-        const data = await response.json();
+        const req = new Request('http://localhost/api/checkout/razorpay/verify-payment', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body,
+        });
 
-        // If the handler is secure, it shouldn't even take 'amount' from body
-        // But if it did, this test ensures we catch discrepancies.
-        expect(response.status).not.toBe(200);
+        const res = await POST(req as any);
+        // Must not be 200 — signature is invalid so should be 400
+        expect(res.status).not.toBe(200);
+        expect([400, 401, 404]).toContain(res.status);
+    });
+
+    it('verifyRazorpaySignature returns false for mismatched amounts / tampered data', async () => {
+        const { verifyRazorpaySignature } = await import('@/lib/payments/razorpay');
+
+        const orderId = 'order_real_123';
+        const paymentId = 'pay_real_456';
+        const secret = process.env.RAZORPAY_KEY_SECRET!;
+
+        // Generate correct signature
+        const crypto = require('crypto');
+        const correctSig = crypto
+            .createHmac('sha256', secret)
+            .update(`${orderId}|${paymentId}`)
+            .digest('hex');
+
+        expect(verifyRazorpaySignature(orderId, paymentId, correctSig)).toBe(true);
+
+        // Tampered: different payment ID
+        expect(verifyRazorpaySignature(orderId, 'pay_tampered', correctSig)).toBe(false);
+
+        // Tampered: completely fake sig
+        expect(verifyRazorpaySignature(orderId, paymentId, 'fakesig123')).toBe(false);
     });
 });

@@ -54,6 +54,14 @@ export interface IOrder extends Document {
     accessToken?: string;
     accessTokenExpiry?: Date;
 
+    // GST info
+    isGstInvoice?: boolean;
+    gstDetails?: {
+        gstin: string;
+        businessName: string;
+        businessAddress: string;
+    };
+
     // Delivery & Tracking
     downloadCount: number;
     downloadLimit: number;
@@ -140,6 +148,14 @@ const OrderSchema: Schema = new Schema({
     commissionAmount: { type: Number, default: 0 },
     affiliateId: { type: String },
     couponId: { type: String },
+
+    // GST info
+    isGstInvoice: { type: Boolean, default: false },
+    gstDetails: {
+        gstin: { type: String },
+        businessName: { type: String },
+        businessAddress: { type: String }
+    },
 
     // Delivery & Tracking
     downloadCount: { type: Number, default: 0 },

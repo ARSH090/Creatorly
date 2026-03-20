@@ -47,8 +47,8 @@ export async function GET(
             s3Key = fileUrl;
         }
 
-        const { getPresignedDownloadUrl } = await import('@/lib/storage/s3');
-        const presignedUrl = await getPresignedDownloadUrl(s3Key);
+        const { getDownloadUrl } = await import('@/lib/storage/s3');
+        const presignedUrl = await getDownloadUrl(s3Key);
 
         return NextResponse.redirect(presignedUrl);
 

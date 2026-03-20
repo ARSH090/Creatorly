@@ -228,7 +228,20 @@ export async function POST(req: NextRequest) {
                                     product.title || product.name || 'Product',
                                     order.total / 100,
                                     order.customerEmail
-                                ) : Promise.resolve()
+                                ) : Promise.resolve(),
+                                // After sending confirmation email, send push notification to creator:
+                                (async () => {
+                                    try {
+                                        const { sendSaleNotification } = await import('@/lib/services/pushNotification');
+                                        await sendSaleNotification(order.creatorId.toString(), {
+                                            productName: order.items[0]?.name || 'Product',
+                                            amount: order.total,
+                                            buyerEmail: order.customerEmail,
+                                        });
+                                    } catch (pushErr: any) {
+                                        console.error('[Push] Sale notification failed:', pushErr.message);
+                                    }
+                                })()
                             ]);
 
                             // 3. Digital Fulfillment (Files, Courses, Licenses)

@@ -9,6 +9,8 @@ import {
     Zap, Share2, Star, Lock, Clock, Shield,
     Globe, ChevronRight, Check, MessageCircle
 } from 'lucide-react';
+import StripeCheckout from '@/components/checkout/StripeCheckout';
+import EMIBadge from '@/components/checkout/EMIBadge';
 
 interface PublicProductClientProps {
     initialData: any;
@@ -347,6 +349,7 @@ export default function PublicProductClient({
                                                     <span className="text-xl text-zinc-700 line-through font-bold">₹{product.compareAtPrice}</span>
                                                 )}
                                             </div>
+                                            <EMIBadge priceInPaise={product.pricing?.basePrice || product.price || 0} />
                                         </div>
                                         <div className="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-xl">
                                             <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">SAVE 40%</span>
@@ -420,6 +423,21 @@ export default function PublicProductClient({
                                                 </>
                                             )}
                                         </button>
+                                        
+                                        {email && email.includes('@') && (
+                                          <div className="mt-3 pt-3 border-t border-white/8">
+                                            <p className="text-xs text-zinc-600 text-center mb-2">International card payment</p>
+                                            <StripeCheckout
+                                              productId={product._id}
+                                              buyerEmail={email}
+                                              buyerName={email.split('@')[0]}
+                                              couponCode={couponCode}
+                                              price={product.pricing?.salePrice || product.pricing?.basePrice || product.price || 0}
+                                              currency={product.pricing?.currency || 'INR'}
+                                            />
+                                          </div>
+                                        )}
+                                        
                                         <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-widest text-center">Instant Delivery via Email</p>
                                     </div>
 

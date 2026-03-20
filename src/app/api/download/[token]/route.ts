@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase as dbConnect } from '@/lib/db/mongodb';
 import { DownloadToken } from '@/lib/models/DownloadToken';
 import Product from '@/lib/models/Product';
-import { getPresignedDownloadUrl } from '@/lib/storage/s3';
+import { getDownloadUrl } from '@/lib/storage/s3';
 
 export async function GET(
     req: NextRequest,
@@ -49,7 +49,7 @@ export async function GET(
             return NextResponse.json({ error: 'No file associated with this product' }, { status: 404 });
         }
 
-        const signedUrl = await getPresignedDownloadUrl(fileKey, 900); // 15 mins
+        const signedUrl = await getDownloadUrl(fileKey, 900); // 15 mins
 
         // 6. Update Stats
         tokenDoc.downloadCount += 1;

@@ -11,6 +11,11 @@ export const razorpay = new Razorpay({
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret_for_build',
 });
 
+// ── FIX 11: Circuit Breaker logic ──
+let cbState = 'CLOSED';
+let lastErrorTime = 0;
+const CB_THRESHOLD = 5000; // 5 seconds cooldow
+
 /**
  * Returns a Razorpay instance. If credentials are provided, it returns a custom instance (for P2P).
  * Otherwise, it returns the global platform instance.
@@ -33,6 +38,11 @@ export interface IRazorpayOrderOptions {
 }
 
 export const createRazorpayOrder = async (options: IRazorpayOrderOptions, credentials?: { keyId: string; keySecret: string }, idempotencyKey?: string) => {
+    if (cbState === 'OPEN') {
+        if (Date.now() - lastErrorTime > CB_THRESHOLD) cbState = 'HALF_OPEN';
+        else throw new Error('Razorpay service temporarily unavailable (Circuit Breaker OPEN)');
+    }
+
     try {
         const instance = getRazorpayInstance(credentials);
         const requestOptions = idempotencyKey ? {
@@ -42,8 +52,11 @@ export const createRazorpayOrder = async (options: IRazorpayOrderOptions, creden
         } : undefined;
         
         const order = await instance.orders.create(options, requestOptions as any);
+        cbState = 'CLOSED';
         return order;
-    } catch (error) {
+    } catch (error: any) {
+        lastErrorTime = Date.now();
+        cbState = 'OPEN';
         console.error('Error creating Razorpay order:', error);
         throw error;
     }

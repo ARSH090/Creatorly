@@ -100,6 +100,12 @@ export async function POST(req: NextRequest) {
 
         const amount = expectedAmount; // Use the verified expected amount, not body.amount
 
+        // GST & Platform Fee calculation
+        const isIndia = product.pricing?.currency === 'INR';
+        const gstRate = isIndia ? 0.18 : 0;
+        const taxAmount = Math.round(amount * gstRate);
+        const platformFee = Math.round(amount * 0.05); // 5% flat fee
+
         const order = await Order.create({
             orderNumber,
             items: [{
@@ -107,14 +113,17 @@ export async function POST(req: NextRequest) {
                 name: product.title,
                 price: amount,
                 quantity: 1,
-                type: product.productType
+                type: product.productType,
+                tax: taxAmount // Store per-item tax
             }],
             creatorId: product.creatorId,
             userId: buyer._id,
             customerEmail: email.toLowerCase(),
             customerName: customerName,
             amount,
-            total: amount,
+            taxAmount,
+            platformFee,
+            total: amount + taxAmount,
             currency: product.pricing?.currency || 'INR',
             razorpayOrderId: razorpay_order_id,
             razorpayPaymentId: razorpay_payment_id,
@@ -124,7 +133,13 @@ export async function POST(req: NextRequest) {
             paidAt: new Date(),
             couponId: couponCode,
             accessToken,
-            accessTokenExpiry
+            accessTokenExpiry,
+            isGstInvoice: !!body.gstin,
+            gstDetails: body.gstin ? {
+                gstin: body.gstin,
+                businessName: body.businessName,
+                businessAddress: body.businessAddress
+            } : undefined
         });
 
         // 7. Update Subscriber Stats

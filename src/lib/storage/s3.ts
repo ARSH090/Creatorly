@@ -19,7 +19,7 @@ export async function getPresignedUploadUrl(key: string, contentType: string, ex
     return await getSignedUrl(s3Client, command, { expiresIn });
 }
 
-export async function getPresignedDownloadUrl(key: string, expiresIn = 3 * 24 * 3600) {
+export async function getDownloadUrl(key: string, expiresIn = 3 * 24 * 3600) {
     // USE CLOUDFRONT SIGNED URLS FOR SCALABILITY
     if (process.env.CLOUDFRONT_DOMAIN && process.env.CLOUDFRONT_PRIVATE_KEY) {
         try {

@@ -13,6 +13,7 @@ import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import Logo from "@/components/Logo";
+import PushNotificationToggle from './PushNotificationToggle';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
     const { user } = useUser();
@@ -167,6 +168,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full ring-2 ring-[#030303]" />
                                 )}
                             </button>
+
+                            <PushNotificationToggle />
 
                             {/* User Menu */}
                             <div className="flex items-center gap-3 pl-4 border-l border-white/5">

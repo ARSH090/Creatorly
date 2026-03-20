@@ -48,6 +48,39 @@ export const GET = withCronAuth(async (req: NextRequest) => {
             }
         }
 
+        // ── Analytics aggregation ────────────────────────────────────────────────────
+        try {
+            const { AnalyticsEvent } = await import('@/lib/models/AnalyticsEvent');
+            const { DailyMetric } = await import('@/lib/models/DailyMetric');
+
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const dayStr = yesterday.toISOString().split('T')[0]; // YYYY-MM-DD
+
+            const aggregated = await AnalyticsEvent.aggregate([
+                { $match: { day: dayStr } },
+                {
+                    $group: {
+                        _id: { creatorId: '$creatorId', eventType: '$eventType' },
+                        count: { $sum: 1 },
+                        revenue: { $sum: { $ifNull: ['$metadata.amount', 0] } },
+                    },
+                },
+            ]);
+
+            for (const row of aggregated) {
+                await DailyMetric.findOneAndUpdate(
+                    { creatorId: row._id.creatorId, date: dayStr, eventType: row._id.eventType },
+                    { $set: { count: row.count, revenue: row.revenue } },
+                    { upsert: true }
+                );
+            }
+            console.log(`[Daily Cron] Aggregated ${aggregated.length} metric rows for ${dayStr}`);
+        } catch (aggErr: any) {
+            console.error('[Daily Cron] Analytics aggregation failed:', aggErr.message);
+            // Don't fail the whole cron — aggregation failure is non-critical
+        }
+
         return NextResponse.json({ success: true, processed: reminders.length });
 
     } catch (error: any) {
