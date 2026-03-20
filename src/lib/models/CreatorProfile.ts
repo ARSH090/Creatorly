@@ -330,6 +330,8 @@ const CreatorProfileSchema: Schema = new Schema({
             expiry_date: Number
         }
     }
+}, { timestamps: true });
+
 // Pre-save sanitization hook (VULN-04/05/10/11)
 CreatorProfileSchema.pre('save', async function(this: ICreatorProfile) {
     const { sanitizeHtml, sanitizeCss, sanitizeBlocks } = await import('@/lib/utils/sanitizer');
@@ -353,8 +355,6 @@ CreatorProfileSchema.pre('save', async function(this: ICreatorProfile) {
         this.blocksLayout = sanitizeBlocks(this.blocksLayout);
     }
 });
-
-}, { timestamps: true });
 
 // Custom Domain index handled in field definition via sparse: true
 // Fast storefront listing by published status

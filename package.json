@@ -90,6 +90,7 @@
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-tabs": "^1.0.4",
     "@sentry/nextjs": "^7.100.0",
+    "@stripe/stripe-js": "^8.11.0",
     "@tailwindcss/postcss": "^4.2.1",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-query-devtools": "^5.91.3",
@@ -100,6 +101,7 @@
     "@types/marked": "^5.0.2",
     "@types/react-big-calendar": "^1.8.8",
     "@types/uuid": "^9.0.8",
+    "@types/web-push": "^3.6.4",
     "@upstash/ratelimit": "^1.0.0",
     "@vercel/analytics": "^1.2.0",
     "@vercel/speed-insights": "^1.0.10",
@@ -160,6 +162,7 @@
     "tailwind-merge": "^2.2.0",
     "tsx": "^4.7.0",
     "ua-parser-js": "^1.0.37",
+    "web-push": "^3.6.7",
     "yet-another-react-lightbox": "^3.17.0",
     "zod": "^3.22.4",
     "zustand": "^4.5.0"
