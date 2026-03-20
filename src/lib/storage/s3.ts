@@ -42,3 +42,14 @@ export async function getDownloadUrl(key: string, expiresIn = 3 * 24 * 3600) {
     });
     return await getSignedUrl(s3Client, command, { expiresIn });
 }
+
+export function getPublicUrl(key: string): string {
+    if (process.env.CLOUDFRONT_DOMAIN) {
+        return `https://${process.env.CLOUDFRONT_DOMAIN}/${key}`;
+    }
+    return `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION || 'ap-south-1'}.amazonaws.com/${key}`;
+}
+
+export function sanitizeKey(key: string): string {
+    return key.replace(/[^a-zA-Z0-9.\-_/]/g, '_');
+}
