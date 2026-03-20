@@ -1,4 +1,8 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { connectToDatabase } from '@/lib/db/mongodb';
 import { withCronAuth } from '@/lib/auth/cron';
+import { Subscription } from '@/lib/models/Subscription';
+import { sendEmail } from '@/lib/services/email';
 
 export const GET = withCronAuth(async (req: NextRequest) => {
     try {
