@@ -93,7 +93,7 @@ export async function POST(req: NextRequest) {
         // Razorpay verifiedAmount is ALWAYS in paise.
         const expectedAmountInPaise = expectedAmount * 100;
 
-        if (Math.abs(verifiedAmount - expectedAmountInPaise) > 100) { // allow 1 rupee delta for rounding
+        if (Math.abs((verifiedAmount as number) - (expectedAmountInPaise as number)) > 100) { // allow 1 rupee delta for rounding
             console.error(`[SEC-02] Amount mismatch: verified=${verifiedAmount}, expected=${expectedAmountInPaise}`);
             return NextResponse.json(errorResponse('Payment amount mismatch. Potential tampering detected.'), { status: 400 });
         }
