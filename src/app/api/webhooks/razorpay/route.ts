@@ -257,8 +257,8 @@ export async function POST(req: NextRequest) {
 
                             // 6. Marketing Sequences & Tags
                             try {
-                                const { enrollInSequence, applyPurchaseTags } = await import('@/lib/utils/marketing');
-                                const { getOrCreateSubscriber } = await import('@/lib/utils/tags');
+                                const { enrollInSequence } = await import('@/lib/services/marketing');
+                                const { getOrCreateSubscriber, applyPurchaseTags } = await import('@/lib/utils/tags');
                                 const subscriber = await getOrCreateSubscriber(order.creatorId.toString(), order.customerEmail, order.customerName, 'checkout');
                                 await applyPurchaseTags(order.creatorId.toString(), subscriber._id.toString(), product._id.toString());
                                 await enrollInSequence(order.customerEmail, order.creatorId.toString(), 'purchase', product._id.toString());

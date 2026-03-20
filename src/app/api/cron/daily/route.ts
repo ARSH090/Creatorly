@@ -50,4 +50,4 @@ export const GET = withCronAuth(async (req: NextRequest) => {
         console.error('[CRON] Daily Error:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
-}
+});

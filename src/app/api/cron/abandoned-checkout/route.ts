@@ -23,7 +23,7 @@ export const GET = withCronAuth(async (req: NextRequest) => {
             { status: 500 }
         );
     }
-}
+});
 
 /**
  * Also support POST for cron services that use POST

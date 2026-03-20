@@ -66,4 +66,4 @@ export const GET = withCronAuth(async (req: NextRequest) => {
         log.error('[Cron] Subscription cleanup error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
