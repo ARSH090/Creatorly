@@ -102,6 +102,37 @@ export default function RazorpayCheckout() {
                 theme: {
                     color: '#6366f1', // Indigo 500
                 },
+                config: {
+                    display: {
+                        blocks: {
+                            emi: {
+                                name: 'Pay in Easy Installments',
+                                instruments: [{ method: 'emi' }],
+                            },
+                            other: {
+                                name: 'Other Payment Methods',
+                                instruments: [
+                                    { method: 'upi' },
+                                    { method: 'card' },
+                                    { method: 'netbanking' },
+                                    { method: 'wallet' },
+                                ],
+                            },
+                        },
+                        sequence: ['block.emi', 'block.other'],
+                        preferences: {
+                            show_default_blocks: false,
+                        },
+                    },
+                },
+                // Only show EMI block if amount >= 200000 paise (₹2000)
+                ...(subtotal >= 200000 ? {} : {
+                    config: {
+                        display: {
+                            preferences: { show_default_blocks: true },
+                        },
+                    },
+                }),
             };
 
             const rzp = new window.Razorpay(options);

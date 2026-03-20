@@ -84,6 +84,41 @@ async function handleIncomingMessage(message: any, phoneNumberId: string) {
     const creator = await User.findOne({ 'whatsappConfig.phoneNumberId': phoneNumberId });
     if (!creator) return;
 
+    // Handle PAYMENT LINK keyword
+    if (text?.toLowerCase().startsWith('buy ') || text?.toLowerCase() === 'buy') {
+        const parts = text.split(' ');
+        const productSlug = parts[1]; // e.g., "buy my-ebook"
+
+        if (productSlug) {
+            const { createWhatsAppCheckoutLink, formatWhatsAppPaymentMessage } = await import('@/lib/services/whatsappCheckout');
+            const Product = (await import('@/lib/models/Product')).default;
+
+            const product = await Product.findOne({ slug: productSlug, creatorId: creator._id, status: 'active' });
+
+            if (product) {
+                const session = await createWhatsAppCheckoutLink({
+                    productId: product._id.toString(),
+                    buyerPhone: from,
+                    creatorId: creator._id.toString(),
+                });
+                const paymentMessage = formatWhatsAppPaymentMessage(session, creator.displayName || creator.username);
+
+                // Send payment link via WhatsApp
+                await fetch(`https://graph.facebook.com/v18.0/${phoneNumberId}/messages`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${process.env.WHATSAPP_ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        messaging_product: 'whatsapp',
+                        to: from,
+                        type: 'text',
+                        text: { body: paymentMessage },
+                    }),
+                });
+                return; // Stop further processing for this message
+            }
+        }
+    }
+
     // 2. Upsert Contact
     await WhatsAppContact.findOneAndUpdate(
         { creatorId: creator._id, phone: from },

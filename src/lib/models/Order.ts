@@ -44,6 +44,8 @@ export interface IOrder extends Document {
     couponId?: string;
     subscriptionId?: mongoose.Types.ObjectId | string;
     parentOrderId?: mongoose.Types.ObjectId | string;
+    stripeSessionId?: string;
+    stripePaymentIntentId?: string;
 
     // Phase 8: Delivery Tracking
     deliveryStatus?: 'pending' | 'delivered' | 'failed';
@@ -169,6 +171,8 @@ const OrderSchema: Schema = new Schema({
     metadata: { type: Schema.Types.Mixed, default: {} },
     subscriptionId: { type: Schema.Types.ObjectId, ref: 'Subscription' },
     parentOrderId: { type: Schema.Types.ObjectId, ref: 'Order', index: true },
+    stripeSessionId: { type: String, sparse: true },
+    stripePaymentIntentId: { type: String, sparse: true },
 
     // Phase 8: Delivery Tracking
     deliveryStatus: {

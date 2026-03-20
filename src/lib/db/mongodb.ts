@@ -32,7 +32,15 @@ export async function connectToDatabase() {
     }
 
     try {
+        // SCALABILITY: Check active connections before proceeding
+        const connectionCount = mongoose.connection.readyState;
+        if (connectionCount === 1) return cached.conn;
+
         cached.conn = await cached.promise;
+        
+        // Log connection pool info
+        const poolSize = (mongoose.connection as any).client?.topology?.s?.options?.maxPoolSize || 'unknown';
+        console.log(`[MongoDB] Using connection pool (size: ${poolSize})`);
     } catch (e) {
         cached.promise = null;
         throw e;

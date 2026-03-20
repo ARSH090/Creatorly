@@ -2,71 +2,87 @@ import { NextRequest } from 'next/server';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Payout from '@/lib/models/Payout';
 import { Order } from '@/lib/models/Order';
+import User from '@/lib/models/User';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
 import { withErrorHandler } from '@/lib/utils/errorHandler';
+import { createRazorpayXPayout } from '@/lib/payments/razorpay';
+import { nanoid } from 'nanoid';
 
-/**
- * POST /api/creator/payouts/request
- * Request a manual payout
- * Body: { amount?, description? }
- * If amount not provided, requests payout for all pending revenue
- */
-async function handler(req: NextRequest, user: any, context: any) {
+async function handler(req: NextRequest, user: any) {
     await connectToDatabase();
-
     const body = await req.json();
-    const { amount: requestedAmount, description } = body;
+    const { amount: requestedAmount, upiId, mode = 'UPI' } = body;
 
     // Calculate available balance
-    const orders = await Order.find({
-        creatorId: user._id,
-        paymentStatus: 'paid'
-    });
+    const paidOrders = await Order.find({ creatorId: user._id, paymentStatus: 'paid' });
+    const totalPaid = await Payout.find({ creatorId: user._id, status: { $in: ['paid', 'processed'] } });
+    
+    const grossRevenue = paidOrders.reduce((s, o) => s + ((o.total || 0) - (o.commissionAmount || 0)), 0);
+    const alreadyPaidOut = totalPaid.reduce((s, p) => s + p.amount, 0);
+    const availableBalance = grossRevenue - alreadyPaidOut;
 
-    const totalRevenue = orders.reduce((sum, o) => {
-        const orderTotal = o.total || 0;
-        const commission = o.commissionAmount || 0;
-        // Creator gets Total - Commission
-        // Note: Assuming tax is handled by creator or platform. 
-        // Ideally should be (Price - GST - Fees - Commission).
-        // For now, deducting affiliate commission is the critical fix.
-        return sum + (orderTotal - commission);
-    }, 0);
+    const payoutAmount = requestedAmount
+        ? Math.min(requestedAmount * 100, availableBalance) // convert to paise
+        : availableBalance;
 
-    const existingPayouts = await Payout.find({
-        creatorId: user._id,
-        status: { $in: ['pending', 'approved', 'processed'] }
-    });
-
-    const reserved = existingPayouts.reduce((sum: number, p: any) => sum + p.amount, 0);
-    const availableBalance = totalRevenue - reserved;
-
-    if (availableBalance <= 0) {
-        throw new Error('No funds available for payout');
+    if (payoutAmount < 100) { // min ₹1
+        throw new Error('Insufficient balance for payout. Minimum payout is ₹1.');
     }
 
-    const payoutAmount = requestedAmount || availableBalance;
+    const referenceId = `payout_${user._id}_${nanoid(8)}`;
 
-    if (payoutAmount > availableBalance) {
-        throw new Error(`Requested amount (₹${payoutAmount}) exceeds available balance (₹${availableBalance})`);
+    // Attempt instant Razorpay X payout if UPI provided
+    if (upiId && process.env.RAZORPAY_X_KEY_ID) {
+        try {
+            const razorpayPayout = await createRazorpayXPayout({
+                accountNumber: process.env.RAZORPAY_X_ACCOUNT_NUMBER!,
+                amount: Math.round(payoutAmount),
+                currency: 'INR',
+                mode: mode as 'UPI' | 'IMPS' | 'NEFT',
+                purpose: 'payout',
+                fund_account: {
+                    account_type: 'vpa',
+                    vpa: { address: upiId },
+                    contact: {
+                        name: user.displayName || user.username,
+                        email: user.email,
+                        contact: user.phone || '0000000000',
+                        type: 'vendor',
+                    },
+                },
+                narration: `Creatorly payout for ${user.username}`,
+                reference_id: referenceId,
+            });
+
+            const payout = await Payout.create({
+                creatorId: user._id,
+                amount: Math.round(payoutAmount / 100), // store in rupees
+                status: 'processed',
+                payoutMethod: 'upi',
+                razorpayPayoutId: razorpayPayout.id,
+                transactionId: referenceId,
+                processedAt: new Date(),
+                notes: `Instant UPI payout to ${upiId}`,
+            });
+
+            return { success: true, payout, instant: true, razorpayPayoutId: razorpayPayout.id };
+        } catch (err: any) {
+            console.error('Instant payout failed, falling back to manual:', err.message);
+            // Fall through to manual payout
+        }
     }
 
-    // Create payout request
-    const payout = await (Payout as any).create({
+    // Manual payout (admin approves)
+    const payout = await Payout.create({
         creatorId: user._id,
-        amount: payoutAmount,
-        currency: 'INR',
+        amount: Math.round(payoutAmount / 100),
         status: 'pending',
-        payoutMethod: user.payoutMethod?.type || 'bank',
-        description,
-        createdAt: new Date()
+        payoutMethod: mode === 'UPI' ? 'upi' : 'bank',
+        transactionId: referenceId,
+        notes: upiId ? `Requested to UPI: ${upiId}` : 'Manual bank transfer requested',
     });
 
-    return {
-        success: true,
-        payout,
-        message: 'Payout request submitted. It will be processed within 3-5 business days.'
-    };
+    return { success: true, payout, instant: false, message: 'Payout request submitted. Will be processed within 1-2 business days.' };
 }
 
 export const POST = withCreatorAuth(withErrorHandler(handler));

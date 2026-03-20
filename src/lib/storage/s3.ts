@@ -1,6 +1,6 @@
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
-
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { getSignedUrl as getCloudFrontSignedUrl } from '@aws-sdk/cloudfront-signer';
 
 export const s3Client = new S3Client({
     region: process.env.AWS_REGION || 'ap-south-1',
@@ -10,65 +10,35 @@ export const s3Client = new S3Client({
     },
 });
 
-// Utility to sanitize filenames
-export function sanitizeKey(filename: string): string {
-    return filename
-        .split('.')[0]
-        .replace(/[^a-zA-Z0-9]/g, '-')
-        .toLowerCase();
-}
-
-export async function getPresignedUploadUrl(
-    key: string,
-    contentType: string,
-    expiresIn = 3600
-) {
+export async function getPresignedUploadUrl(key: string, contentType: string, expiresIn = 3600) {
     const command = new PutObjectCommand({
         Bucket: process.env.AWS_S3_BUCKET,
         Key: key,
         ContentType: contentType,
-        // Remove ACL: 'public-read' as it requires specific bucket settings
-        // and is better handled by bucket policy or dedicated CloudFront
     });
-
-    try {
-        const url = await getSignedUrl(s3Client, command, { expiresIn });
-        return url;
-    } catch (error) {
-        console.error('Error generating presigned upload URL:', error);
-        throw error;
-    }
+    return await getSignedUrl(s3Client, command, { expiresIn });
 }
 
-export async function getPresignedDownloadUrl(
-    key: string,
-    expiresIn = 3 * 24 * 3600 // 72 hours per user requirement
-) {
+export async function getPresignedDownloadUrl(key: string, expiresIn = 3 * 24 * 3600) {
+    // USE CLOUDFRONT SIGNED URLS FOR SCALABILITY
+    if (process.env.CLOUDFRONT_DOMAIN && process.env.CLOUDFRONT_PRIVATE_KEY) {
+        try {
+            return getCloudFrontSignedUrl({
+                url: `https://${process.env.CLOUDFRONT_DOMAIN}/${key}`,
+                keyPairId: process.env.CLOUDFRONT_KEY_PAIR_ID!,
+                privateKey: process.env.CLOUDFRONT_PRIVATE_KEY.replace(/\\n/g, '\n'),
+                dateLessThan: new Date(Date.now() + expiresIn * 1000).toISOString(),
+            });
+        } catch (err) {
+            console.error('CloudFront signing failed, falling back to S3:', err);
+        }
+    }
+
+    // Fallback to S3 Presigned URL
+    const { GetObjectCommand } = await import('@aws-sdk/client-s3');
     const command = new GetObjectCommand({
         Bucket: process.env.AWS_S3_BUCKET,
         Key: key,
     });
-
-    try {
-        const url = await getSignedUrl(s3Client, command, { expiresIn });
-        return url;
-    } catch (error) {
-        console.error('Error generating presigned download URL:', error);
-        throw error;
-    }
+    return await getSignedUrl(s3Client, command, { expiresIn });
 }
-
-
-
-export function getPublicUrl(key: string) {
-    if (process.env.NEXT_PUBLIC_S3_DOMAIN) {
-        return `${process.env.NEXT_PUBLIC_S3_DOMAIN}/${key}`;
-    }
-    // Fallback to standard AWS S3 URL if domain is not set
-    if (process.env.AWS_S3_BUCKET) {
-        const region = process.env.AWS_REGION || 'ap-south-1';
-        return `https://${process.env.AWS_S3_BUCKET}.s3.${region}.amazonaws.com/${key}`;
-    }
-    return '';
-}
-

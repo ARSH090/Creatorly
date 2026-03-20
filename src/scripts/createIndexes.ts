@@ -3,7 +3,7 @@ import User from '@/lib/models/User'
 import Product from '@/lib/models/Product'
 import Order from '@/lib/models/Order'
 import Subscriber from '@/lib/models/Subscriber'
-import AdminLog from '@/lib/models/AdminLog'
+import AuditLog from '@/lib/models/AuditLog'
 import { AnalyticsEvent } from '@/lib/models/AnalyticsEvent'
 import { AutoDMLog } from '@/lib/models/AutoDMLog'
 
@@ -37,6 +37,7 @@ async function createAllIndexes() {
     await Order.collection.createIndex({ creatorId: 1, createdAt: -1 })
     await Order.collection.createIndex({ buyerEmail: 1 })
     await Order.collection.createIndex({ razorpayOrderId: 1 }, { unique: true, sparse: true })
+    await Order.collection.createIndex({ stripeSessionId: 1 }, { unique: true, sparse: true })
     await Order.collection.createIndex({ status: 1, createdAt: -1 })
 
     // ── SUBSCRIBER ────────────────────────────────────
@@ -46,9 +47,9 @@ async function createAllIndexes() {
     await Subscriber.collection.createIndex({ unsubscribeToken: 1 }, { unique: true })
 
     // ── ADMIN LOG ─────────────────────────────────────
-    await AdminLog.collection.createIndex({ createdAt: -1 })
-    await AdminLog.collection.createIndex({ action: 1, createdAt: -1 })
-    await AdminLog.collection.createIndex({ targetType: 1, targetId: 1 })
+    await AuditLog.collection.createIndex({ createdAt: -1 })
+    await AuditLog.collection.createIndex({ action: 1, createdAt: -1 })
+    await AuditLog.collection.createIndex({ targetType: 1, targetId: 1 })
 
     // ── ANALYTICS ─────────────────────────────────────
     await AnalyticsEvent.collection.createIndex({ creatorId: 1, createdAt: -1 })

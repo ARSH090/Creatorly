@@ -172,6 +172,7 @@ export interface IUser extends Document {
         };
     };
     primaryPaymentMethod?: 'upi' | 'razorpay' | 'stripe' | 'paypal' | 'bank';
+    pushSubscription?: any;
 
     // Timestamps
     createdAt: Date;
@@ -510,6 +511,7 @@ const UserSchema: Schema = new Schema({
     },
     storeSuspensionReason: { type: String, default: '' },
     adminNotes: { type: String, default: '' },
+    pushSubscription: { type: Schema.Types.Mixed },
 }, { timestamps: true });
 
 

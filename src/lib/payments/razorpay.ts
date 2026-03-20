@@ -124,3 +124,97 @@ export const syncRazorpayOffer = async (options: {
         throw error;
     }
 };
+
+/**
+ * Razorpay X — Instant Payout API
+ * Sends money directly to creator's UPI ID or bank account instantly
+ */
+export interface RazorpayXPayoutOptions {
+    accountNumber: string; // Razorpay X account number (from dashboard)
+    amount: number; // in paise
+    currency: string;
+    mode: 'UPI' | 'IMPS' | 'NEFT';
+    purpose: 'payout';
+    fund_account: {
+        account_type: 'vpa' | 'bank_account';
+        vpa?: { address: string }; // for UPI
+        bank_account?: { name: string; ifsc: string; account_number: string }; // for bank
+        contact: {
+            name: string;
+            email: string;
+            contact: string;
+            type: 'vendor';
+        };
+    };
+    narration: string;
+    reference_id: string;
+}
+
+export async function createRazorpayXPayout(options: RazorpayXPayoutOptions) {
+    const keyId = process.env.RAZORPAY_X_KEY_ID;
+    const keySecret = process.env.RAZORPAY_X_KEY_SECRET;
+    const accountNumber = process.env.RAZORPAY_X_ACCOUNT_NUMBER;
+
+    if (!keyId || !keySecret || !accountNumber) {
+        throw new Error('Razorpay X credentials not configured. Set RAZORPAY_X_KEY_ID, RAZORPAY_X_KEY_SECRET, RAZORPAY_X_ACCOUNT_NUMBER');
+    }
+
+    const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+
+    // Step 1: Create contact
+    const contactRes = await fetch('https://api.razorpay.com/v1/contacts', {
+        method: 'POST',
+        headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name: options.fund_account.contact.name,
+            email: options.fund_account.contact.email,
+            contact: options.fund_account.contact.contact,
+            type: 'vendor',
+        }),
+    });
+    const contact = await contactRes.json();
+    if (!contactRes.ok) throw new Error(`Contact creation failed: ${JSON.stringify(contact)}`);
+
+    // Step 2: Create fund account
+    const faPayload: any = {
+        contact_id: contact.id,
+        account_type: options.fund_account.account_type,
+    };
+    if (options.fund_account.account_type === 'vpa' && options.fund_account.vpa) {
+        faPayload.vpa = { address: options.fund_account.vpa.address };
+    } else if (options.fund_account.bank_account) {
+        faPayload.bank_account = options.fund_account.bank_account;
+    }
+
+    const faRes = await fetch('https://api.razorpay.com/v1/fund_accounts', {
+        method: 'POST',
+        headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify(faPayload),
+    });
+    const fundAccount = await faRes.json();
+    if (!faRes.ok) throw new Error(`Fund account creation failed: ${JSON.stringify(fundAccount)}`);
+
+    // Step 3: Create payout
+    const payoutRes = await fetch('https://api.razorpay.com/v1/payouts', {
+        method: 'POST',
+        headers: {
+            Authorization: `Basic ${auth}`,
+            'Content-Type': 'application/json',
+            'X-Payout-Idempotency': options.reference_id, // prevent duplicate payouts
+        },
+        body: JSON.stringify({
+            account_number: accountNumber,
+            fund_account_id: fundAccount.id,
+            amount: options.amount,
+            currency: options.currency,
+            mode: options.mode,
+            purpose: 'payout',
+            narration: options.narration,
+            reference_id: options.reference_id,
+        }),
+    });
+    const payout = await payoutRes.json();
+    if (!payoutRes.ok) throw new Error(`Payout creation failed: ${JSON.stringify(payout)}`);
+
+    return payout;
+}

@@ -56,10 +56,40 @@ export async function POST(req: NextRequest) {
         console.log(`[STRIPE WEBHOOK] Received: ${event.type}`);
 
         switch (event.type) {
-            case 'checkout.session.completed':
-            case 'payment_intent.succeeded': {
+            case 'checkout.session.completed': {
                 const session = event.data.object as any;
-                const orderId = session.metadata?.orderId || session.client_reference_id;
+                const order = await Order.findOne({ stripeSessionId: session.id });
+
+                if (order && order.status !== 'completed') {
+                    order.status = 'completed';
+                    order.paymentStatus = 'paid';
+                    order.paymentMethod = 'stripe';
+                    order.stripePaymentIntentId = session.payment_intent as string;
+                    order.paidAt = new Date();
+                    await order.save();
+
+                    // Trigger fulfillment
+                    const { DigitalDeliveryService } = await import('@/lib/services/digitalDelivery');
+                    await DigitalDeliveryService.fulfillOrder(order._id.toString());
+
+                    // Increment coupon usage
+                    if (order.couponId) {
+                        try {
+                            const CouponModel = (await import('@/lib/models/Coupon')).default;
+                            await CouponModel.findByIdAndUpdate(order.couponId, { $inc: { usedCount: 1 } });
+                        } catch (couponErr) {
+                            console.error('[STRIPE WEBHOOK] Coupon update failed:', couponErr);
+                        }
+                    }
+
+                    console.log(`[Stripe Webhook] Order ${order.orderNumber} fulfilled`);
+                }
+                break;
+            }
+
+            case 'payment_intent.succeeded': {
+                const intent = event.data.object as any;
+                const orderId = intent.metadata?.orderId || intent.client_reference_id;
 
                 if (orderId) {
                     const order = await Order.findById(orderId);
