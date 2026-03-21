@@ -97,6 +97,7 @@ export interface IProduct extends Document {
         fileKeys: string[];
         createdAt: Date;
     }>;
+    creatorState?: string;
 
     // Delivery & Protection
     downloadLimit?: number;

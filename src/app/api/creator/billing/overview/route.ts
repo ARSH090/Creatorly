@@ -11,7 +11,10 @@ async function getOverviewHandler(req: NextRequest, user: any) {
     try {
         await connectToDatabase();
         const overview = await BillingService.getBillingOverview(user._id.toString());
-        return NextResponse.json(overview);
+        return NextResponse.json({
+            ...overview,
+            gstr1ExportUrl: '/api/creator/billing/gstr1',
+        });
     } catch (error: any) {
         console.error('Billing Overview API Error:', error);
         return NextResponse.json(errorResponse('Failed to fetch billing overview', error.message), { status: 500 });

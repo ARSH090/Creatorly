@@ -28,7 +28,8 @@ export async function POST(req: NextRequest) {
             }
 
             // Create global Order
-            const orderNumber = `ORD-PP-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+            const { nanoid } = await import('nanoid');
+            const orderNumber = `ORD-PP-${nanoid(8).toUpperCase()}`;
             const amount = parseFloat(captureData.purchase_units[0].payments.captures[0].amount.value);
 
             const order = await Order.create({

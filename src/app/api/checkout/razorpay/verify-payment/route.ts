@@ -102,8 +102,18 @@ export async function POST(req: NextRequest) {
 
         // GST & Platform Fee calculation
         const isIndia = product.pricing?.currency === 'INR';
-        const gstRate = isIndia ? 0.18 : 0;
-        const taxAmount = Math.round(amount * gstRate);
+        let taxAmount = 0;
+        let gstBreakdown = null;
+        if (isIndia) {
+            const { calculateGST } = await import('@/lib/compliance/gst');
+            const amountInRupees = amount / 100;
+            gstBreakdown = calculateGST(amountInRupees, {
+                rate: 18,
+                stateOfOrigin: product.creatorState || 'MH',
+                stateOfConsumption: body.buyerState || 'MH',
+            });
+            taxAmount = Math.round((gstBreakdown.cgst + gstBreakdown.sgst + gstBreakdown.igst) * 100);
+        }
         const platformFee = Math.round(amount * 0.05); // 5% flat fee
 
         const order = await Order.create({
@@ -135,11 +145,15 @@ export async function POST(req: NextRequest) {
             accessToken,
             accessTokenExpiry,
             isGstInvoice: !!body.gstin,
-            gstDetails: body.gstin ? {
+            gstDetails: body.gstin || gstBreakdown ? {
                 gstin: body.gstin,
                 businessName: body.businessName,
-                businessAddress: body.businessAddress
-            } : undefined
+                businessAddress: body.businessAddress,
+                cgst: gstBreakdown?.cgst || 0,
+                sgst: gstBreakdown?.sgst || 0,
+                igst: gstBreakdown?.igst || 0,
+                totalGst: gstBreakdown ? (gstBreakdown.cgst + gstBreakdown.sgst + gstBreakdown.igst) : 0,
+            } : undefined,
         });
 
         // 7. Update Subscriber Stats

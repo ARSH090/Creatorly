@@ -291,6 +291,33 @@ export default function BillingPage() {
                 </div>
             </div>
 
+            {/* GSTR-1 Export */}
+            <div className="bg-zinc-900/40 border border-white/8 rounded-2xl p-6">
+                <h3 className="text-white font-bold text-lg mb-2">GSTR-1 Export</h3>
+                <p className="text-zinc-500 text-sm mb-4">Download GST-compliant sales report for filing with your CA.</p>
+                <div className="flex items-center gap-3">
+                    <select
+                        className="bg-zinc-800 border border-white/8 rounded-xl px-4 py-2 text-white text-sm"
+                        id="gstr-month"
+                        defaultValue={new Date().getMonth() + 1}
+                    >
+                        {['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].map((m, i) => (
+                            <option key={i} value={i+1}>{m} {new Date().getFullYear()}</option>
+                        ))}
+                    </select>
+                    <button
+                        onClick={() => {
+                            const month = (document.getElementById('gstr-month') as HTMLSelectElement)?.value || new Date().getMonth()+1;
+                            const year = new Date().getFullYear();
+                            window.open(`/api/creator/billing/gstr1?month=${month}&year=${year}`, '_blank');
+                        }}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-semibold transition-all"
+                    >
+                        Download GSTR-1 CSV
+                    </button>
+                </div>
+            </div>
+
             {/* History Table */}
             <div className="bg-zinc-900/40 backdrop-blur-2xl rounded-[3rem] p-10 border border-white/5">
                 <div className="flex items-center justify-between mb-10">

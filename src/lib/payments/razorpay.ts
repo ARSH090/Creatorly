@@ -1,6 +1,7 @@
 
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
+import { createCircuitBreaker } from '@/lib/resilience/circuitBreaker';
 
 if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
     console.warn('Razorpay credentials missing in environment variables');
@@ -10,11 +11,6 @@ export const razorpay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID || 'dummy_key_id_for_build',
     key_secret: process.env.RAZORPAY_KEY_SECRET || 'dummy_secret_for_build',
 });
-
-// ── FIX 11: Circuit Breaker logic ──
-let cbState = 'CLOSED';
-let lastErrorTime = 0;
-const CB_THRESHOLD = 5000; // 5 seconds cooldow
 
 /**
  * Returns a Razorpay instance. If credentials are provided, it returns a custom instance (for P2P).
@@ -37,26 +33,27 @@ export interface IRazorpayOrderOptions {
     notes?: Record<string, string>;
 }
 
-export const createRazorpayOrder = async (options: IRazorpayOrderOptions, credentials?: { keyId: string; keySecret: string }, idempotencyKey?: string) => {
-    if (cbState === 'OPEN') {
-        if (Date.now() - lastErrorTime > CB_THRESHOLD) cbState = 'HALF_OPEN';
-        else throw new Error('Razorpay service temporarily unavailable (Circuit Breaker OPEN)');
-    }
+// Create the circuit breaker once at module level (not inside the function)
+const _razorpayOrderCreate = async (instance: any, options: IRazorpayOrderOptions, requestOptions: any) => {
+    return instance.orders.create(options, requestOptions);
+};
+const razorpayOrderBreaker = createCircuitBreaker(_razorpayOrderCreate);
+razorpayOrderBreaker.fallback(() => {
+    throw new Error('Razorpay is temporarily unavailable. Please try again in a moment.');
+});
 
+export const createRazorpayOrder = async (
+    options: IRazorpayOrderOptions,
+    credentials?: { keyId: string; keySecret: string },
+    idempotencyKey?: string
+) => {
     try {
         const instance = getRazorpayInstance(credentials);
-        const requestOptions = idempotencyKey ? {
-            headers: {
-                'X-Razorpay-Idempotency-Key': idempotencyKey
-            }
-        } : undefined;
-        
-        const order = await instance.orders.create(options, requestOptions as any);
-        cbState = 'CLOSED';
-        return order;
-    } catch (error: any) {
-        lastErrorTime = Date.now();
-        cbState = 'OPEN';
+        const requestOptions = idempotencyKey
+            ? { headers: { 'X-Razorpay-Idempotency-Key': idempotencyKey } }
+            : undefined;
+        return await razorpayOrderBreaker.fire(instance, options, requestOptions);
+    } catch (error) {
         console.error('Error creating Razorpay order:', error);
         throw error;
     }

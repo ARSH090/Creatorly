@@ -13,6 +13,7 @@ import { BlockRenderer, themeToRecord } from './BlockRenderer';
 import ChatWidget from './ChatWidget';
 import { CustomCursor } from './theme/CustomCursor';
 import { BackgroundAnimation } from './theme/BackgroundAnimation';
+import { sanitizeCss } from '@/lib/utils/sanitizer';
 
 interface StorefrontRendererProps {
     blocks: StorefrontBlock[];
@@ -142,7 +143,7 @@ export default function StorefrontRenderer({
 
             {/* Custom CSS */}
             {theme.customCss && (
-                <style dangerouslySetInnerHTML={{ __html: theme.customCss }} />
+                <style dangerouslySetInnerHTML={{ __html: sanitizeCss(theme.customCss) }} />
             )}
 
             {/* Main content */}

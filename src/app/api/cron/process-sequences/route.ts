@@ -1,15 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withCronAuth } from '@/lib/auth/cron';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import SequenceEnrollment from '@/lib/models/SequenceEnrollment';
 import EmailSequence from '@/lib/models/EmailSequence';
 import { QueueJob } from '@/lib/models/QueueJob';
 
-export async function POST(req: NextRequest) {
-    // Upstash QStash logic or simply CRON_SECRET for now as per project convention
-    const authHeader = req.headers.get('authorization');
-    if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const POST = withCronAuth(async (req: NextRequest) => {
 
     try {
         await connectToDatabase();
@@ -76,7 +72,7 @@ export async function POST(req: NextRequest) {
         console.error('[Sequence Cron] Fatal error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});
 
 // Keep GET for manual triggering/ease of testing during dev
 export async function GET(req: NextRequest) {

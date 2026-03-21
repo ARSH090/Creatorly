@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withCronAuth } from '@/lib/auth/cron';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { Subscription } from '@/lib/models/Subscription';
 import { User } from '@/lib/models/User';
 import { sendTrialReminderEmail } from '@/lib/services/email';
 
-export async function GET(req: NextRequest) {
-    const authHeader = req.headers.get('authorization');
-    if (process.env.NODE_ENV === 'production' && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+export const GET = withCronAuth(async (req: NextRequest) => {
 
     try {
         await connectToDatabase();
@@ -57,4 +54,4 @@ export async function GET(req: NextRequest) {
         console.error('[Cron] Trial reminder error:', error);
         return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
     }
-}
+});

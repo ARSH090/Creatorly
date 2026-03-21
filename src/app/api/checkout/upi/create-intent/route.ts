@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
 
         // Generate UPI URI
         // upi://pay?pa=upiId&pn=DisplayName&am=Amount&cu=INR&tn=OrderId
-        const orderId = `ord_${Math.random().toString(36).substring(2, 10)}`;
+        const { nanoid } = await import('nanoid');
+        const orderId = `ord_${nanoid(10)}`;
         const upiUri = `upi://pay?pa=${upiConfig.upiId}&pn=${encodeURIComponent(creator?.displayName ?? '')}&am=${amount}&cu=INR&tn=${encodeURIComponent(product.title.slice(0, 20))}`;
 
         return NextResponse.json({

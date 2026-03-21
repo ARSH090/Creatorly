@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Instagram, Twitter as TwitterIcon, Share2, Youtube, Music, Linkedin, Pin, Mail } from 'lucide-react';
 import type { SocialFeedSettings } from '@/types/storefront-blocks.types';
+import { sanitizeHtml } from '@/lib/utils/sanitizer';
 
 interface Props {
     settings: SocialFeedSettings;
@@ -117,7 +118,7 @@ export default function SocialFeedWidget({ settings, theme }: Props) {
             return (
                 <div
                     className="w-full h-full overflow-hidden flex items-center justify-center p-2"
-                    dangerouslySetInnerHTML={{ __html: data.html }}
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(data.html || '') }}
                 />
             );
         }

