@@ -1,47 +1,45 @@
-import { Redis } from 'ioredis';
+import { Redis as UpstashRedis } from '@upstash/redis';
 
 const REDIS_URL = process.env.REDIS_URL;
+const isEdge = process.env.NEXT_RUNTIME === 'edge';
 
 class RateLimiter {
-    private redis: Redis | null = null;
+    private redis: any = null;
 
     constructor() {
-        // Only initialize Redis if URL is configured
-        if (REDIS_URL) {
-            const redisOptions: any = {
-                maxRetriesPerRequest: 3,
-                retryStrategy: (times: number) => {
-                    if (times > 3) {
-                        console.warn('Redis connection failed after 3 retries, rate limiting disabled');
-                        return null;
-                    }
-                    return Math.min(times * 50, 2000);
-                },
-                lazyConnect: true,
-                enableOfflineQueue: false,
-            };
-
-            // Add TLS config if using rediss:// protocol (Upstash)
-            if (REDIS_URL.startsWith('rediss://')) {
-                redisOptions.tls = {
-                    rejectUnauthorized: false, // Required for Upstash
-                };
+        if (isEdge) {
+            if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+                this.redis = new UpstashRedis({
+                    url: process.env.UPSTASH_REDIS_REST_URL,
+                    token: process.env.UPSTASH_REDIS_REST_TOKEN,
+                });
             }
-
-            this.redis = new Redis(REDIS_URL, redisOptions);
-
-            // Handle errors gracefully
-            this.redis.on('error', (err) => {
-                console.warn('Redis rate limiter error (falling back to no rate limit):', err.message);
-            });
-
-            // Try to connect, but don't crash if it fails
-            this.redis.connect().catch((err) => {
-                console.warn('Failed to connect Redis for rate limiting:', err.message);
-                this.redis = null;
-            });
         } else {
-            console.warn('⚠ REDIS_URL not set — rate limiting disabled');
+            // Node.js Runtime - Use ioredis
+            try {
+                const IORedis = require('ioredis');
+                if (REDIS_URL) {
+                    const redisOptions: any = {
+                        maxRetriesPerRequest: 3,
+                        retryStrategy: (times: number) => {
+                            if (times > 3) return null;
+                            return Math.min(times * 50, 2000);
+                        },
+                        lazyConnect: true,
+                        enableOfflineQueue: false,
+                    };
+
+                    if (REDIS_URL.startsWith('rediss://')) {
+                        redisOptions.tls = { rejectUnauthorized: false };
+                    }
+
+                    this.redis = new IORedis(REDIS_URL, redisOptions);
+                    this.redis.on('error', (err: any) => console.warn('Rate limit Redis error (failing open):', err.message));
+                    this.redis.connect().catch((err: any) => console.warn('Rate limit Redis connect fail:', err.message));
+                }
+            } catch (e) {
+                console.error('Failed to initialize ioredis for rate limiting:', e);
+            }
         }
     }
 
@@ -62,7 +60,8 @@ class RateLimiter {
             if (count === 1) {
                 await this.redis.expire(key, window);
             }
-            return count > limit;
+            // Upstash returns count directly, ioredis returns count directly
+            return Number(count) > limit;
         } catch (error) {
             console.error('Rate limit check failed:', error);
             return false; // Fail open - allow request if Redis is down

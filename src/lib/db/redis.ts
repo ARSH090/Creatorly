@@ -1,53 +1,56 @@
-import Redis from 'ioredis';
+import { Redis as UpstashRedis } from '@upstash/redis';
 
 const getCleanRedisUrl = () => {
-  const url = process.env.REDIS_URL || process.env.REDIS || '';
-  // Fix for invalid Vercel env vars containing CLI flags (e.g. "--tls -u redis://..." or trailing " --tls")
-  // Handles both plain spaces and URL-encoded spaces (%20)
-  const cleanUrl = url.replace(/%20/g, ' ').split(' ')[0];
-  const match = cleanUrl.match(/(rediss?:\/\/[^\s]+)/);
-  return match ? match[1] : cleanUrl;
+    const url = process.env.REDIS_URL || process.env.REDIS || '';
+    const cleanUrl = url.replace(/%20/g, ' ').split(' ')[0];
+    const match = cleanUrl.match(/(rediss?:\/\/[^\s]+)/);
+    return match ? match[1] : cleanUrl;
 };
 
 const REDIS_URL = getCleanRedisUrl();
+const isEdge = process.env.NEXT_RUNTIME === 'edge';
 
+let redis: any = null;
 
-let redis: Redis | null = null;
-
-if (REDIS_URL) {
-  // Configure Redis with TLS support for Upstash
-  const redisOptions: any = {
-    maxRetriesPerRequest: 3,
-    retryStrategy: (times: number) => {
-      if (times > 3) {
-        console.warn('Redis connection failed after 3 retries');
-        return null;
-      }
-      return Math.min(times * 50, 2000);
-    },
-    lazyConnect: true,
-    enableOfflineQueue: false,
-  };
-
-  // Add TLS config if using rediss:// protocol (Upstash)
-  if (REDIS_URL.startsWith('rediss://')) {
-    redisOptions.tls = {
-      rejectUnauthorized: false, // Required for Upstash
-    };
-  }
-
-  redis = new Redis(REDIS_URL, redisOptions);
-
-  redis.on('error', (err) => {
-    console.warn('Redis connection error:', err.message);
-  });
-
-  redis.connect().catch((err) => {
-    console.warn('Failed to connect to Redis:', err.message);
-    redis = null;
-  });
+if (isEdge) {
+    if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
+        redis = new UpstashRedis({
+            url: process.env.UPSTASH_REDIS_REST_URL,
+            token: process.env.UPSTASH_REDIS_REST_TOKEN,
+        });
+    } else {
+        console.warn('⚠ Upstash REST credentials not set for Edge Runtime');
+    }
 } else {
-  console.warn('⚠ REDIS_URL not set — rate limiting will fall back to in-memory');
+    // Node.js Runtime - Use ioredis
+    try {
+        const IORedis = require('ioredis');
+        if (REDIS_URL) {
+            const redisOptions: any = {
+                maxRetriesPerRequest: 3,
+                retryStrategy: (times: number) => {
+                    if (times > 3) return null;
+                    return Math.min(times * 50, 2000);
+                },
+                lazyConnect: true,
+                enableOfflineQueue: false,
+            };
+
+            if (REDIS_URL.startsWith('rediss://')) {
+                redisOptions.tls = { rejectUnauthorized: false };
+            }
+
+            redis = new IORedis(REDIS_URL, redisOptions);
+            redis.on('error', (err: any) => console.warn('Redis error:', err.message));
+            redis.connect().catch((err: any) => console.warn('Redis connect failed:', err.message));
+        }
+    } catch (e) {
+        console.error('Failed to initialize ioredis:', e);
+    }
+}
+
+if (!redis && !isEdge) {
+    console.warn('⚠ Redis not initialized — falling back to null');
 }
 
 export default redis;
