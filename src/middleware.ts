@@ -6,7 +6,8 @@ import { authRateLimit, usernameCheckRateLimit, paymentRateLimit, publicApiRateL
 const isProtectedRoute = createRouteMatcher([
     '/dashboard(.*)',
     '/admin(.*)',
-    '/onboarding(.*)',
+    // NOTE: /onboarding is NOT here — it handles its own auth redirect internally
+    // New users arrive at /onboarding without being "logged into dashboard" yet
     '/api/user(.*)',
     // API routes (creator, admin, products etc.) are protected at the route level via withAuth
 ]);
@@ -16,6 +17,7 @@ const isAuthRoute = createRouteMatcher([
     '/auth/login(.*)',
     '/auth/register(.*)',
     '/auth/forgot-password(.*)',
+    '/auth/reset-password(.*)',
     '/sign-in(.*)',
     '/sign-up(.*)',
     '/login(.*)',
@@ -33,12 +35,35 @@ const isPublicRoute = createRouteMatcher([
     '/pricing',
     '/features',
     '/blog(.*)',
+    // Legal pages — all must be public (no Clerk auth check)
     '/terms',
+    '/terms-of-service(.*)',
     '/privacy',
-    '/refund-policy',
+    '/privacy-policy(.*)',
+    '/refund-policy(.*)',
+    '/legal(.*)',
     '/thank-you',
     '/learn(.*)',
     '/book(.*)',
+    // Checkout — buyer-facing, no login required
+    '/checkout(.*)',
+    '/cart(.*)',
+    '/order-success(.*)',
+    '/upsell(.*)',
+    '/p/(.*)',
+    // Auth pages
+    '/auth/(.*)',
+    '/sign-in(.*)',
+    '/sign-up(.*)',
+    '/signup(.*)',
+    // Other public pages
+    '/explore(.*)',
+    '/offline',
+    '/subscribe(.*)',
+    '/unsubscribe(.*)',
+    '/onboarding(.*)',
+    '/setup/(.*)',
+    '/portal/(.*)',
     '/[username](.*)',
 ]);
 

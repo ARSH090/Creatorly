@@ -12,10 +12,38 @@ interface Props {
 }
 
 export default async function SuccessPage({ searchParams }: Props) {
-    const { orderId } = await searchParams;
+    const params = await searchParams;
+    // Support both ?orderId= (primary) and ?order_number= (legacy/alternative)
+    const orderId = (params.orderId || params.order_number || params.session_id) as string | undefined;
 
     if (!orderId || typeof orderId !== 'string') {
-        notFound();
+        // Show a helpful message instead of 404
+        return (
+            <div className="min-h-screen bg-[#030303] flex items-center justify-center p-6">
+                <div className="max-w-md w-full bg-white/[0.03] border border-white/10 rounded-[2.5rem] p-12 text-center space-y-6">
+                    <div className="w-20 h-20 bg-indigo-500/10 rounded-full flex items-center justify-center mx-auto">
+                        <Package className="w-10 h-10 text-indigo-400" />
+                    </div>
+                    <h1 className="text-3xl font-black uppercase italic tracking-tighter text-white">Order Complete</h1>
+                    <p className="text-zinc-500 font-medium">Check your email for your purchase confirmation and download links.</p>
+                    <Link href="/" className="block w-full py-4 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all text-center">
+                        Return Home
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    // If orderId looks like a Stripe session ID (starts with cs_), handle differently
+    if (orderId.startsWith('cs_')) {
+        // Stripe checkout session - find order by stripeSessionId
+        await connectToDatabase();
+        const stripeOrder = await Order.findOne({ stripeSessionId: orderId });
+        if (stripeOrder) {
+            // Redirect to the correct orderId-based URL
+            const { redirect } = await import('next/navigation');
+            redirect(`/checkout/success?orderId=${stripeOrder._id.toString()}`);
+        }
     }
 
     await connectToDatabase();
