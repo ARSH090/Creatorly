@@ -85,10 +85,16 @@ export default function ComparisonSection() {
                         <thead>
                             <tr className="border-b border-white/10">
                                 <th className="text-left py-6 px-4 md:px-6 text-white font-semibold">Feature</th>
-                                <th className="text-center py-6 px-4 md:px-6">
+                                <th className="text-center py-6 px-4 md:px-6 relative">
+                                    {/* Column Header Glow */}
+                                    <motion.div
+                                        className="absolute inset-0 bg-indigo-500/10 blur-xl rounded-t-2xl -z-10"
+                                        animate={{ opacity: [0.5, 0.8, 0.5] }}
+                                        transition={{ duration: 4, repeat: Infinity }}
+                                    />
                                     <div className="flex flex-col items-center gap-2">
-                                        <span className="text-white font-bold">Creatorly</span>
-                                        <span className="text-xs text-emerald-400 font-semibold">✓ All-in-One</span>
+                                        <span className="text-white font-bold relative z-10">Creatorly</span>
+                                        <span className="text-xs text-emerald-400 font-semibold relative z-10">✓ All-in-One</span>
                                     </div>
                                 </th>
                                 <th className="text-center py-6 px-4 md:px-6">
@@ -109,14 +115,21 @@ export default function ComparisonSection() {
                             {features.map((feature, idx) => (
                                 <motion.tr
                                     key={feature.name}
-                                    className="border-b border-white/5 hover:bg-white/2 transition-colors"
+                                    className="border-b border-white/5 hover:bg-white/[0.03] transition-colors relative cursor-default group"
                                     variants={itemVariants}
+                                    whileHover={{
+                                        x: 4,
+                                        backgroundColor: 'rgba(255,255,255,0.03)',
+                                        transition: { duration: 0.2 }
+                                    }}
                                 >
                                     <td className="py-6 px-4 md:px-6">
                                         <span className="text-white font-medium">{feature.name}</span>
                                     </td>
-                                    <td className="py-6 px-4 md:px-6">
-                                        <FeatureCell value={feature.creatorly} />
+                                    <td className="py-6 px-4 md:px-6 relative">
+                                        {/* Creatorly Cell Highlight on Hover Row */}
+                                        <div className="absolute inset-y-0 inset-x-2 bg-indigo-500/5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity z-0 pointer-events-none" />
+                                        <div className="relative z-10"><FeatureCell value={feature.creatorly} /></div>
                                     </td>
                                     <td className="py-6 px-4 md:px-6">
                                         <FeatureCell value={feature.stanStore} />

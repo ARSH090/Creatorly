@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Check } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const PricingPreviewSection: React.FC = () => {
     return (
@@ -21,7 +22,15 @@ const PricingPreviewSection: React.FC = () => {
 
                 <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-12">
                     {/* Free Plan */}
-                    <div className="p-8 rounded-3xl border border-white/10 bg-zinc-900/30 flex flex-col">
+                    <motion.div
+                        className="p-8 rounded-3xl border border-white/10 bg-zinc-900/30 flex flex-col relative"
+                        initial={{ opacity: 0, y: 30, rotateY: 10 }}
+                        whileInView={{ opacity: 1, y: 0, rotateY: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.6 }}
+                        whileHover={{ y: -5, rotateY: -2, scale: 1.02, boxShadow: '0 20px 40px rgba(0,0,0,0.4)', transition: { duration: 0.2 } }}
+                        style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
+                    >
                         <h3 className="text-xl font-bold text-white mb-2">Free</h3>
                         <div className="flex items-baseline gap-1 mb-2">
                             <span className="text-4xl font-bold text-white">₹0</span>
@@ -38,10 +47,10 @@ const PricingPreviewSection: React.FC = () => {
                             ))}
                         </ul>
 
-                        <Link href="/auth/register" target="_blank" rel="noopener noreferrer" className="w-full py-4 rounded-xl bg-white/10 text-white font-bold text-center hover:bg-white/20 transition-colors">
+                        <Link href="/auth/register" target="_blank" rel="noopener noreferrer" className="w-full py-4 rounded-xl bg-white/10 text-white font-bold text-center hover:bg-white/20 transition-colors" style={{ transform: 'translateZ(20px)' }}>
                             Start Free
                         </Link>
-                    </div>
+                    </motion.div>
 
                     {/* Pro Plan */}
                     <div className="p-8 rounded-3xl border border-indigo-500/30 bg-indigo-500/5 flex flex-col relative overflow-hidden">

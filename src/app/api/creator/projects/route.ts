@@ -7,6 +7,7 @@ import { successResponse, errorResponse } from '@/types/api';
 
 import { ProjectTemplate } from '@/lib/models/ProjectTemplate';
 import { Task } from '@/lib/models/Task';
+import crypto from 'crypto';
 
 /**
  * GET - List projects for a creator
@@ -45,8 +46,9 @@ async function postHandler(req: NextRequest, user: any) {
         }
 
         // Generate project number and portal token
-        const projectNumber = `PRJ-${Math.floor(100000 + Math.random() * 900000)}`;
-        const clientPortalToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const { nanoid } = await import('nanoid');
+        const projectNumber = `PRJ-${nanoid(8).toUpperCase()}`;
+        const clientPortalToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
 
         let finalMilestones = body.milestones || [];
         let template = null;

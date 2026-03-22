@@ -5,6 +5,7 @@ import User from '@/lib/models/User';
 import { createRazorpayOrder } from '@/lib/payments/razorpay';
 import { validateCoupon } from '@/lib/services/couponValidator';
 import { errorResponse } from '@/types/api';
+import crypto from 'crypto';
 
 /**
  * POST /api/checkout/razorpay/create-digital-order
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
             razorpayOrder = await createRazorpayOrder({
                 amount: Math.round(finalAmount * 100), // to paise
                 currency: product.pricing?.currency || 'INR',
-                receipt: `rcpt_${Math.random().toString(36).substring(2, 10)}`,
+                receipt: `rcpt_${crypto.randomUUID().replace(/-/g, '').substring(0, 10)}`,
                 notes: {
                     productId: product._id.toString(),
                     customerEmail,

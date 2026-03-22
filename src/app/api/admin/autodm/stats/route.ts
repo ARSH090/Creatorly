@@ -29,8 +29,9 @@ export async function GET(req: NextRequest) {
 
         const creatorsUsingAutoDM = await User.countDocuments({ 'instagramConnection.isConnected': true });
 
-        // Mock Platform flag for the toggle button
-        const autoDMEnabled = true;
+        const { PlatformSettings } = await import('@/lib/models/PlatformSettings');
+        const settings = await PlatformSettings.findOne().lean();
+        const autoDMEnabled = settings?.featureToggles?.automationEnabled ?? true;
 
         return NextResponse.json({
             totalActiveRules,

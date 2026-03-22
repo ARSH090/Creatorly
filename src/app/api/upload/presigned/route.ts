@@ -6,10 +6,15 @@ import { BLOCKED_FILE_EXTENSIONS, BLOCKED_MIME_TYPES } from '@/lib/utils/fileVal
 
 export const POST = withAuth(async (req, user) => {
     try {
-        const { filename, contentType, type } = await req.json();
+        const { filename, contentType, type, fileSize } = await req.json();
 
-        if (!filename || !contentType) {
-            return NextResponse.json({ error: 'Filename and content type are required' }, { status: 400 });
+        if (!filename || !contentType || !fileSize) {
+            return NextResponse.json({ error: 'Filename, content type, and file size are required' }, { status: 400 });
+        }
+
+        // Enforce 100MB limit
+        if (fileSize > 100 * 1024 * 1024) {
+            return NextResponse.json({ error: 'File size exceeds 100MB' }, { status: 400 });
         }
 
         // Extract extension
@@ -32,16 +37,16 @@ export const POST = withAuth(async (req, user) => {
         }
 
         // Generate a clean, unique key
-        const { sanitizeKey } = await import('@/lib/storage/s3');
+        const { sanitizeKey, getPublicUrl, getPresignedUploadUrl } = await import('@/lib/storage/s3');
         const cleanName = sanitizeKey(filename);
         const fileExtension = ext || 'bin';
         const key = `${type || 'general'}/${user._id}/${Date.now()}-${crypto.randomUUID()}.${fileExtension}`;
 
-        const { getPublicUrl, getPresignedUploadUrl } = await import('@/lib/storage/s3');
-        const uploadUrl = await getPresignedUploadUrl(key, contentType, 300); // 5 min expiry
+        const uploadData = await getPresignedUploadUrl(key, contentType, fileSize);
 
         return NextResponse.json({
-            uploadUrl,
+            uploadUrl: uploadData.url,
+            fields: uploadData.fields,
             key,
             publicUrl: getPublicUrl(key)
         });

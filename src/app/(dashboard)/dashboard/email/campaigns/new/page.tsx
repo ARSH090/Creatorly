@@ -13,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import RichTextEditor from '@/components/dashboard/RichTextEditor';
+import { sanitizeHtml } from '@/lib/utils/sanitizer';
 
 export default function NewCampaignPage() {
     const router = useRouter();
@@ -372,7 +373,7 @@ export default function NewCampaignPage() {
                                 <div className="p-10 flex-1 overflow-y-auto scrollbar-hide bg-white/5">
                                     <div className="max-w-none prose prose-invert prose-indigo prose-sm sm:prose-base font-sans leading-relaxed text-zinc-300">
                                         {content ? (
-                                            <div dangerouslySetInnerHTML={{ __html: content.replace(/\{\{first_name\}\}/g, 'Subscriber') }} />
+                                            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content.replace(/\{\{first_name\}\}/g, 'Subscriber')) }} />
                                         ) : (
                                             <div className="h-full flex flex-col items-center justify-center text-center space-y-4 py-20 opacity-20">
                                                 <Edit3 className="w-12 h-12" />

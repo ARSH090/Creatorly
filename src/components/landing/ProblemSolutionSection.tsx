@@ -13,7 +13,12 @@ const ProblemSolutionSection: React.FC = () => {
                     <p className="text-zinc-400 max-w-2xl mx-auto">Stop stitching together 10 different apps. Creatorly unifies your entire business.</p>
                 </div>
 
-                <div className="grid md:grid-cols-2 gap-8 md:gap-12 relative">
+                <motion.div
+                    className="grid md:grid-cols-2 gap-8 md:gap-12 relative"
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true, margin: '-100px' }}
+                >
                     {/* Divider Line for Desktop */}
                     <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-transparent via-white/10 to-transparent -translate-x-1/2" />
 
@@ -31,12 +36,20 @@ const ProblemSolutionSection: React.FC = () => {
                             "Zero data on who your actual superfans are."
                         ].map((item, i) => (
                             <motion.div
-                                initial={{ opacity: 0, x: -20 }}
+                                initial={{ opacity: 0, x: -30 }}
                                 whileInView={{ opacity: 1, x: 0 }}
                                 viewport={{ once: true }}
-                                transition={{ delay: i * 0.1 }}
+                                transition={{ delay: i * 0.12, duration: 0.5 }}
                                 key={i}
-                                className="p-6 rounded-2xl bg-red-500/5 border border-red-500/10 flex gap-4 items-start"
+                                className="p-6 rounded-2xl bg-red-500/5 border border-red-500/10 flex gap-4 items-start group cursor-default"
+                                whileHover={{
+                                    x: 6,
+                                    scale: 1.01,
+                                    boxShadow: '0 8px 30px rgba(239,68,68,0.1)',
+                                    borderColor: 'rgba(239,68,68,0.2)',
+                                    transition: { duration: 0.2 }
+                                }}
+                                style={{ transformStyle: 'preserve-3d' }}
                             >
                                 <div className="shrink-0 w-6 h-6 rounded-full bg-red-500/20 flex items-center justify-center text-red-500 mt-0.5">
                                     <X className="w-3 h-3" />
@@ -60,12 +73,20 @@ const ProblemSolutionSection: React.FC = () => {
                             "Deep analytics and own your customer data forever."
                         ].map((item, i) => (
                             <motion.div
-                                initial={{ opacity: 0, x: 20 }}
+                                initial={{ opacity: 0, x: 30 }}
                                 whileInView={{ opacity: 1, x: 0 }}
                                 viewport={{ once: true }}
-                                transition={{ delay: i * 0.1 }}
+                                transition={{ delay: i * 0.12, duration: 0.5 }}
                                 key={i}
-                                className="p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex gap-4 items-start"
+                                className="p-6 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 flex gap-4 items-start group cursor-default"
+                                whileHover={{
+                                    x: -6,
+                                    scale: 1.01,
+                                    boxShadow: '0 8px 30px rgba(99,102,241,0.12)',
+                                    borderColor: 'rgba(99,102,241,0.25)',
+                                    transition: { duration: 0.2 }
+                                }}
+                                style={{ transformStyle: 'preserve-3d' }}
                             >
                                 <div className="shrink-0 w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-500 mt-0.5">
                                     <Check className="w-3 h-3" />
@@ -74,7 +95,7 @@ const ProblemSolutionSection: React.FC = () => {
                             </motion.div>
                         ))}
                     </div>
-                </div>
+                </motion.div>
             </div>
         </section>
     );

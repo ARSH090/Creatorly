@@ -24,11 +24,15 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
     try {
         const rawBody = await request.text();
         const signature = request.headers.get('x-hub-signature-256');
 
         if (!signature || !validateSignature(signature, rawBody)) {
+            clearTimeout(timeoutId);
             return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
         }
 
@@ -42,6 +46,7 @@ export async function POST(request: NextRequest) {
 
         if (value?.messages) {
             for (const message of value.messages) {
+                // Pass controller signal if needed, but here we just bound the entire POST
                 await handleIncomingMessage(message, value.metadata.phone_number_id);
             }
         }
@@ -52,10 +57,16 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        clearTimeout(timeoutId);
         return NextResponse.json({ success: true });
     } catch (error: any) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            console.warn('[WhatsApp Webhook] Timeout after 8s - responding 200 to Meta');
+            return NextResponse.json({ success: true, timeout: true });
+        }
         console.error('[WhatsApp Webhook] POST Error:', error);
-        return NextResponse.json({ success: true }, { status: 200 });
+        return NextResponse.json({ success: true }, { status: 200 }); // Always 200 to Meta
     }
 }
 

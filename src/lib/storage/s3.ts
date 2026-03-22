@@ -1,6 +1,7 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { getSignedUrl as getCloudFrontSignedUrl } from '@aws-sdk/cloudfront-signer';
+import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 
 export const s3Client = new S3Client({
     region: process.env.AWS_REGION || 'ap-south-1',
@@ -10,13 +11,20 @@ export const s3Client = new S3Client({
     },
 });
 
-export async function getPresignedUploadUrl(key: string, contentType: string, expiresIn = 3600) {
-    const command = new PutObjectCommand({
-        Bucket: process.env.AWS_S3_BUCKET,
+export async function getPresignedUploadUrl(key: string, contentType: string, fileSize: number) {
+    const { url, fields } = await createPresignedPost(s3Client, {
+        Bucket: process.env.AWS_S3_BUCKET!,
         Key: key,
-        ContentType: contentType,
+        Conditions: [
+            ['content-length-range', 0, 100 * 1024 * 1024], // Max 100MB
+            ['eq', '$Content-Type', contentType],
+        ],
+        Fields: {
+            'Content-Type': contentType,
+        },
+        Expires: 3600,
     });
-    return await getSignedUrl(s3Client, command, { expiresIn });
+    return { url, fields };
 }
 
 export async function getDownloadUrl(key: string, expiresIn = 3 * 24 * 3600) {

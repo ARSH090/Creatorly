@@ -8,32 +8,35 @@ const Footer: React.FC = () => {
         <div>
           <p className="text-white font-bold mb-6 tracking-tighter uppercase text-xs">Infrastructure</p>
           <ul className="space-y-4 text-[10px] font-bold text-zinc-500">
-            <li><Link href="#features" className="hover:text-white transition-colors uppercase tracking-widest">Storefront</Link></li>
-            <li><Link href="#features" className="hover:text-white transition-colors uppercase tracking-widest">Analytics</Link></li>
-            <li><Link href="#features" className="hover:text-white transition-colors uppercase tracking-widest">Payments</Link></li>
-            <li><Link href="/auth/register" className="text-indigo-400 hover:text-white transition-colors uppercase tracking-widest">Join Platform</Link></li>
+            <li className="group"><Link href="#features" className="inline-block hover:text-white transition-all transform group-hover:translate-x-1 uppercase tracking-widest">Storefront</Link></li>
+            <li className="group"><Link href="#features" className="inline-block hover:text-white transition-all transform group-hover:translate-x-1 uppercase tracking-widest">Analytics</Link></li>
+            <li className="group"><Link href="#features" className="inline-block hover:text-white transition-all transform group-hover:translate-x-1 uppercase tracking-widest">Payments</Link></li>
+            <li className="group"><Link href="/auth/register" className="inline-block text-indigo-400 hover:text-white transition-all transform group-hover:translate-x-1 uppercase tracking-widest">Join Platform</Link></li>
           </ul>
         </div>
         <div>
           <p className="text-white font-bold mb-6 tracking-tighter uppercase text-xs">Legal</p>
           <ul className="space-y-4 text-[10px] font-bold text-zinc-500">
-            <li><Link href="/privacy" className="hover:text-white transition-colors uppercase tracking-widest">Privacy</Link></li>
-            <li><Link href="/terms" className="hover:text-white transition-colors uppercase tracking-widest">Terms</Link></li>
-            <li><Link href="/refund-policy" className="hover:text-white transition-colors uppercase tracking-widest">Refunds</Link></li>
+            <li className="group"><Link href="/privacy" className="inline-block hover:text-white transition-all transform group-hover:translate-x-1 uppercase tracking-widest">Privacy</Link></li>
+            <li className="group"><Link href="/terms" className="inline-block hover:text-white transition-all transform group-hover:translate-x-1 uppercase tracking-widest">Terms</Link></li>
+            <li className="group"><Link href="/refund-policy" className="inline-block hover:text-white transition-all transform group-hover:translate-x-1 uppercase tracking-widest">Refunds</Link></li>
           </ul>
         </div>
         <div>
           <p className="text-white font-bold mb-6 tracking-tighter uppercase text-xs">Connectivity</p>
           <ul className="space-y-4 text-[10px] font-bold text-zinc-500">
-            <li><Link href="mailto:support@creatorly.link" className="hover:text-white transition-colors uppercase tracking-widest">Inquiries</Link></li>
-            <li><Link href="/auth/login" className="hover:text-white transition-colors uppercase tracking-widest">Sign In</Link></li>
+            <li className="group"><Link href="mailto:support@creatorly.link" className="inline-block hover:text-white transition-all transform group-hover:translate-x-1 uppercase tracking-widest">Inquiries</Link></li>
+            <li className="group"><Link href="/auth/login" className="inline-block hover:text-white transition-all transform group-hover:translate-x-1 uppercase tracking-widest">Sign In</Link></li>
           </ul>
         </div>
         <div>
           <p className="text-white font-bold mb-6 tracking-tighter uppercase text-xs">System</p>
           <div className="p-4 rounded-xl border border-white/5 bg-white/1">
             <div className="flex items-center gap-2 mb-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" aria-hidden></span>
+              <span className="relative flex w-2 h-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full w-2 h-2 bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
+              </span>
               <span className="text-[10px] font-bold text-white uppercase tracking-widest">All Systems Operational</span>
             </div>
             <p className="text-[10px] text-zinc-600 font-medium">Recent audit available on request — contact support below.</p>

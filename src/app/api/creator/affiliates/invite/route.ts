@@ -32,7 +32,8 @@ async function handler(req: NextRequest, user: any, context: any) {
     if (existing) throw new Error('This user is already an affiliate for you');
 
     // Generate unique affiliate code
-    const affiliateCode = `AFF-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const { nanoid } = await import('nanoid');
+    const affiliateCode = `AFF-${nanoid(8).toUpperCase()}`;
 
     const affiliate = await (Affiliate as any).create({
         creatorId: user._id,

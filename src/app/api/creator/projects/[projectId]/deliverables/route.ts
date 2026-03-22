@@ -3,7 +3,8 @@ import { connectToDatabase } from '@/lib/db/mongodb';
 import { Project } from '@/lib/models/Project';
 import { Deliverable } from '@/lib/models/Deliverable';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
-import { errorResponse } from '@/types/api';
+import { successResponse, errorResponse } from '@/types/api';
+import crypto from 'crypto';
 
 /**
  * GET - List deliverables for a project
@@ -80,7 +81,7 @@ async function postHandler(req: NextRequest, user: any, { params }: any) {
         }
 
         // Generate approval token
-        const approvalToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const approvalToken = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
 
         const deliverable = await Deliverable.create({
             ...body,

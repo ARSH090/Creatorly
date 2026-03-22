@@ -26,19 +26,25 @@ async function handler(req: NextRequest, user: any) {
 
         const brief = validation.data;
 
-        // 1. Check AI Credits / Limits based on Plan
+        // 1. Check and atomically reserve AI credit
         const role = user.role || 'user';
         const limits: Record<string, number> = {
             'user': 5,
             'creator': 100,
             'admin': 1000,
-            'super-admin': Infinity
+            'super-admin': 999999
         };
-
         const maxGens = user.planLimits?.maxAiGenerations || limits[role];
-        if (user.aiUsageCount >= maxGens) {
+
+        const UserModel = (await import('@/lib/models/User')).default;
+        const credited = await UserModel.findOneAndUpdate(
+            { _id: user._id, aiUsageCount: { $lt: maxGens } },
+            { $inc: { aiUsageCount: 1 } },
+            { new: true }
+        );
+        if (!credited) {
             return NextResponse.json({
-                error: `Monthly AI limit reached (${maxGens}). Please upgrade your plan for more.`
+                error: `Monthly AI limit reached (${maxGens} generations). Please upgrade your plan.`
             }, { status: 403 });
         }
 
@@ -51,6 +57,18 @@ async function handler(req: NextRequest, user: any) {
         });
 
 
+
+        // Validate AI output is meaningful
+        if (!generatedText || generatedText.trim().length < 50) {
+            // Decrement credit since generation failed
+            await UserModel.findByIdAndUpdate(user._id, { $inc: { aiUsageCount: -1 } });
+            return NextResponse.json({ error: 'AI generation returned empty content. Please try a different topic.' }, { status: 500 });
+        }
+        const refusalPhrases = ["I cannot", "I am unable", "I can't", "I won't", "As an AI"];
+        if (refusalPhrases.some(p => generatedText.trim().startsWith(p))) {
+            await UserModel.findByIdAndUpdate(user._id, { $inc: { aiUsageCount: -1 } });
+            return NextResponse.json({ error: 'AI could not generate content for this topic. Please try rephrasing.' }, { status: 422 });
+        }
 
         // 3. Extract title and body (Basic parsing - can be improved)
         const lines = generatedText.split('\n');
@@ -73,9 +91,7 @@ async function handler(req: NextRequest, user: any) {
             status: 'draft'
         });
 
-        // 5. Update user usage
-        const User = (await import('@/lib/models/User')).default;
-        await User.findByIdAndUpdate(user._id, { $inc: { aiUsageCount: 1 } });
+        // 5. Update user usage (now handled atomically at step 1)
 
         // 6. Trigger Usage Notification Check (Async)
         const { BillingService } = await import('@/lib/services/billing');
@@ -85,7 +101,7 @@ async function handler(req: NextRequest, user: any) {
 
     } catch (error: any) {
         console.error('[AI Generate] Error:', error.message);
-        return NextResponse.json({ error: error.message }, { status: 500 });
+        return NextResponse.json({ error: 'Content generation failed. Please try again.' }, { status: 500 });
     }
 }
 

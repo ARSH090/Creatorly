@@ -66,7 +66,7 @@ export function withErrorHandler<T = any>(
                     error: {
                         code: 'VALIDATION_ERROR',
                         message: 'Invalid input data',
-                        details: error.errors || error.message
+                        details: process.env.NODE_ENV === 'production' ? undefined : (error.errors || error.message)
                     }
                 }, { status: 400 });
             }
@@ -102,7 +102,7 @@ export function withErrorHandler<T = any>(
                     error: {
                         code: 'DUPLICATE_ENTRY',
                         message: 'A record with this value already exists',
-                        details: error.keyPattern
+                        details: process.env.NODE_ENV === 'production' ? undefined : error.keyPattern
                     }
                 }, { status: 409 });
             }

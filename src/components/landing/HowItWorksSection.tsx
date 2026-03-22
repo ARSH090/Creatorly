@@ -41,17 +41,30 @@ const HowItWorksSection: React.FC = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8 relative">
                     {/* Connecting Line (Desktop) */}
-                    <div className="hidden md:block absolute top-8 left-0 w-full h-px bg-gradient-to-r from-transparent via-zinc-800 to-transparent dashed-line" />
+                    <div 
+                        className="hidden md:block absolute top-8 left-0 w-full h-px pointer-events-none" 
+                        style={{
+                            background: 'linear-gradient(90deg, transparent, rgba(99,102,241,0.3), rgba(139,92,246,0.3), transparent)',
+                            boxShadow: '0 0 10px rgba(99,102,241,0.2)',
+                        }}
+                    />
 
                     {steps.map((step, index) => (
                         <motion.div
                             key={index}
-                            initial={{ opacity: 0, y: 20 }}
-                            whileInView={{ opacity: 1, y: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ delay: index * 0.15 }}
-                            className="relative flex flex-col items-center text-center group"
+                            initial={{ opacity: 0, y: 40, rotateX: -15 }}
+                            whileInView={{ opacity: 1, y: 0, rotateX: 0 }}
+                            viewport={{ once: true, margin: '-50px' }}
+                            transition={{ delay: index * 0.15, duration: 0.6, ease: 'easeOut' }}
+                            className="relative group cursor-default text-center"
+                            style={{ transformStyle: 'preserve-3d', perspective: '800px' }}
+                            whileHover={{
+                                y: -8,
+                                rotateX: 5,
+                                transition: { duration: 0.3 }
+                            }}
                         >
+
                             {/* Icon Container */}
                             <div className="w-24 h-24 rounded-3xl bg-zinc-900/50 border border-white/5 flex items-center justify-center group-hover:border-indigo-500/30 group-hover:shadow-[0_0_50px_rgba(99,102,241,0.2)] transition-all duration-500 z-10 mb-8 relative">
                                 <Image

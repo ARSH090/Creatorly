@@ -7,6 +7,7 @@ import { DMLog } from '@/lib/models/DMLog';
 import { InstagramService } from '@/lib/services/instagram';
 
 import { connectToDatabase } from '@/lib/db/mongodb';
+import redis from '@/lib/cache';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,10 +29,8 @@ interface ActiveFlowSession {
     igUserId: string;
 }
 
-// In-memory session store (replace with Redis for production)
-const activeSessions = new Map<string, ActiveFlowSession>();
-
-const SESSION_TTL_MS = 30 * 60 * 1000; // 30 minutes
+// Redis-based session store
+const SESSION_TTL_SEC = 30 * 60; // 30 minutes
 
 // ─── Start a flow ─────────────────────────────────────────────────────────────
 
@@ -130,15 +129,13 @@ async function executeStep(
 
             // For email_collect + question steps: save session and wait for user reply
             if (step.type === 'email_collect' || (step.type === 'question' && step.buttons && step.buttons.length > 0)) {
-                activeSessions.set(sessionKey, {
+                await redis.set(sessionKey, JSON.stringify({
                     flowId: ctx.flowId,
                     currentStepId: step.id,
                     creatorId: ctx.creatorId,
                     accessToken: ctx.accessToken,
                     igUserId: ctx.igUserId,
-                });
-                // TTL cleanup
-                setTimeout(() => activeSessions.delete(sessionKey), SESSION_TTL_MS);
+                }), { ex: SESSION_TTL_SEC });
                 return; // Wait for webhook reply
             }
 
@@ -170,15 +167,17 @@ export async function handleFlowReply(params: {
     messageText: string;
 }): Promise<boolean> {
     const sessionKey = `${params.senderIgId}:${params.creatorId}`;
-    const session = activeSessions.get(sessionKey);
-    if (!session) return false;
+    const sessionData = await redis.get(sessionKey);
+    if (!sessionData) return false;
+    
+    const session = (typeof sessionData === 'string' ? JSON.parse(sessionData) : sessionData) as ActiveFlowSession;
 
     await connectToDatabase();
     const flow = await AutoDMFlow.findById(session.flowId);
-    if (!flow) { activeSessions.delete(sessionKey); return false; }
+    if (!flow) { await redis.del(sessionKey); return false; }
 
     const currentStep = flow.steps.find((s) => s.id === session.currentStepId);
-    if (!currentStep) { activeSessions.delete(sessionKey); return false; }
+    if (!currentStep) { await redis.del(sessionKey); return false; }
 
     // Route to email collector if email_collect step
     if (currentStep.type === 'email_collect') {
@@ -224,12 +223,14 @@ export async function handleFlowReply(params: {
     return false;
 }
 
-// ─── Get active session for a user ────────────────────────────────────────────
+// ─── Get/Clear active session for a user ─────────────────────────────────────
 
-export function getActiveSession(senderIgId: string, creatorId: string): ActiveFlowSession | undefined {
-    return activeSessions.get(`${senderIgId}:${creatorId}`);
+export async function getActiveSession(senderIgId: string, creatorId: string): Promise<ActiveFlowSession | null> {
+    const sessionData = await redis.get(`${senderIgId}:${creatorId}`);
+    if (!sessionData) return null;
+    return (typeof sessionData === 'string' ? JSON.parse(sessionData) : sessionData) as ActiveFlowSession;
 }
 
-export function clearSession(senderIgId: string, creatorId: string): void {
-    activeSessions.delete(`${senderIgId}:${creatorId}`);
+export async function clearSession(senderIgId: string, creatorId: string): Promise<void> {
+    await redis.del(`${senderIgId}:${creatorId}`);
 }

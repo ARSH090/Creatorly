@@ -52,8 +52,20 @@ export const createRazorpayOrder = async (
         const requestOptions = idempotencyKey
             ? { headers: { 'X-Razorpay-Idempotency-Key': idempotencyKey } }
             : undefined;
-        return await razorpayOrderBreaker.fire(instance, options, requestOptions);
-    } catch (error) {
+        
+        // Implement 10s timeout
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 10000);
+        
+        try {
+            const order = await razorpayOrderBreaker.fire(instance, options, requestOptions);
+            clearTimeout(timeout);
+            return order;
+        } catch (innerError) {
+            clearTimeout(timeout);
+            throw innerError;
+        }
+    } catch (error: any) {
         console.error('Error creating Razorpay order:', error);
         throw error;
     }
@@ -172,9 +184,13 @@ export async function createRazorpayXPayout(options: RazorpayXPayoutOptions) {
     const auth = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
 
     // Step 1: Create contact
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
     const contactRes = await fetch('https://api.razorpay.com/v1/contacts', {
         method: 'POST',
         headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
             name: options.fund_account.contact.name,
             email: options.fund_account.contact.email,
@@ -199,6 +215,7 @@ export async function createRazorpayXPayout(options: RazorpayXPayoutOptions) {
     const faRes = await fetch('https://api.razorpay.com/v1/fund_accounts', {
         method: 'POST',
         headers: { Authorization: `Basic ${auth}`, 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify(faPayload),
     });
     const fundAccount = await faRes.json();
@@ -212,6 +229,7 @@ export async function createRazorpayXPayout(options: RazorpayXPayoutOptions) {
             'Content-Type': 'application/json',
             'X-Payout-Idempotency': options.reference_id, // prevent duplicate payouts
         },
+        signal: controller.signal,
         body: JSON.stringify({
             account_number: accountNumber,
             fund_account_id: fundAccount.id,
@@ -224,6 +242,7 @@ export async function createRazorpayXPayout(options: RazorpayXPayoutOptions) {
         }),
     });
     const payout = await payoutRes.json();
+    clearTimeout(timeout);
     if (!payoutRes.ok) throw new Error(`Payout creation failed: ${JSON.stringify(payout)}`);
 
     return payout;

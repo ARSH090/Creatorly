@@ -33,8 +33,8 @@ const Header: React.FC = () => {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 bg-black/50 backdrop-blur-xl">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
+      <header className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md shadow-2xl shadow-black/50 transition-all duration-300">
+        <div className="px-6 h-16 md:h-20 flex items-center justify-between w-full">
           <div className="flex items-center gap-12">
             <Link href="/" className="group" suppressHydrationWarning>
               <Logo
@@ -49,9 +49,11 @@ const Header: React.FC = () => {
                 <div key={link.href} className="relative group">
                   <Link
                     href={link.href}
-                    className="text-xs font-bold text-zinc-500 hover:text-indigo-400 transition-colors uppercase tracking-[0.2em] py-6"
+                    className="relative text-xs font-bold text-zinc-400 hover:text-white transition-colors uppercase tracking-[0.2em] py-6 inline-block"
                   >
                     {link.label}
+                    {/* Hover indicator */}
+                    <span className="absolute left-0 bottom-4 w-0 h-px bg-indigo-400 group-hover:w-full transition-all duration-300" />
                   </Link>
 
                   {/* Mega Menu Dropdown */}

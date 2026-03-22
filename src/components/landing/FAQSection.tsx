@@ -108,13 +108,13 @@ export default function FAQSection() {
                     {faqItems.map((item, index) => (
                         <motion.div
                             key={index}
-                            className="border border-white/10 rounded-xl overflow-hidden hover:border-indigo-500/30 transition-colors"
+                            className="border border-white/10 rounded-xl overflow-hidden bg-zinc-900/10 cursor-pointer"
                             variants={itemVariants}
+                            whileHover={{ scale: 1.01, zIndex: 10, boxShadow: '0 10px 30px rgba(0,0,0,0.5)', transition: { duration: 0.2 } }}
+                            style={{ transformStyle: 'preserve-3d' }}
+                            onClick={() => setOpenIndex(openIndex === index ? null : index)}
                         >
-                            <button
-                                onClick={() => setOpenIndex(openIndex === index ? null : index)}
-                                className="w-full p-6 flex items-start justify-between gap-4 text-left hover:bg-white/2 transition-colors group"
-                            >
+                            <div className="w-full p-6 flex items-start justify-between gap-4 text-left transition-colors group">
                                 <span className="font-semibold text-white text-lg pr-4 group-hover:text-indigo-400 transition-colors">
                                     {item.question}
                                 </span>
@@ -123,7 +123,7 @@ export default function FAQSection() {
                                         openIndex === index ? 'rotate-180' : ''
                                     }`}
                                 />
-                            </button>
+                            </div>
 
                             <AnimatePresence>
                                 {openIndex === index && (

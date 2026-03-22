@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import { CustomDomain } from '@/lib/models/CustomDomain';
 import { withCreatorAuth } from '@/lib/auth/withAuth';
@@ -70,8 +71,7 @@ async function handler(req: NextRequest, user: any, context: any) {
 }
 
 function generateVerificationToken(): string {
-    return Math.random().toString(36).substring(2, 15) +
-        Math.random().toString(36).substring(2, 15);
+    return crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
 }
 
 async function verifyDNS(domain: string, token: string): Promise<boolean> {

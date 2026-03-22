@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Check, Zap } from 'lucide-react';
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 
 const plans = [
   {
@@ -122,13 +123,25 @@ export default function PricingPage() {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24">
-          {plans.map((plan) => (
-            <div
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-24 perspective-1000">
+          {plans.map((plan, i) => (
+            <motion.div
               key={plan.name}
-              className={`relative bg-zinc-900/50 border rounded-3xl p-8 h-full flex flex-col ${plan.popular
+              initial={{ opacity: 0, y: 30, rotateY: i === 0 ? 10 : i === 2 ? -10 : 0 }}
+              whileInView={{ opacity: 1, y: 0, rotateY: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: i * 0.1 }}
+              whileHover={{ 
+                  y: -10, 
+                  scale: plan.popular ? 1.05 : 1.02, 
+                  rotateY: i === 0 ? -2 : i === 2 ? 2 : 0,
+                  boxShadow: plan.popular ? '0 30px 60px rgba(99,102,241,0.2)' : '0 20px 40px rgba(0,0,0,0.4)',
+                  transition: { duration: 0.3 } 
+              }}
+              style={{ transformStyle: 'preserve-3d' }}
+              className={`relative bg-zinc-900/50 border rounded-3xl p-8 h-full flex flex-col transition-all duration-300 ${plan.popular
                   ? 'border-indigo-500/50 shadow-2xl shadow-indigo-500/10 md:scale-105'
-                  : 'border-white/5'
+                  : 'border-white/5 hover:border-white/20'
                 }`}
             >
               {plan.popular && (
@@ -185,7 +198,7 @@ export default function PricingPage() {
                   {plan.cta}
                 </Link>
               )}
-            </div>
+            </motion.div>
           ))}
         </div>
 

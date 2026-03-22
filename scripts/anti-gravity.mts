@@ -8,6 +8,20 @@
 
 import { execSync } from 'child_process';
 import mongoose from 'mongoose';
+import fs from 'fs';
+import path from 'path';
+
+// Load .env.local if exists
+if (fs.existsSync('.env.local')) {
+    const envFile = fs.readFileSync('.env.local', 'utf8');
+    envFile.split('\n').forEach(line => {
+        const [key, ...valueParts] = line.split('=');
+        if (key && valueParts.length > 0) {
+            const value = valueParts.join('=').trim().replace(/^["']|["']$/g, '');
+            process.env[key.trim()] = value;
+        }
+    });
+}
 
 interface VerificationCheck {
     name: string;

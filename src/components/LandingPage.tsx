@@ -1,6 +1,7 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { motion, useScroll } from 'framer-motion';
 import HeroSection from './landing/HeroSection';
 import ProblemSolutionSection from './landing/ProblemSolutionSection';
 import HowItWorksSection from './landing/HowItWorksSection';
@@ -16,8 +17,22 @@ import FinalCTASection from './landing/FinalCTASection';
 import MobileStickyCTA from './landing/MobileStickyCTA';
 
 const LandingPage: React.FC = () => {
+  const { scrollYProgress } = useScroll();
+  const [mounted, setMounted] = useState(false);
+  
+  useEffect(() => {
+      setMounted(true);
+  }, []);
+
   return (
     <div className="dark min-h-screen bg-[#030303] text-zinc-400 selection:bg-indigo-500/30 font-sans antialiased overflow-x-hidden">
+      {/* Global Scroll Progress Bar */}
+      {mounted && (
+        <motion.div
+          className="fixed top-0 left-0 right-0 h-1 bg-indigo-500 z-[100] origin-left"
+          style={{ scaleX: scrollYProgress, boxShadow: '0 0 10px rgba(99,102,241,0.5)' }}
+        />
+      )}
       {/* Global Background Textures */}
       <div
         className="fixed inset-0 pointer-events-none z-0 opacity-[0.03] mix-blend-overlay"

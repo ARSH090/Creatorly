@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import crypto from 'crypto';
 import { connectToDatabase } from '@/lib/db/mongodb';
 import Product from '@/lib/models/Product';
 import { CourseLesson as Lesson, CourseModule as Module } from '@/lib/models/CourseContent';
@@ -45,7 +46,7 @@ async function handler(req: NextRequest, user: any, context: any) {
         moduleId,
         productId: courseId,
         title,
-        slug: slugify(title) + '-' + Math.random().toString(36).substring(7),
+        slug: slugify(title) + '-' + crypto.randomUUID().replace(/-/g, '').substring(0, 8),
         lessonType: videoUrl ? 'video' : 'text',
         content: {
             videoUrl,

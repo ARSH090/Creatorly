@@ -5,6 +5,7 @@ import Product from '@/lib/models/Product';
 import User from '@/lib/models/User';
 import { DigitalDeliveryService } from '@/lib/services/digitalDelivery';
 import { errorResponse } from '@/types/api';
+import { publicApiRateLimit } from '@/lib/security/global-ratelimit';
 
 /**
  * POST /api/checkout/free/fulfill
@@ -16,8 +17,29 @@ export async function POST(req: NextRequest) {
         const body = await req.json();
         const { productId, email } = body;
 
+        // 0. Rate Limit
+        const ip = req.headers.get('x-forwarded-for') || '127.0.0.1';
+        const ratelimit = await publicApiRateLimit.limit(ip);
+        if (!ratelimit.success) {
+            return NextResponse.json(errorResponse('Too many requests. Please try again later.'), { status: 429 });
+        }
+
         if (!productId || !email) {
             return NextResponse.json(errorResponse('Product ID and Email are required'), { status: 400 });
+        }
+
+        // 0b. Duplicate Check (Prevent spamming free downloads)
+        const existingOrder = await Order.findOne({
+            customerEmail: email.toLowerCase(),
+            "items.productId": productId,
+            status: 'completed'
+        });
+        if (existingOrder) {
+            return NextResponse.json({
+                success: true,
+                orderId: existingOrder._id,
+                message: 'You already have access to this product. Check your email.'
+            });
         }
 
         // 1. Fetch Product

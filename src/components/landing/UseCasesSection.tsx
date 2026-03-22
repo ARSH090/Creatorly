@@ -103,10 +103,14 @@ const UseCasesSection: React.FC = () => {
                     className="hidden md:flex gap-8 px-6 w-max"
                 >
                     {cases.map((useCase, i) => (
-                        <div
+                        <motion.div
                             key={i}
-                            className="w-[400px] h-[280px] bg-zinc-900/20 backdrop-blur-sm rounded-[32px] p-10 border border-white/5 flex flex-col justify-between hover:bg-zinc-900/40 transition-colors duration-500 group"
+                            className="w-[400px] h-[280px] bg-zinc-900/20 backdrop-blur-sm rounded-[32px] p-10 border border-white/5 flex flex-col justify-between hover:bg-zinc-900/40 transition-colors duration-500 group relative overflow-hidden"
+                            whileHover={{ y: -10, rotateX: 2, rotateY: -2, scale: 1.02, boxShadow: '0 20px 40px rgba(0,0,0,0.5)', transition: { duration: 0.3 } }}
+                            style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
                         >
+                            {/* Glow layer */}
+                            <div className="absolute inset-x-0 -top-px h-px w-1/2 mx-auto bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                             <div>
                                 <div className="flex justify-between items-start mb-6">
                                     <div className={`w-14 h-14 rounded-2xl ${useCase.bg} flex items-center justify-center ${useCase.color} border ${useCase.border} group-hover:scale-110 transition-transform duration-500`}>
@@ -114,12 +118,12 @@ const UseCasesSection: React.FC = () => {
                                     </div>
                                     <span className="text-xs font-bold text-zinc-600 uppercase tracking-widest border border-zinc-800 px-3 py-1 rounded-full">{`0${i + 1}`}</span>
                                 </div>
-                                <h3 className="text-2xl font-bold text-white mb-3">{useCase.role}</h3>
+                                <h3 className="text-2xl font-bold text-white mb-3" style={{ transform: 'translateZ(20px)' }}>{useCase.role}</h3>
                             </div>
-                            <p className="text-zinc-400 leading-relaxed text-sm font-medium">
+                            <p className="text-zinc-400 leading-relaxed text-sm font-medium" style={{ transform: 'translateZ(10px)' }}>
                                 {useCase.desc}
                             </p>
-                        </div>
+                        </motion.div>
                     ))}
                 </motion.div>
             </div>

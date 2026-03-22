@@ -12,25 +12,31 @@ export async function GET(
         await dbConnect();
         const { token } = params;
 
-        // 1. Find and validate token
-        const tokenDoc = await DownloadToken.findOne({ token, isActive: true });
+        // 1. Find and atomically check/increment
+        const tokenDoc = await DownloadToken.findOneAndUpdate(
+            {
+                token,
+                isActive: true,
+                expiresAt: { $gt: new Date() },
+                $expr: { $lt: ["$downloadCount", "$maxDownloads"] }
+            },
+            {
+                $inc: { downloadCount: 1 },
+                $set: {
+                    lastDownloadedAt: new Date(),
+                    lastUsedIp: req.headers.get('x-forwarded-for') || 'unknown'
+                }
+            },
+            { new: true }
+        );
 
         if (!tokenDoc) {
-            return NextResponse.json({ error: 'Invalid or expired download link' }, { status: 404 });
+            return NextResponse.json({ error: 'Download link is invalid, expired, or limit reached' }, { status: 403 });
         }
 
-        // 2. Check Expiry
-        if (new Date() > tokenDoc.expiresAt) {
-            tokenDoc.isActive = false;
-            await tokenDoc.save();
-            return NextResponse.json({ error: 'Download link has expired' }, { status: 410 });
-        }
-
-        // 3. Check Download Count
+        // Logic check to auto-deactivate if this was the last use
         if (tokenDoc.downloadCount >= tokenDoc.maxDownloads) {
-            tokenDoc.isActive = false;
-            await tokenDoc.save();
-            return NextResponse.json({ error: 'Download limit reached' }, { status: 403 });
+            await DownloadToken.findByIdAndUpdate(tokenDoc._id, { $set: { isActive: false } });
         }
 
         // 4. Get Product & File
@@ -50,16 +56,6 @@ export async function GET(
         }
 
         const signedUrl = await getDownloadUrl(fileKey, 900); // 15 mins
-
-        // 6. Update Stats
-        tokenDoc.downloadCount += 1;
-        tokenDoc.lastDownloadedAt = new Date();
-        tokenDoc.lastUsedIp = req.headers.get('x-forwarded-for') || 'unknown';
-
-        if (tokenDoc.downloadCount >= tokenDoc.maxDownloads) {
-            tokenDoc.isActive = false;
-        }
-        await tokenDoc.save();
 
         // 7. Redirect to S3
         return NextResponse.redirect(signedUrl);

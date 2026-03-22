@@ -147,6 +147,10 @@ export default function DeepFeatureSections() {
                             <motion.div
                                 className={feature.layout === 'right' ? 'lg:order-2' : 'lg:order-1'}
                                 variants={itemVariants}
+                                initial={{ opacity: 0, x: feature.layout === 'right' ? 30 : -30 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.6 }}
                             >
                                 <span className="text-xs font-semibold text-indigo-400 uppercase tracking-wider">
                                     {feature.category}
@@ -187,8 +191,14 @@ export default function DeepFeatureSections() {
 
                             {/* Visual Side */}
                             <motion.div
-                                className={`relative ${feature.layout === 'right' ? 'lg:order-1' : 'lg:order-2'}`}
+                                className={`relative perspective-1000 ${feature.layout === 'right' ? 'lg:order-1' : 'lg:order-2'}`}
                                 variants={itemVariants}
+                                initial={{ opacity: 0, rotateY: feature.layout === 'right' ? 15 : -15, x: feature.layout === 'right' ? -40 : 40 }}
+                                whileInView={{ opacity: 1, rotateY: 0, x: 0 }}
+                                viewport={{ once: true, margin: '-100px' }}
+                                transition={{ duration: 0.8, ease: 'easeOut' }}
+                                whileHover={{ rotateY: feature.layout === 'right' ? 5 : -5, scale: 1.02, transition: { duration: 0.4 } }}
+                                style={{ transformStyle: 'preserve-3d' }}
                             >
                                 <div className="relative h-[400px] rounded-2xl bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-transparent border border-indigo-500/20 p-8 flex items-center justify-center">
                                     {/* Placeholder for feature visualization */}
@@ -197,13 +207,13 @@ export default function DeepFeatureSections() {
                                         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-indigo-500/5 rounded-full blur-3xl" />
                                     </div>
 
-                                    <div className="relative z-10 flex items-center justify-center w-60 h-60">
+                                    <div className="relative z-10 flex items-center justify-center w-60 h-60" style={{ transform: 'translateZ(40px)', filter: 'drop-shadow(0 20px 40px rgba(0,0,0,0.5))' }}>
                                         <Image
                                             src={feature.image}
                                             alt={feature.title}
                                             fill
                                             sizes="240px"
-                                            className="object-contain drop-shadow-2xl"
+                                            className="object-contain"
                                         />
                                     </div>
                                 </div>

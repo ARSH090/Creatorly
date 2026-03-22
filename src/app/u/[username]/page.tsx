@@ -27,6 +27,7 @@ import type { StorefrontBlock, StorefrontThemeV2 } from '@/types/storefront-bloc
 import { shouldDowngrade } from '@/lib/utils/tier-utils';
 import StorefrontRenderer from '@/components/storefront/StorefrontRenderer';
 import EditStorefrontButton from '@/components/storefront/EditStorefrontButton';
+import { sanitizeCss } from '@/lib/utils/sanitizer';
 
 // ─── ISR: revalidate every 60 seconds ─────────────────────────────────────────
 export const revalidate = 60;
@@ -310,7 +311,7 @@ export default async function CreatorStorefront({
     const customInjections = (
         <>
             {profile?.customCss && (
-                <style id="creatorly-custom-css" dangerouslySetInnerHTML={{ __html: profile.customCss }} />
+                <style id="creatorly-custom-css" dangerouslySetInnerHTML={{ __html: sanitizeCss(profile.customCss) }} />
             )}
 
             {profile?.pixels?.metaPixelId && (

@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const FinalCTASection: React.FC = () => {
     return (
@@ -18,13 +19,31 @@ const FinalCTASection: React.FC = () => {
                 <p className="text-xl text-zinc-500 mb-14 max-w-2xl mx-auto font-medium">
                     Join the fastest growing community of Indian creators today.<br className="hidden sm:block" /> Your audience is waiting for your store.
                 </p>
-                <Link
-                    href="/auth/register"
-                    className="group relative inline-flex items-center gap-3 h-20 px-12 rounded-2xl bg-white text-black font-black text-xl hover:bg-zinc-100 hover:shadow-[0_0_30px_rgba(255,255,255,0.3)] hover:scale-[1.05] active:scale-[0.98] transition-all duration-300"
+                <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="inline-block relative"
                 >
-                    <span className="uppercase tracking-tight">Launch Your Page</span>
-                    <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                </Link>
+                    {/* Pulsing button aura */}
+                    <motion.div
+                        className="absolute -inset-1 rounded-2xl bg-white/30 blur-lg"
+                        animate={{ opacity: [0.3, 0.6, 0.3], scale: [1, 1.05, 1] }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                    />
+                    <Link
+                        href="/auth/register"
+                        className="group relative flex items-center gap-3 h-20 px-12 rounded-2xl bg-white text-black font-black text-xl overflow-hidden"
+                    >
+                        {/* Shimmer sweep */}
+                        <motion.div
+                            className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white to-transparent opacity-50 z-10"
+                            animate={{ translateX: ['-100%', '200%'] }}
+                            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+                        />
+                        <span className="uppercase tracking-tight relative z-20">Launch Your Page</span>
+                        <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform relative z-20" />
+                    </Link>
+                </motion.div>
             </div>
         </section>
     );

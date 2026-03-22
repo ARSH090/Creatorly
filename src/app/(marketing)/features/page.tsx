@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { ShoppingCart, Mail, BookOpen, Users, TrendingUp, Globe, Wand2, Zap, BarChart3, Smartphone, Clock, Lock, Package, CreditCard } from 'lucide-react';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 
 export const metadata: Metadata = {
     title: 'Features | Creatorly - All-in-One Creator Platform',
@@ -128,10 +129,14 @@ export default function Features() {
                     {features.map((feature) => {
                         const Icon = feature.icon;
                         return (
-                            <div
+                            <motion.div
                                 key={feature.id}
-                                className="group relative bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-8 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all duration-300"
+                                className="group relative bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-2xl p-8 hover:border-indigo-500/30 hover:bg-indigo-500/5 transition-all duration-300 overflow-hidden"
+                                whileHover={{ y: -5, rotateX: 2, rotateY: -2, scale: 1.02, boxShadow: '0 20px 40px rgba(0,0,0,0.5)', transition: { duration: 0.2 } }}
+                                style={{ transformStyle: 'preserve-3d', perspective: '1000px' }}
                             >
+                                {/* Glow layer on hover */}
+                                <div className="absolute inset-x-0 -top-px h-px w-1/2 mx-auto bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                                 {/* Icon */}
                                 <div className="mb-6 inline-flex p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 group-hover:border-indigo-500/40 transition-colors">
                                     <Icon className="w-6 h-6 text-indigo-400" />
@@ -158,7 +163,7 @@ export default function Features() {
                                 >
                                     Learn more →
                                 </Link>
-                            </div>
+                            </motion.div>
                         );
                     })}
                 </div>
