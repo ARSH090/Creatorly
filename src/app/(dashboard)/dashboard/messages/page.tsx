@@ -119,7 +119,7 @@ export default function MessagesPage() {
                                 >
                                     <div className="w-12 h-12 rounded-2xl bg-zinc-800 flex items-center justify-center overflow-hidden border border-white/5 shadow-2xl">
                                         {conv.user.avatar ? (
-                                            <Image width={800} height={800} src={conv.user.avatar} className="w-full h-full object-cover" />
+                                            <Image width={800} height={800} src={conv.user.avatar} alt={conv.user.name || "User Avatar"} className="w-full h-full object-cover" />
                                         ) : (
                                             <UserIcon className="w-5 h-5 text-zinc-600" />
                                         )}
@@ -151,7 +151,7 @@ export default function MessagesPage() {
                             <div className="p-6 border-b border-white/5 flex items-center justify-between bg-zinc-900/10 backdrop-blur-xl">
                                 <div className="flex items-center gap-4">
                                     <div className="w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center overflow-hidden border border-white/5">
-                                        {activeConv.user.avatar ? <Image width={800} height={800} src={activeConv.user.avatar} className="w-full h-full object-cover" /> : <UserIcon className="w-4 h-4 text-zinc-600" />}
+                                        {activeConv.user.avatar ? <Image width={800} height={800} src={activeConv.user.avatar} alt={activeConv.user.name || "Avatar"} className="w-full h-full object-cover" /> : <UserIcon className="w-4 h-4 text-zinc-600" />}
                                     </div>
                                     <div>
                                         <p className="font-black text-xs uppercase tracking-widest text-white">{activeConv.user.displayName || activeConv.user.username}</p>
