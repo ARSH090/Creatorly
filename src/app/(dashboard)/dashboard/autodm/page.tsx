@@ -386,7 +386,7 @@ function CreateRuleModal({ onSuccess }: { onSuccess: () => void }) {
                             <Label htmlFor="matchType">Match Type</Label>
                             <Select
                                 value={formData.matchType}
-                                onValueChange={v => setFormData(p => ({ ...p, matchType: v as any }))}
+                                onValueChange={(v: string) => setFormData(p => ({ ...p, matchType: v as any }))}
                             >
                                 <SelectTrigger id="matchType" className="rounded-xl">
                                     <SelectValue placeholder="Select" />
