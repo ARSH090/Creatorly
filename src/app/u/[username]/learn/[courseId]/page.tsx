@@ -38,6 +38,17 @@ export default function CourseLearnPage() {
     const [expanded, setExpanded] = useState<string[]>([]);
     const [marking, setMarking] = useState(false);
     const [certDownloading, setCertDownloading] = useState(false);
+    
+    // Quiz state moved to top-level
+    const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
+    const [quizSubmitted, setQuizSubmitted] = useState(false);
+    const [quizScore, setQuizScore] = useState(0);
+
+    useEffect(() => {
+        setQuizAnswers({});
+        setQuizSubmitted(false);
+        setQuizScore(0);
+    }, [activeLesson?.id]);
 
     useEffect(() => {
         fetch(`/api/courses/${courseId}`)
@@ -370,9 +381,12 @@ export default function CourseLearnPage() {
                             {activeLesson.type === 'quiz' && activeLesson.content && (() => {
                                 try {
                                     const quizData = JSON.parse(activeLesson.content);
-                                    const [answers, setAnswers] = useState<Record<number, number>>({});
-                                    const [submitted, setSubmitted] = useState(false);
-                                    const [score, setScore] = useState(0);
+                                    const answers = quizAnswers;
+                                    const setAnswers = setQuizAnswers;
+                                    const submitted = quizSubmitted;
+                                    const setSubmitted = setQuizSubmitted;
+                                    const score = quizScore;
+                                    const setScore = setQuizScore;
 
                                     const handleOptionSelect = (qIdx: number, oIdx: number) => {
                                         if (submitted) return;

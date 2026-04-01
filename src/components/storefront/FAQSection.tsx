@@ -17,9 +17,9 @@ interface FAQSectionProps {
 }
 
 const FAQSection: React.FC<FAQSectionProps> = ({ faqs, theme }) => {
-    if (!faqs || faqs.length === 0) return null;
-
     const [openIndex, setOpenIndex] = useState<number | null>(0);
+
+    if (!faqs || faqs.length === 0) return null;
 
     return (
         <section className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">

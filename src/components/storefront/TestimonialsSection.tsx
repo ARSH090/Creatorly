@@ -21,9 +21,9 @@ interface TestimonialsSectionProps {
 }
 
 const TestimonialsSection: React.FC<TestimonialsSectionProps> = ({ testimonials, theme }) => {
-    if (!testimonials || testimonials.length === 0) return null;
-
     const [activeIndex, setActiveIndex] = React.useState(0);
+
+    if (!testimonials || testimonials.length === 0) return null;
 
     const next = () => setActiveIndex((prev) => (prev + 1) % testimonials.length);
     const prev = () => setActiveIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length);
