@@ -149,7 +149,7 @@ export default function ProductDetailPage() {
                                     </div>
                                     <div className="grid gap-2">
                                         <Label>Status</Label>
-                                        <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+                                        <Select value={form.status} onValueChange={(v: string) => setForm({ ...form, status: v as typeof form.status })}>
                                             <SelectTrigger>
                                                 <SelectValue />
                                             </SelectTrigger>
