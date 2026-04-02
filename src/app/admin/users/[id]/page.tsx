@@ -155,7 +155,7 @@ export default function UserDetailPage() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="grid gap-2">
                                     <Label>Plan</Label>
-                                    <Select value={editForm.plan} onValueChange={(v) => setEditForm({ ...editForm, plan: v })}>
+                                    <Select value={editForm.plan} onValueChange={(v: string) => setEditForm({ ...editForm, plan: v as typeof editForm.plan })}>
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>
@@ -168,7 +168,7 @@ export default function UserDetailPage() {
                                 </div>
                                 <div className="grid gap-2">
                                     <Label>Role</Label>
-                                    <Select value={editForm.role} onValueChange={(v) => setEditForm({ ...editForm, role: v })}>
+                                    <Select value={editForm.role} onValueChange={(v: string) => setEditForm({ ...editForm, role: v as typeof editForm.role })}>
                                         <SelectTrigger>
                                             <SelectValue />
                                         </SelectTrigger>
